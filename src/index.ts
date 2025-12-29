@@ -1,4 +1,5 @@
 import { Elysia } from "elysia";
+import "dotenv/config";
 // 从 routers/index.ts 统一导入所有路由模块
 import { userRouter, postRouter } from "./routers";
 

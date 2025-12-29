@@ -1,4 +1,5 @@
 import { Elysia } from "elysia";
+import prisma from "../utils/prisma";
 
 // 使用 group 创建用户相关的路由组
 export const userRouter = new Elysia().group("/api/users", (app) => {
@@ -20,9 +21,22 @@ export const userRouter = new Elysia().group("/api/users", (app) => {
             };
         })
         // POST /api/users - 创建用户
-        .post("/", async ({ body }) => {
+        .post("/register", async ({ body }) => {
+            const user = await prisma.user.create({
+                data: {
+                    email: "123@qq.com",
+                    name: 'john'
+                }
+            });
+
             return {
                 message: "用户创建成功",
+                user: user
+            };
+        })
+        .post("/login", async ({ body }) => {
+            return {
+                message: "用户登录成功",
                 user: body
             };
         })
