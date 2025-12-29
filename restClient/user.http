@@ -1,7 +1,10 @@
 @base=http://localhost:3000/api/users
 
-## userList
+### userList
 GET {{base}}
+
+### userList
+GET {{base}}/query?name=john
 
 ### userLogin
 POST {{base}}/login
@@ -20,3 +23,6 @@ Content-Type: application/json
     "username": "admin",
     "password": "123456"
 }
+
+### jwt test
+GET http://localhost:3000/sign/mike
