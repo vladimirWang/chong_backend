@@ -1,6 +1,8 @@
-import { Elysia, t } from "elysia";
+import { Elysia, t, status } from "elysia";
 import prisma from "../utils/prisma";
 import { jwt } from '@elysiajs/jwt'
+import { errorCode, ErrorResponse, SuccessResponse } from "../models/Response";
+import { z } from "zod";
 
 // 使用 group 创建用户相关的路由组
 export const userRouter = new Elysia()
@@ -36,10 +38,8 @@ export const userRouter = new Elysia()
                 }
             })
             if (userExisted) {
-                return {
-                    message: "用户已存在",
-                    user: userExisted
-                }
+                const result= new ErrorResponse(errorCode.EMAIL_EXISTED, "用户已存在");
+                return JSON.stringify(result);
             }
             const user = await prisma.user.create({
                 data: {
@@ -48,22 +48,24 @@ export const userRouter = new Elysia()
                 }
             });
 
-            return {
-                message: "用户创建成功",
-                user
-            };
+            const result = new SuccessResponse(user, "用户创建成功");
+            return JSON.stringify(result);
         }, {
-            body: t.Object({
-                email: t.String({
-                    description: "邮箱地址",
-                    format: "email",
-                    minLength: 1
-                }),
-                password: t.String({
-                    description: "密码",
-                    minLength: 6
-                })
+            body: z.object({
+                email: z.string().email(),
+                password: z.string().min(6)
             })
+            // body: t.Object({
+            //     email: t.String({
+            //         description: "邮箱地址",
+            //         format: "email",
+            //         minLength: 1
+            //     }),
+            //     password: t.String({
+            //         description: "密码",
+            //         minLength: 6
+            //     })
+            // })
         })
         .post("/login", async ({ body, jwt }) => {
             // 生成 token
