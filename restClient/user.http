@@ -20,7 +20,7 @@ POST {{base}}/register
 Content-Type: application/json
 
 {
-    "username": "admin",
+    "email": "admin99@163.com",
     "password": "123456"
 }
 

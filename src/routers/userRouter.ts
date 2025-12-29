@@ -21,12 +21,6 @@ export const userRouter = new Elysia()
                 ]
             };
         })
-        .guard({
-            query: t.Object({
-                name: t.String()
-            })
-        })
-        .get('/query', ({ query }) => query.name)
         // GET /api/users/:id - 获取单个用户
         .get("/:id", ({ params }) => {
             return {
@@ -34,25 +28,42 @@ export const userRouter = new Elysia()
                 name: `用户 ${params.id}`
             };
         })
-        .guard({
-            body: t.Object({
-                email: t.String(),
-                password: t.String()
-            })
-        })
-        // POST /api/users - 创建用户
+        // POST /api/users/register - 注册用户（需要 email 和 password）
         .post("/register", async ({ body }) => {
-            // const user = await prisma.user.create({
-            //     data: {
-            //         email: body.email,
-            //         password: body.password
-            //     }
-            // });
+            const userExisted = await prisma.user.findFirst({
+                where: {
+                    email: body.email
+                }
+            })
+            if (userExisted) {
+                return {
+                    message: "用户已存在",
+                    user: userExisted
+                }
+            }
+            const user = await prisma.user.create({
+                data: {
+                    email: body.email,
+                    password: body.password
+                }
+            });
 
             return {
                 message: "用户创建成功",
-                user: 'user'
+                user
             };
+        }, {
+            body: t.Object({
+                email: t.String({
+                    description: "邮箱地址",
+                    format: "email",
+                    minLength: 1
+                }),
+                password: t.String({
+                    description: "密码",
+                    minLength: 6
+                })
+            })
         })
         .post("/login", async ({ body, jwt }) => {
             // 生成 token
