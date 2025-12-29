@@ -3,6 +3,7 @@ import prisma from "../utils/prisma";
 import { jwt } from '@elysiajs/jwt'
 import { errorCode, ErrorResponse, SuccessResponse } from "../models/Response";
 import { z } from "zod";
+import { ZodError } from "zod";
 
 // 使用 group 创建用户相关的路由组
 export const userRouter = new Elysia()
@@ -32,15 +33,6 @@ export const userRouter = new Elysia()
         })
         // POST /api/users/register - 注册用户（需要 email 和 password）
         .post("/register", async ({ body }) => {
-            const userExisted = await prisma.user.findFirst({
-                where: {
-                    email: body.email
-                }
-            })
-            if (userExisted) {
-                const result= new ErrorResponse(errorCode.EMAIL_EXISTED, "用户已存在");
-                return JSON.stringify(result);
-            }
             const user = await prisma.user.create({
                 data: {
                     email: body.email,
@@ -54,7 +46,27 @@ export const userRouter = new Elysia()
             body: z.object({
                 email: z.string().email(),
                 password: z.string().min(6)
-            })
+            }),
+            beforeHandle: async ({ body }) => {
+                // 检查邮箱是否已存在
+                const userExisted = await prisma.user.findFirst({
+                    where: {
+                        email: body.email,
+                        password: body.password
+                    }
+                });
+                
+                if (userExisted) {
+                    // 抛出 zod 异常，使用自定义错误消息
+                    throw new ZodError([
+                        {
+                            code: "custom",
+                            path: ["email"],
+                            message: "邮箱已存在"
+                        }
+                    ]);
+                }
+            }
             // body: t.Object({
             //     email: t.String({
             //         description: "邮箱地址",
@@ -68,17 +80,28 @@ export const userRouter = new Elysia()
             // })
         })
         .post("/login", async ({ body, jwt }) => {
+            const userExisted = await prisma.user.findFirst({
+                where: {
+                    email: body.email,
+                    password: body.password
+                }
+            })
+            if (!userExisted) {
+                const result = new ErrorResponse(errorCode.USER_NOT_FOUND, "用户不存在");
+                return JSON.stringify(result);
+            }
             // 生成 token
             const token = await jwt.sign({
-                userId: 1,
-                username: "john",
+                userId: userExisted.id,
+                username: userExisted.username,
             });
 
-            return {
-                success: true,
-                message: "用户登录成功",
-                token: token
-            };
+            return JSON.stringify(new SuccessResponse<string>(token, "用户登录成功"));
+        }, {
+            body: z.object({
+                email: z.string().email(),
+                password: z.string().min(6)
+            })
         })
         // PUT /api/users/:id - 更新用户
         .put("/:id", async ({ params, body }) => {

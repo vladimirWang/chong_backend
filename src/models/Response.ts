@@ -23,4 +23,5 @@ export class ErrorResponse<T> extends Response<T> {
 export const errorCode = {
     EMAIL_EXISTED: 10001, // 邮箱已存在
     VALIDATION_ERROR: 10002, // 校验失败
+    USER_NOT_FOUND: 10003, // 用户不存在
 }

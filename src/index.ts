@@ -4,13 +4,28 @@ import "dotenv/config";
 import { userRouter, postRouter } from "./routers";
 import { ErrorResponse, errorCode } from "./models/Response";
 import { ValidationError } from "elysia";
+import { ZodError } from "zod";
 
 // 创建主应用并注册所有路由模块
 const app = new Elysia()
     .get("/", () => "Hello Elysia")
     // 全局错误处理 - 拦截 zod 校验异常
     .onError(({ code, error }) => {
-        // 处理 zod 校验错误
+        // 直接处理 ZodError（包括在 beforeHandle 中抛出的）
+        if (error instanceof ZodError) {
+            const errorMessages = error.issues.map((issue) => issue.message);
+            const errorMessage = errorMessages.length > 0 
+                ? errorMessages.join(', ') 
+                : "校验失败";
+            
+            const result = new ErrorResponse(errorCode.VALIDATION_ERROR, errorMessage);
+            return new Response(JSON.stringify(result), {
+                status: 400,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+        
+        // 处理 Elysia 的 VALIDATION 错误（zod schema 校验失败）
         if (code === 'VALIDATION') {
             // 提取 zod 错误信息
             let errorMessage = "校验失败";
