@@ -1,15 +1,15 @@
 {
-  "name": "chong_backend",
-  "module": "index.ts",
-  "type": "module",
-  "private": true,
+  "name": "app",
+  "version": "1.0.50",
   "scripts": {
-    "dev": "bun index.ts"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "bun run --watch src/index.ts"
+  },
+  "dependencies": {
+    "elysia": "latest"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "bun-types": "latest"
   },
-  "peerDependencies": {
-    "typescript": "^5"
-  }
+  "module": "src/index.js"
 }
