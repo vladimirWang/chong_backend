@@ -13,7 +13,7 @@ export const userRouter = new Elysia()
             secret: 'Fischl von Luftschloss Narfidort'
         })
     )
-    .group("/api/users", (app) => {
+    .group("/api/user", (app) => {
     return app
         // GET /api/users - 获取用户列表
         .get("/", () => {

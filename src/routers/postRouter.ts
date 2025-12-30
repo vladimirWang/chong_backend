@@ -1,7 +1,7 @@
 import { Elysia } from "elysia";
 
 // 文章相关路由模块
-export const postRouter = new Elysia().group("/api/posts", (app) => {
+export const postRouter = new Elysia().group("/api/post", (app) => {
     return app
         // GET /api/posts - 获取文章列表
         .get("/", () => {

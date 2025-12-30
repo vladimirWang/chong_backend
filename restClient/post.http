@@ -1,0 +1,28 @@
+@userBase=http://localhost:3000/api/user
+@postBase=http://localhost:3000/api/post
+### userList
+GET {{userBase}}
+userBase
+### userList
+GET {{userBase}}/query?name=john
+
+### userLogin
+POST {{userBase}}/login
+Content-Type: application/json
+
+{
+    "username": "admin",
+    "password": "123456"
+}
+
+###  userRegister
+POST {{userBase}}/register
+Content-Type: application/json
+
+{
+    "email": "admin99@163.com",
+    "password": "123456"
+}
+
+### jwt test
+GET http://localhost:3000/sign/mike
