@@ -55,7 +55,7 @@ export const vendorRouter = new Elysia()
         // POST /api/posts - 创建供应商
         .post("/", async ({ body }) => {
             const {name, remark} = body;
-            const vendor =  await prisma.vendor.create({
+            const vendor =  await prisma.Vendor.create({
                 data: {
                     name,
                     remark
@@ -69,7 +69,7 @@ export const vendorRouter = new Elysia()
             }),
             beforeHandle: async({body}) => {
                 // 检查品牌是否已存在
-                const userExisted = await prisma.vendor.findFirst({
+                const userExisted = await prisma.Vendor.findFirst({
                     where: {
                         name: body.name,
                         // password: body.password
@@ -90,9 +90,9 @@ export const vendorRouter = new Elysia()
         })
         // PUT /api/posts/:id - 更新文章
         .get("/byId/:id", async ({ params, body }) => {
-            const vendor = await prisma.vendor.findUnique({
+            const vendor = await prisma.Vendor.findUnique({
                 where: {
-                    id: Number(params.id)
+                    id: params.id
                 },
                 include: {
                     products: true
