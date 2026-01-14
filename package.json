@@ -6,6 +6,8 @@
     "dev": "bun run --watch src/index.ts"
   },
   "dependencies": {
+    "@elysiajs/jwt": "^1.4.0",
+    "dotenv": "^17.2.3",
     "elysia": "latest",
     "prisma": "6.5.0",
     "zod": "^4.2.1"

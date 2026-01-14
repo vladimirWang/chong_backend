@@ -74,6 +74,15 @@ const app = new Elysia()
             });
         }
         
+        // 处理 404 错误（路由不存在）
+        if (code === 'NOT_FOUND') {
+            const result = new ErrorResponse(errorCode.NOT_FOUND, "路由不存在");
+            return new Response(JSON.stringify(result), {
+                status: 404,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+        
         // 其他错误继续抛出
         throw error;
     })
