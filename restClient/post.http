@@ -1,28 +1,47 @@
-@userBase=http://localhost:3000/api/user
+@authUrl=http://localhost:3000/api/user/login
 @postBase=http://localhost:3000/api/post
-### userList
-GET {{userBase}}
-userBase
-### userList
-GET {{userBase}}/query?name=john
+@base=http://localhost:3000/api
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjYsInVzZXJuYW1lIjpudWxsLCJpYXQiOjE3NjgzNjI5Nzd9.xpBzfCeVPy7YJrQmP9mfHof7JK6ADLz3kV5WKfIBung
 
-### userLogin
-POST {{userBase}}/login
+## 登录拿token
+# @name loginAPI
+POST {{base}}/user/login
 Content-Type: application/json
 
 {
-    "username": "admin",
-    "password": "123456"
+    "password": "123456",
+    "email": "123456@qq.com"
 }
 
-###  userRegister
-POST {{userBase}}/register
+
+### userList
+GET http://localhost:3000/api/post?cookie={{token}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-    "email": "admin99@163.com",
-    "password": "123456"
+    "cookie": "auth="
 }
+### userList
+# GET {{userBase}}/query?name=john
 
-### jwt test
-GET http://localhost:3000/sign/mike
+# ### userLogin
+# POST {{userBase}}/login
+# Content-Type: application/json
+
+# {
+#     "username": "admin",
+#     "password": "123456"
+# }
+
+# ###  userRegister
+# POST {{userBase}}/register
+# Content-Type: application/json
+
+# {
+#     "email": "admin99@163.com",
+#     "password": "123456"
+# }
+
+# ### jwt test
+# GET http://localhost:3000/sign/mike
