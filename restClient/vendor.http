@@ -1,25 +1,18 @@
 @authUrl=http://localhost:3000/api/user/login
 @base=http://localhost:3000/api/vendor
-@token =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiI0MTMxMTQ0QHFxLmNvbSIsInVzZXJuYW1lIjoibWlrMTEyIiwiYXZhdGFyIjoiMTIzMTIiLCJjcmVhdGVBdCI6IjIwMjUtMDEtMjVUMDU6MjM6NDcuNDU4WiIsInVwZGF0ZUF0IjoiMjAyNS0wMi0wMlQyMzowOTo1Ny4wMjVaIiwiaWF0IjoxNzM4NTUwOTAyLCJleHAiOjE3Mzg2MzczMDJ9.jPCKGmaEOLe-JrITR8-whbYfoS3r-Xf1y8JOVVrCOK4
-
-## 登录拿token
-POST {{authUrl}}
-Content-Type: application/json
-{
-    "password": "123456",
-    "email": "123456@qq.com"
-}
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjMsInVzZXJuYW1lIjpudWxsLCJpYXQiOjE3NjgzNzEyMzF9._UHLjdPaw8Jflub1WlR5d33drnfUE5AA6_OqqH1psog
 
 ### brand list
-GET {{base}}
+GET {{base}}?name=nike&limit=2&page=3
 Authorization: Bearer {{token}}
 
 ### create brand
 POST {{base}}
 Content-Type: application/json
+Authorization: {{token}}
 
 {
-    "name": "polo"
+    "name": "nike3"
 }
 
 ### get data by id

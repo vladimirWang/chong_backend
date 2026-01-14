@@ -1,10 +1,9 @@
 @authUrl=http://localhost:3000/api/user/login
 @postBase=http://localhost:3000/api/post
 @base=http://localhost:3000/api
-@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjYsInVzZXJuYW1lIjpudWxsLCJpYXQiOjE3NjgzNjUzMjN9.xgLCMTF7CAKCpgb83FqBuWZ9OaqVv9-t_wwRVCESBSU
 
-## 登录拿token
 # @name loginAPI
+## 登录拿token
 POST {{base}}/user/login
 Content-Type: application/json
 
@@ -12,12 +11,16 @@ Content-Type: application/json
     "password": "123456",
     "email": "123456@qq.com"
 }
+### 获取token
+@token = {{loginAPI.response.body.&.data}}
+@msg = {{loginAPI.request.body.$.email}}
+# @token={{response.body.$.data.data}}
+# @token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjYsInVzZXJuYW1lIjpudWxsLCJpYXQiOjE3NjgzNjY0NjZ9.rKGTs5qU3t9WegL1ptLwbbwcAHTmPtuJxwF1ncAPkJA
 
 
 ### 获取文章列表
-GET {{postBase}}?cookie=test
+GET {{postBase}}?cookie={{msg}}
 Authorization: {{token}}
-### userList
 # GET {{userBase}}/query?name=john
 
 # ### userLogin

@@ -4,4 +4,5 @@
  */
 export { userRouter } from "./userRouter";
 export { postRouter } from "./postRouter";
+export { vendorRouter } from "./vendorRouter";
 

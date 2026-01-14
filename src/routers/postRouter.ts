@@ -18,7 +18,7 @@ export const postRouter = new Elysia()
         .get("/", async (
             {query, jwt, status, headers: { authorization }}
         ) => {
-        
+    
         const profile = await jwt.verify(authorization)
 
         if (!profile){
