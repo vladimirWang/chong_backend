@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,12 +7,76 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id    Int     @id @default(autoincrement())
-  email String  @unique
-  username String?
-  password String
-  avatar String?
+model Vendor {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique
+  isDel     Boolean   @default(false)
+  remark    String?
+  products  Product[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+  imports   Import[]
 }
+
+model Import {
+  id           Int      @id @default(autoincrement())
+  isDel        Boolean  @default(false)
+  remark       String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  purchaseDate DateTime @db.Date // 
+  price        Int
+  count        Int
+  productId    Int?
+  product      Product? @relation(fields: [productId], references: [id])
+  vendorId     Int? // 供应商
+  vendor       Vendor?  @relation(fields: [vendorId], references: [id])
+  // ImportProduct ImportProduct[]
+}
+
+model Product {
+  id       Int      @id @default(autoincrement())
+  name     String   @unique
+  img      String?
+  vendorId Int?
+  remark   String?
+  balance  Int?     @default(0) @db.UnsignedSmallInt
+  isDel    Boolean  @default(false)
+  createAt DateTime @default(now())
+  updateAt DateTime @updatedAt
+  // imports  ImportProduct[]
+  Vendor   Vendor?  @relation(fields: [vendorId], references: [id])
+  Import   Import[]
+  price    Int? // 售价
+  cost     Int? // 成本价
+  // ImportProduct ImportProduct[]
+
+  @@index([vendorId], map: "Product_brandId_fkey")
+}
+
+model User {
+  id       Int      @id @default(autoincrement())
+  email    String   @unique
+  username String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  password String
+  avatar   String?
+}
+
+// model ImportProduct {
+//   id        Int      @id @default(autoincrement())
+//   productId Int
+//   importId  Int
+//   price     Int      @db.UnsignedSmallInt
+//   count     Int      @db.UnsignedSmallInt
+//   remark    String?
+//   isDel     Boolean  @default(false)
+//   createAt  DateTime @default(now())
+//   updateAt  DateTime @updatedAt
+//   import    Import   @relation(fields: [importId], references: [id])
+//   product   Product  @relation(fields: [productId], references: [id])
+
+//   @@unique([productId, importId])
+//   @@index([importId], map: "ImportProduct_importId_fkey")
+// }
