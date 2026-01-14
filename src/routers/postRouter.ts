@@ -18,12 +18,13 @@ export const postRouter = new Elysia()
         .get("/", async (
             {query, jwt, status, headers: { authorization }}
         ) => {
-        console.log("body: ", authorization)
+        
         const profile = await jwt.verify(authorization)
 
         if (!profile){
-            return status(401, 'Unauthorized')
+            return status(401, 'Unauthorized: Invalid token')
         }
+        console.log("token verified: ", profile)
             return {
                 posts: [
                     { id: 1, title: "第一篇文章", content: "内容..." },

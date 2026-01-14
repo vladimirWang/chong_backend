@@ -1,7 +1,7 @@
 @authUrl=http://localhost:3000/api/user/login
 @postBase=http://localhost:3000/api/post
 @base=http://localhost:3000/api
-@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjYsInVzZXJuYW1lIjpudWxsLCJpYXQiOjE3NjgzNjI5Nzd9.xpBzfCeVPy7YJrQmP9mfHof7JK6ADLz3kV5WKfIBung
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjYsInVzZXJuYW1lIjpudWxsLCJpYXQiOjE3NjgzNjUzMjN9.xgLCMTF7CAKCpgb83FqBuWZ9OaqVv9-t_wwRVCESBSU
 
 ## 登录拿token
 # @name loginAPI
@@ -14,14 +14,9 @@ Content-Type: application/json
 }
 
 
-### userList
-GET http://localhost:3000/api/post?cookie={{token}}
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-{
-    "cookie": "auth="
-}
+### 获取文章列表
+GET {{postBase}}?cookie=test
+Authorization: {{token}}
 ### userList
 # GET {{userBase}}/query?name=john
 
