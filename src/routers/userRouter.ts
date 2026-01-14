@@ -4,13 +4,14 @@ import { jwt } from '@elysiajs/jwt'
 import { errorCode, ErrorResponse, SuccessResponse } from "../models/Response";
 import { z } from "zod";
 import { ZodError } from "zod";
+const { JWT_SECRET } = process.env;
 
 // 使用 group 创建用户相关的路由组
 export const userRouter = new Elysia()
     .use(
         jwt({
             name: 'jwt',
-            secret: 'Fischl von Luftschloss Narfidort'
+            secret: JWT_SECRET!
         })
     )
     .group("/api/user", (app) => {
