@@ -10,6 +10,10 @@ POST {{base}}
 Content-Type: application/json
 
 {
-    "name": "beer",
-    "vendorId": 1
+    "name": "beer4",
+    "vendorId": 3
 }
+
+
+### 根据id获取产品
+GET {{base}}/getProductById/3
