@@ -53,7 +53,7 @@ export const userRouter = new Elysia()
                 const userExisted = await prisma.user.findFirst({
                     where: {
                         email: body.email,
-                        password: body.password
+                        // password: body.password
                     }
                 });
                 
