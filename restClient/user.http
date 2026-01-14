@@ -1,28 +1,71 @@
-@base=http://localhost:3000/api/users
+@base=http://localhost:3000/api
+@token =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiI0MTMxMTQ0QHFxLmNvbSIsInVzZXJuYW1lIjoibWlrMTEyIiwiYXZhdGFyIjoiMTIzMTIiLCJjcmVhdGVBdCI6IjIwMjUtMDEtMjVUMDU6MjM6NDcuNDU4WiIsInVwZGF0ZUF0IjoiMjAyNS0wMi0wMlQyMzowOTo1Ny4wMjVaIiwiaWF0IjoxNzM4NTUwOTAyLCJleHAiOjE3Mzg2MzczMDJ9.jPCKGmaEOLe-JrITR8-whbYfoS3r-Xf1y8JOVVrCOK4
 
-### userList
-GET {{base}}
+### user list
+GET {{base}}/user
+Authorization: Bearer {{token}}
 
-### userList
-GET {{base}}/query?name=john
-
-### userLogin
-POST {{base}}/login
+### user register           done
+POST {{base}}/user/register
 Content-Type: application/json
 
 {
-    "username": "admin",
-    "password": "123456"
+    "username": "123456",
+    "password": "123456",
+    "email": "123456@qq.com"
 }
 
-###  userRegister
-POST {{base}}/register
+### user login             done
+POST {{base}}/user/login
 Content-Type: application/json
 
 {
-    "email": "admin99@163.com",
-    "password": "123456"
+    "password": "123123",
+    "email": "4131144@qq.com"
 }
 
-### jwt test
-GET http://localhost:3000/sign/mike
+
+### user list
+GET {{base}}/user
+Authorization: Bearer {{token}}
+
+### user info
+GET {{base}}/user/info
+Authorization: Bearer {{token}}
+
+### user update
+PUT {{base}}/user
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "username": "1234567890"
+}
+
+### user avatar
+POST {{base}}/avatar
+Authorization: Bearer {{token}}
+
+### user avatar
+POST {{base}}/user/avatar
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="text"
+
+avatar
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="image"; filename="1.png"
+Content-Type: image/png
+
+< ./user.http
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### user info
+GET {{base}}/user/1
+Authorization: Bearer {{token}}
+
+### user current
+GET {{base}}/user/current
+Authorization: Bearer {{token}}

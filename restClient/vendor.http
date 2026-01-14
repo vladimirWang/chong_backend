@@ -1,0 +1,27 @@
+@authUrl=http://localhost:3000/api/user/login
+@base=http://localhost:3000/api/vendor
+@token =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiI0MTMxMTQ0QHFxLmNvbSIsInVzZXJuYW1lIjoibWlrMTEyIiwiYXZhdGFyIjoiMTIzMTIiLCJjcmVhdGVBdCI6IjIwMjUtMDEtMjVUMDU6MjM6NDcuNDU4WiIsInVwZGF0ZUF0IjoiMjAyNS0wMi0wMlQyMzowOTo1Ny4wMjVaIiwiaWF0IjoxNzM4NTUwOTAyLCJleHAiOjE3Mzg2MzczMDJ9.jPCKGmaEOLe-JrITR8-whbYfoS3r-Xf1y8JOVVrCOK4
+
+## 登录拿token
+POST {{authUrl}}
+Content-Type: application/json
+{
+    "password": "123456",
+    "email": "123456@qq.com"
+}
+
+### brand list
+GET {{base}}
+Authorization: Bearer {{token}}
+
+### create brand
+POST {{base}}
+Content-Type: application/json
+
+{
+    "name": "polo"
+}
+
+### get data by id
+GET {{base}}/byId/1
+Authorization: Bearer {{token}}

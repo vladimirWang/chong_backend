@@ -1,0 +1,15 @@
+@base=http://localhost:3000/api/product
+@token =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiIxMjM0NTZAcXEuY29tIiwidXNlcm5hbWUiOiIxMjM0NTYiLCJjcmVhdGVBdCI6IjIwMjUtMDItMTRUMDk6MTA6MTQuMDMwWiIsInVwZGF0ZUF0IjoiMjAyNS0wMi0xNFQwOToxMDoxNC4wMzBaIiwiYXZhdGFyIjpudWxsLCJpYXQiOjE3Mzk1MjQyMjgsImV4cCI6MTczOTYxMDYyOH0.CUanDrZHUfDFkt4IkdI5miNxYM_RwL8D40EL0qEtO88
+
+### user list
+GET {{base}}?limit=10&page=1&name=beer
+Authorization: Bearer {{token}}
+
+### create product
+POST {{base}}
+Content-Type: application/json
+
+{
+    "name": "beer",
+    "vendorId": 1
+}
