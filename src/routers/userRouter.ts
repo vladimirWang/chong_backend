@@ -34,14 +34,28 @@ export const userRouter = new Elysia()
         })
         // POST /api/users/register - 注册用户（需要 email 和 password）
         .post("/register", async ({ body }) => {
+            // console.log("register body: ", prisma.User)
+            // return {code: '1'}
             const user = await prisma.User.create({
                 data: {
                     email: body.email,
                     password: body.password
-                }
+                },
+                // select: [
+                //     'id',
+                //     "email",
+                //     "username",
+                //     "createdAt"
+                // ]
             });
 
-            const result = new SuccessResponse(user, "用户创建成功");
+            const userCreated = {
+                id: user.id,
+                email: user.email,
+                username: user.username,
+                createdAt: user.createdAt
+            }
+            const result = new SuccessResponse(userCreated, "用户创建成功");
             return JSON.stringify(result);
         }, {
             body: z.object({
