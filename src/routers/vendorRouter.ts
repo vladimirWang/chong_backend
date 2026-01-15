@@ -45,12 +45,17 @@ export const vendorRouter = new Elysia()
         }
         )
         // GET /api/posts/:id - 获取单个文章
-        .get("/:id", ({ params, status, cookie: {auth} }) => {
-            return {
-                id: params.id,
-                title: `1文章 ${params.id}`,
-                content: "文章内容..."
-            };
+        .get("/:id", async ({ params, status, cookie: {auth} }) => {
+            const vendor = await prisma.Vendor.findUnique({
+                where: {
+                    id: params.id
+                }
+            });
+            return JSON.stringify(new SuccessResponse<string>(vendor, "供应商获取成功"));
+        }, {
+            params: z.object({
+                id: z.coerce.number()
+            })
         })
         // POST /api/posts - 创建供应商
         .post("/", async ({ body }) => {
@@ -113,6 +118,26 @@ export const vendorRouter = new Elysia()
             return {
                 message: `文章 ${params.id} 删除成功`
             };
-        });
+        }).put('/:id', async ({ params, body }) => {
+            const { name, remark } = body;
+            const updatedVendor = await prisma.Vendor.update({
+                where: {
+                    id: params.id
+                },
+                data: {
+                    name,
+                    remark
+                }
+            });
+            return JSON.stringify(new SuccessResponse<string>(updatedVendor, "供应商更新成功"));
+        }, {
+            params: z.object({
+                id: z.coerce.number()
+            }),
+            body: z.object({
+                name: z.string().min(2).optional(),
+                remark: z.string().optional()
+            })
+        })
 });
 
