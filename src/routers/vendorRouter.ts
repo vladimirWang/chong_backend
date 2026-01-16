@@ -9,17 +9,11 @@ const { JWT_SECRET } = process.env;
 
 // 供应商相关路由模块
 export const vendorRouter = new Elysia()
-    .use(
-        jwt({
-            name: 'jwt',
-            secret: JWT_SECRET!
-        })
-    )
     .group("/api/vendor", (app) => {
     return app
         // GET /api/posts - 获取文章列表
         .get("/", async (
-            {query, jwt, status, headers: { authorization }}
+            {query, status, headers: { authorization }}
         ) => {
             const { limit = 10, page = 1, name, pagination = true } = query;
             const {skip, take} = getPaginationValues({limit, page});

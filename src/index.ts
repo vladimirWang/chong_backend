@@ -5,6 +5,9 @@ import { userRouter, postRouter, vendorRouter, productRouter, stockInRouter } fr
 import { ErrorResponse, errorCode } from "./models/Response";
 import { ValidationError } from "elysia";
 import { ZodError } from "zod";
+import { authPlugin } from "./macro/auth.macro";
+import { jwt } from '@elysiajs/jwt'
+const { JWT_SECRET } = process.env;
 
 // 创建主应用并注册所有路由模块
 const app = new Elysia()
@@ -85,6 +88,16 @@ const app = new Elysia()
         
         // 其他错误继续抛出
         throw error;
+    })
+    .use(
+        jwt({
+            name: 'jwt',
+            secret: JWT_SECRET!
+        })
+    )
+    .use(authPlugin)
+    .get("/hi", () => 'hi2', {
+        auth: true
     })
     // 使用 .use() 方法整合路由模块
     // 每个路由模块会自动添加其 group 前缀
