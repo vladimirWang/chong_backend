@@ -7,33 +7,36 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// 供应商
 model Vendor {
   id        Int       @id @default(autoincrement())
   name      String    @unique
-  isDel     Boolean   @default(false)
+  deletedAt     DateTime?
   remark    String?
   products  Product[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
-  imports   Import[]
+  imports   StockIn[]
 }
 
-model Import {
+// 进货
+model StockIn {
   id           Int      @id @default(autoincrement())
-  isDel        Boolean  @default(false)
   remark       String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
-  purchaseDate DateTime @db.Date // 
-  price        Int
-  count        Int
+  deletedAt     DateTime?
+  cost        Int //  进货价
+  count        Int // 数量
   productId    Int?
   product      Product? @relation(fields: [productId], references: [id])
   vendorId     Int? // 供应商
   vendor       Vendor?  @relation(fields: [vendorId], references: [id])
   // ImportProduct ImportProduct[]
+	// @@map("StockIn")
 }
 
+// 商品
 model Product {
   id       Int      @id @default(autoincrement())
   name     String   @unique
@@ -41,12 +44,12 @@ model Product {
   vendorId Int?
   remark   String?
   balance  Int?     @default(0) @db.UnsignedSmallInt
-  isDel    Boolean  @default(false)
+  deletedAt     DateTime?
   createAt DateTime @default(now())
   updateAt DateTime @updatedAt
   // imports  ImportProduct[]
   Vendor   Vendor?  @relation(fields: [vendorId], references: [id])
-  Import   Import[]
+  StockIn   StockIn[]
   price    Int? // 售价
   cost     Int? // 成本价
   // ImportProduct ImportProduct[]
@@ -54,6 +57,7 @@ model Product {
   @@index([vendorId], map: "Product_brandId_fkey")
 }
 
+// 用户
 model User {
   id       Int      @id @default(autoincrement())
   email    String   @unique
@@ -71,7 +75,7 @@ model User {
 //   price     Int      @db.UnsignedSmallInt
 //   count     Int      @db.UnsignedSmallInt
 //   remark    String?
-//   isDel     Boolean  @default(false)
+//   deletedAt     DateTime?
 //   createAt  DateTime @default(now())
 //   updateAt  DateTime @updatedAt
 //   import    Import   @relation(fields: [importId], references: [id])
