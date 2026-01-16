@@ -21,15 +21,15 @@ export const vendorRouter = new Elysia()
         .get("/", async (
             {query, jwt, status, headers: { authorization }}
         ) => {
-            const { limit, page, name } = query;
+            const { limit = 10, page = 1, name, pagination = true } = query;
             const {skip, take} = getPaginationValues({limit, page});
             console.log("------cookie: =======================", typeof limit, typeof page, name)
 
             // 查询条件
             const whereValues = getWhereValues({ name });
             const vendors = await  prisma.Vendor.findMany({
-                skip,
-                take,
+                skip: pagination ? skip: undefined,
+                take: pagination ? take: undefined,
                 where: whereValues
             });
             const total = await prisma.Vendor.count({ where: whereValues });
@@ -38,6 +38,7 @@ export const vendorRouter = new Elysia()
         }, 
         {
             query: z.object({
+                pagination: z.coerce.boolean().optional(),
                 limit: z.coerce.number().optional(),
                 page: z.coerce.number().optional(),
                 name: z.string().optional()

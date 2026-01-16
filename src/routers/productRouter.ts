@@ -46,13 +46,17 @@ export const productRouter = new Elysia()
             }),
         }
         )
-        // GET /api/posts/:id - 获取单个文章
-        .get("/:id", ({ params, status, cookie: {auth} }) => {
-            return {
-                id: params.id,
-                title: `1文章 ${params.id}`,
-                content: "文章内容..."
-            };
+        .get("/:id", async ({ params, status, cookie: {auth} }) => {
+           const res = await prisma.Product.findUnique({
+            where: {
+                id: params.id
+            }
+           })
+           return JSON.stringify(new SuccessResponse(res, "产品信息查询成功"))
+        }, {
+            params: z.object({
+                id: z.coerce.number()
+            })
         })
         // POST /api/posts - 创建产品
         .post("/", async ({ body }) => {
@@ -92,27 +96,52 @@ export const productRouter = new Elysia()
                 }
             }
         })
-        // PUT /api/posts/:id - 更新文章
-        .get("/getProductById/:id", async ({ params, body }) => {
-            const vendor = await prisma.Product.findUnique({
+        .patch("/:id", async ({ params, body }) => {
+            const {price, cost, name, remark, img} = body;
+            const product = await prisma.Product.update({
                 where: {
                     id: params.id
                 },
-                include: {
-                    Vendor: true
+                data: {
+                    name,
+                    cost,
+                    remark,
+                    img,
+                    price
                 }
             });
-            return JSON.stringify(new SuccessResponse<string>(vendor, "供应商获取成功"));
-            // return {
-            //     message: `文章 ${params.id} 更新成功`,
-            //     post: { id: params.id, ...(body as Record<string, any>) }
-            // };
+            return JSON.stringify(new SuccessResponse<string>(product, "产品更新成功"));
         }, {
             params: z.object({
                 id: z.coerce.number()
-            })
+            }),
+            body: z.object({
+                price: z.number().optional(), 
+                cost: z.number().optional(), 
+                name: z.string().optional(), 
+                remark: z.string().optional(), 
+                img: z.string().optional(),
+            }),
+            beforeHandle: async ({params})=> {
+                const productExisted = await prisma.Product.findUnique({
+                    where: {
+                        id: params.id,
+                        // password: body.password
+                    }
+                });
+                
+                if (!productExisted) {
+                    // 抛出 zod 异常，使用自定义错误消息
+                    throw new ZodError([
+                        {
+                            code: "custom",
+                            path: ["id"],
+                            message: "产品不存在"
+                        }
+                    ]);
+                }
+            }
         })
-        // DELETE /api/posts/:id - 删除文章
         .delete("/:id", ({ params }) => {
             return {
                 message: `文章 ${params.id} 删除成功`

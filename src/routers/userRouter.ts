@@ -82,17 +82,6 @@ export const userRouter = new Elysia()
                     ]);
                 }
             }
-            // body: t.Object({
-            //     email: t.String({
-            //         description: "邮箱地址",
-            //         format: "email",
-            //         minLength: 1
-            //     }),
-            //     password: t.String({
-            //         description: "密码",
-            //         minLength: 6
-            //     })
-            // })
         })
         .post("/login", async ({ body, jwt }) => {
             const userExisted = await prisma.user.findFirst({
