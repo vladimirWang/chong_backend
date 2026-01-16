@@ -6,4 +6,5 @@ export { userRouter } from "./userRouter";
 export { postRouter } from "./postRouter";
 export { vendorRouter } from "./vendorRouter";
 export { productRouter } from "./productRouter";
+export { stockInRouter } from "./stockInRouter";
 

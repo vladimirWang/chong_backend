@@ -1,7 +1,7 @@
 import { Elysia } from "elysia";
 import "dotenv/config";
 // 从 routers/index.ts 统一导入所有路由模块
-import { userRouter, postRouter, vendorRouter, productRouter } from "./routers";
+import { userRouter, postRouter, vendorRouter, productRouter, stockInRouter } from "./routers";
 import { ErrorResponse, errorCode } from "./models/Response";
 import { ValidationError } from "elysia";
 import { ZodError } from "zod";
@@ -92,6 +92,7 @@ const app = new Elysia()
     .use(postRouter)  // 注册 /api/posts/* 路由
     .use(vendorRouter)  // 注册 /api/vendor/* 路由
     .use(productRouter)  // 注册 /api/vendor/* 路由
+    .use(stockInRouter)  // 注册 /api/vendor/* 路由
     .listen(3000);
 
 console.log(
