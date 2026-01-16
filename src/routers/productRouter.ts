@@ -47,12 +47,18 @@ export const productRouter = new Elysia()
         }
         )
         // GET /api/posts/:id - 获取单个文章
-        .get("/:id", ({ params, status, cookie: {auth} }) => {
-            return {
-                id: params.id,
-                title: `1文章 ${params.id}`,
-                content: "文章内容..."
-            };
+        .get("/:id", async ({ params, status, cookie: {auth} }) => {
+            const product = await prisma.Product.findUnique({
+                where: {
+                    id: params.id
+                }
+            })
+            
+            return JSON.stringify(new SuccessResponse<string>(product, "产品查询成功"));
+        }, {
+            params: z.object({
+                id: z.coerce.number()
+            })
         })
         // POST /api/posts - 创建产品
         .post("/", async ({ body }) => {
@@ -64,7 +70,7 @@ export const productRouter = new Elysia()
                     vendorId
                 }
             })
-            return JSON.stringify(new SuccessResponse<string>(vendor, "供应商创建成功"));
+            return JSON.stringify(new SuccessResponse<string>(vendor, "产品创建成功"));
         }, {
             body: z.object({
                 name: z.string().min(2),
@@ -102,7 +108,7 @@ export const productRouter = new Elysia()
                     Vendor: true
                 }
             });
-            return JSON.stringify(new SuccessResponse<string>(vendor, "供应商获取成功"));
+            return JSON.stringify(new SuccessResponse<string>(vendor, "供应商查询成功"));
             // return {
             //     message: `文章 ${params.id} 更新成功`,
             //     post: { id: params.id, ...(body as Record<string, any>) }
@@ -117,6 +123,30 @@ export const productRouter = new Elysia()
             return {
                 message: `文章 ${params.id} 删除成功`
             };
-        });
+        }).put('/:id', async ({params, body}) => {
+            const {name, remark, price, cost} = body;
+            const result = await prisma.Product.update({
+                where: {
+                    id: params.id
+                },
+                data: {
+                    name,
+                    remark,
+                    price,
+                    cost
+                }
+            })
+            return JSON.stringify(new SuccessResponse<string>(result, "供应商更新成功"));
+        }, {
+            params: z.object({
+                id: z.coerce.number(),
+            }),
+            body: z.object({
+                name: z.string(),
+                remark: z.string(),
+                price: z.number(),
+                cost: z.number(),
+            })
+        })
 });
 
