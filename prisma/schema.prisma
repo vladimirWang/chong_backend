@@ -16,7 +16,7 @@ model Vendor {
   products  Product[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
-  imports   StockIn[]
+  // stockIns   StockIn[]
 }
 
 // 进货
@@ -26,14 +26,26 @@ model StockIn {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   deletedAt     DateTime?
-  cost        Int //  进货价
-  count        Int // 数量
-  productId    Int?
-  product      Product? @relation(fields: [productId], references: [id])
-  vendorId     Int? // 供应商
-  vendor       Vendor?  @relation(fields: [vendorId], references: [id])
+  totalPrice Int @db.UnsignedMediumInt // 订单总价
+  // cost        Int //  进货价
+  // count        Int // 数量
+  // productId    Int?
+  // product      Product? @relation(fields: [productId], references: [id])
+  // vendorId     Int? // 供应商
+  // vendor       Vendor?  @relation(fields: [vendorId], references: [id])
   // ImportProduct ImportProduct[]
 	// @@map("StockIn")
+  productJoinStockIn ProductJoinStockIn[]
+}
+
+model ProductJoinStockIn {
+  id Int @id @default(autoincrement())
+  stockInId Int
+  stockIn StockIn @relation(fields: [stockInId], references: [id])
+  productId Int
+  product Product @relation(fields: [productId], references: [id])
+  price Int @db.UnsignedSmallInt // 售价
+  count Int @db.UnsignedSmallInt // 数量
 }
 
 // 商品
@@ -49,10 +61,10 @@ model Product {
   updateAt DateTime @updatedAt
   // imports  ImportProduct[]
   Vendor   Vendor?  @relation(fields: [vendorId], references: [id])
-  StockIn   StockIn[]
+  // StockIn   StockIn[]
   price    Int? // 售价
   cost     Int? // 成本价
-  // ImportProduct ImportProduct[]
+  productJoinStockIn ProductJoinStockIn[]
 
   @@index([vendorId], map: "Product_brandId_fkey")
 }
@@ -68,19 +80,18 @@ model User {
   avatar   String?
 }
 
-// model ImportProduct {
+// model StockInProduct {
 //   id        Int      @id @default(autoincrement())
 //   productId Int
-//   importId  Int
+//   stockInId  Int
 //   price     Int      @db.UnsignedSmallInt
 //   count     Int      @db.UnsignedSmallInt
 //   remark    String?
 //   deletedAt     DateTime?
 //   createAt  DateTime @default(now())
 //   updateAt  DateTime @updatedAt
-//   import    Import   @relation(fields: [importId], references: [id])
+//   stockIn    StockIn   @relation(fields: [stockInId], references: [id])
 //   product   Product  @relation(fields: [productId], references: [id])
 
-//   @@unique([productId, importId])
-//   @@index([importId], map: "ImportProduct_importId_fkey")
+//   @@unique([productId, stockInId])
 // }
