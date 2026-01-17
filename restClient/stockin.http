@@ -1,4 +1,4 @@
-@base=http://localhost:3000/api/import
+@base=http://localhost:3000/api/stockin
 @token =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiI0MTMxMTQ0QHFxLmNvbSIsInVzZXJuYW1lIjoibWlrMTEyIiwiYXZhdGFyIjoiMTIzMTIiLCJjcmVhdGVBdCI6IjIwMjUtMDEtMjVUMDU6MjM6NDcuNDU4WiIsInVwZGF0ZUF0IjoiMjAyNS0wMi0wMlQyMzowOTo1Ny4wMjVaIiwiaWF0IjoxNzM4NTUwOTAyLCJleHAiOjE3Mzg2MzczMDJ9.jPCKGmaEOLe-JrITR8-whbYfoS3r-Xf1y8JOVVrCOK4
 
 ### user list
@@ -6,15 +6,31 @@ GET {{base}}?limit=10&page=1
 Authorization: Bearer {{token}}
 
 ### create import
-POST {{base}}
+POST {{base}}/single
 Content-Type: application/json
 
 {
     "remark": "importRemark",
-    "importProductRemark":"importProductRemark",
-    "price": 5, 
-    "count": 10, 
-    "productId": 4,
-    "purchaseDate": "2025-01-09",
-    "vendorId": 1
+    "price": 10, 
+    "count": 20,
+    "productId": 5
 }
+
+### create import
+POST {{base}}/multiple
+Content-Type: application/json
+
+[
+    {
+    "remark": "importRemark",
+    "price": 10, 
+    "count": 20,
+    "productId": 3
+    },
+    {
+        "remark": "importRemark",
+        "price": 10, 
+        "count": 20,
+        "productId": 3
+    }
+]
