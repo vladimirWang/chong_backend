@@ -20,17 +20,18 @@ Content-Type: application/json
 POST {{base}}/multiple
 Content-Type: application/json
 
-[
-    {
+{
     "remark": "importRemark",
-    "price": 10, 
-    "count": 20,
-    "productId": 3
-    },
-    {
-        "remark": "importRemark",
-        "price": 10, 
-        "count": 20,
-        "productId": 3
-    }
-]
+    "joinData": [
+        {
+            "price": 100, 
+            "count": 200,
+            "productId": 5
+        },
+        {
+            "price": 200, 
+            "count": 300,
+            "productId": 6
+        }
+    ]
+}
