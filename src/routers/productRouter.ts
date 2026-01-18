@@ -16,8 +16,13 @@ export const productRouter = new Elysia()
         .get(
           "/",
           async ({ query, status, headers: { authorization } }) => {
-            const { limit, page, name } = query;
-            const { skip, take } = getPaginationValues({ limit, page });
+            const { limit, page, name, pagination = true } = query;
+            let skip = undefined, take = undefined;
+            if (pagination) {
+              const paginationInfo = getPaginationValues({ limit, page });
+              skip = paginationInfo.skip;
+              take = paginationInfo.take;
+            }
 
             // 查询条件
             const whereValues = getWhereValues({ name });
@@ -41,7 +46,7 @@ export const productRouter = new Elysia()
               page: z.coerce.number().optional(),
               name: z.string().optional(),
             }),
-            auth: true
+            // auth: true
           }
         )
         .get(
