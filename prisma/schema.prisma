@@ -11,7 +11,7 @@ datasource db {
 model Vendor {
   id        Int       @id @default(autoincrement())
   name      String    @unique
-  deletedAt     DateTime?
+  deletedAt DateTime?
   remark    String?
   products  Product[]
   createdAt DateTime  @default(now())
@@ -21,12 +21,12 @@ model Vendor {
 
 // 进货
 model StockIn {
-  id           Int      @id @default(autoincrement())
-  remark       String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  deletedAt     DateTime?
-  totalCost Int @db.UnsignedMediumInt // 订单总价
+  id                 Int                  @id @default(autoincrement())
+  remark             String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  deletedAt          DateTime?
+  totalCost          Int                  @db.UnsignedMediumInt // 订单总价
   // cost        Int //  进货价
   // count        Int // 数量
   // productId    Int?
@@ -34,37 +34,37 @@ model StockIn {
   // vendorId     Int? // 供应商
   // vendor       Vendor?  @relation(fields: [vendorId], references: [id])
   // ImportProduct ImportProduct[]
-	// @@map("StockIn")
+  // @@map("StockIn")
   productJoinStockIn ProductJoinStockIn[]
 }
 
 model ProductJoinStockIn {
-  id Int @id @default(autoincrement())
+  id        Int     @id @default(autoincrement())
   stockInId Int
-  stockIn StockIn @relation(fields: [stockInId], references: [id])
+  stockIn   StockIn @relation(fields: [stockInId], references: [id])
   productId Int
-  product Product @relation(fields: [productId], references: [id])
-  cost Int @db.UnsignedSmallInt // 售价
-  count Int @db.UnsignedSmallInt // 数量
+  product   Product @relation(fields: [productId], references: [id])
+  cost      Int     @db.UnsignedSmallInt // 售价
+  count     Int     @db.UnsignedSmallInt // 数量
 }
 
 // 商品
 model Product {
-  id       Int      @id @default(autoincrement())
-  name     String   @unique
-  img      String?
-  vendorId Int
-  remark   String?
-  balance  Int?     @default(0) @db.UnsignedSmallInt
-  deletedAt     DateTime?
-  createAt DateTime @default(now())
-  updateAt DateTime @updatedAt
+  id                 Int                  @id @default(autoincrement())
+  name               String               @unique
+  img                String?
+  vendorId           Int
+  remark             String?
+  balance            Int?                 @default(0) @db.UnsignedSmallInt
+  deletedAt          DateTime?
+  createAt           DateTime             @default(now())
+  updateAt           DateTime             @updatedAt
   // imports  ImportProduct[]
-  Vendor   Vendor?  @relation(fields: [vendorId], references: [id])
+  Vendor             Vendor?              @relation(fields: [vendorId], references: [id])
   // StockIn   StockIn[]
-  latestPrice    Int? // 售价,只有进库后才有
-  latestCost     Int? // 成本价,只有进库后才有
-  productCode String? @db.VarChar(20) @unique // 只有进库后才有
+  latestPrice        Int? // 售价,只有进库后才有
+  latestCost         Int? // 成本价,只有进库后才有
+  productCode        String?              @unique @db.VarChar(20) // 只有进库后才有
   productJoinStockIn ProductJoinStockIn[]
 
   @@index([vendorId], map: "Product_brandId_fkey")
@@ -72,13 +72,13 @@ model Product {
 
 // 用户
 model User {
-  id       Int      @id @default(autoincrement())
-  email    String   @unique
-  username String?
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  username  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  password String
-  avatar   String?
+  password  String
+  avatar    String?
 }
 
 // model StockInProduct {

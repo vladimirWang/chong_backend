@@ -18,15 +18,15 @@ export const stockInRouter = new Elysia()
   .group("/api/stockin", (app) => {
     return app
       .get("/", async () => {
-        const result = await prisma.StockIn.findMany()
-        const total = await prisma.StockIn.count()
+        const result = await prisma.stockIn.findMany()
+        const total = await prisma.stockIn.count()
         return JSON.stringify(new SuccessResponse({list: result, total}, "进货记录新建成功"));
       })
       .post(
         "/single",
         async ({body}) => {
             const {productId, cost, count, remark} = body;
-          const res = await prisma.StockIn.create({
+          const res = await prisma.stockIn.create({
             data: {
                 remark,
               totalCost: cost * count,
@@ -55,7 +55,7 @@ export const stockInRouter = new Elysia()
             remark: z.string().optional(),
           }),
           beforeHandle: async ({ body }) => {
-            const productExisted = await prisma.Product.findUnique({
+            const productExisted = await prisma.product.findUnique({
               where: {
                 id: body.productId,
                 // password: body.password
@@ -85,7 +85,7 @@ export const stockInRouter = new Elysia()
           // 查询所有产品信息（包括 vendorId）
           const productIds = body.joinData.map((item) => item.productId);
           const uniqueProductIds = [...new Set(productIds)];
-          const products = await prisma.Product.findMany({
+          const products = await prisma.product.findMany({
             where: {
               id: {
                 in: uniqueProductIds,
@@ -98,11 +98,11 @@ export const stockInRouter = new Elysia()
           });
 
           // 创建产品 id 到产品信息的映射
-          const productMap = new Map<number, IProduct>(products.map((p: { id: number; vendorId: number | null }) => [p.id, p]));
+          const productMap = new Map<number, { id: number; vendorId: number | null }>(products.map((p: { id: number; vendorId: number | null }) => [p.id, p]));
 
           const results = await prisma.$transaction([
             // 创建进库记录
-            prisma.StockIn.create({
+            prisma.stockIn.create({
               data: {
                 remark: body.remark,
                 totalCost,
@@ -140,7 +140,7 @@ export const stockInRouter = new Elysia()
               const productCode = luhn(product!);
               updateData.productCode = productCode;
               
-              return prisma.Product.update({
+              return prisma.product.update({
                 data: updateData,
                 where: {
                   id: item.productId
@@ -167,7 +167,7 @@ export const stockInRouter = new Elysia()
             const productIds = body.joinData.map((item) => item.productId);
             const uniqueProductIds = [...new Set(productIds)];
             
-            const existingProducts = await prisma.Product.findMany({
+            const existingProducts = await prisma.product.findMany({
               where: {
                 id: {
                   in: uniqueProductIds,
@@ -197,7 +197,7 @@ export const stockInRouter = new Elysia()
       )
       .get("/:id", async ({ params }) => {
         const { id } = params;
-        const result = await prisma.StockIn.findUnique({
+        const result = await prisma.stockIn.findUnique({
           where: {
             id,
           },

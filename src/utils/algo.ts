@@ -36,7 +36,7 @@ export const numberPadLeft = (n: number, length: number, padChar: string = '0'):
 }
 
 // luhn算法
-export const luhn= (product: IProduct): string => {
+export const luhn= (product: IProduct | { id: number; vendorId: number }): string => {
     const date = dayjs().format('YYMMDD');
     // // <YYMMDD><vendorId><productId><validationNumber>
     const {id, vendorId} = product;
