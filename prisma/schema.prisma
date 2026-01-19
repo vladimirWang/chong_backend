@@ -64,6 +64,7 @@ model Product {
   // StockIn   StockIn[]
   price    Int? // 售价
   cost     Int? // 成本价
+  productCode String? @db.VarChar(20) @unique
   productJoinStockIn ProductJoinStockIn[]
 
   @@index([vendorId], map: "Product_brandId_fkey")
