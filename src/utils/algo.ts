@@ -5,7 +5,8 @@ export const sum = (arr: number[]) => {
     return arr.reduce((a, c) => a + c, 0);
 }
 
-export const getValidationNumber = (str: string) => {
+// 获取luhn算法的校验位
+export const getValidationNumber = (str: string): number => {
     // 优化1：纯数字校验
     if (!/^\d+$/.test(str)) {
         throw new Error("传入的字符串必须是纯数字格式");
@@ -27,20 +28,21 @@ export const getValidationNumber = (str: string) => {
     return result;
 }
 
-export const numberPadLeft = (n: number, length: number, padChar: string = '0') => {
+export const numberPadLeft = (n: number, length: number, padChar: string = '0'): string => {
     if (n < 0 || Math.floor(n) !== n) {
         throw new Error("待补零的数字必须是大于等于 0 的整数");
     }
     return (n+'').padStart(length, padChar);
 }
 
-
-export const luhn= (product: IProduct) => {
+// luhn算法
+export const luhn= (product: IProduct): string => {
     const date = dayjs().format('YYMMDD');
     // // <YYMMDD><vendorId><productId><validationNumber>
     const {id, vendorId} = product;
     const tmp = `${date}${numberPadLeft(vendorId, 4)}${numberPadLeft(id, 4)}`
     const validationNumber = getValidationNumber(tmp);
     // console.log("validationNumber---:", validationNumber)
+    // 221010 0001 0002 6 = 15位
     return `${tmp}${validationNumber}`;
 }
