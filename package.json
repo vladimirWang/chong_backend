@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@elysiajs/jwt": "^1.4.0",
+    "dayjs": "^1.11.19",
     "dotenv": "^17.2.3",
     "elysia": "latest",
     "prisma": "6.5.0",
