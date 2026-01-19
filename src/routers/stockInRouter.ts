@@ -5,6 +5,7 @@ import { errorCode, ErrorResponse, SuccessResponse } from "../models/Response";
 import { z, ZodError } from "zod";
 const { JWT_SECRET } = process.env;
 import { IProduct } from "../models/Product";
+import { luhn } from "../utils/algo";
 
 
 export const stockInRouter = new Elysia()
@@ -80,6 +81,25 @@ export const stockInRouter = new Elysia()
           const totalCost = body.joinData.reduce((a, c) => {
             return a+c.cost * c.count;
           }, 0)
+          
+          // 查询所有产品信息（包括 vendorId）
+          const productIds = body.joinData.map((item) => item.productId);
+          const uniqueProductIds = [...new Set(productIds)];
+          const products = await prisma.Product.findMany({
+            where: {
+              id: {
+                in: uniqueProductIds,
+              },
+            },
+            select: {
+              id: true,
+              vendorId: true,
+            },
+          });
+
+          // 创建产品 id 到产品信息的映射
+          const productMap = new Map<number, IProduct>(products.map((p: { id: number; vendorId: number | null }) => [p.id, p]));
+
           const results = await prisma.$transaction([
             // 创建进库记录
             prisma.StockIn.create({
@@ -101,18 +121,29 @@ export const stockInRouter = new Elysia()
                 }
               }
             }),
-            // 修改库存
+            // 修改库存并生成产品编码
             ...(body.joinData.map(item => {
-              return prisma.Product.update({
-                data: {
-                  balance: {
-                    increment: item.count
-                    // increment: 5
-                  }
+              const product = productMap.get(item.productId);
+              // 如果产品存在且有 vendorId，生成产品编码
+              const updateData: {
+                balance: { increment: number };
+                productCode?: string;
+                latestCost?: number;
+              } = {
+                balance: {
+                  increment: item.count
                 },
+                latestCost: item.cost
+              };
+              
+              // TODO 正确处理判空
+              const productCode = luhn(product!);
+              updateData.productCode = productCode;
+              
+              return prisma.Product.update({
+                data: updateData,
                 where: {
                   id: item.productId
-                  // id: 4
                 }
               })
             }))
@@ -147,7 +178,7 @@ export const stockInRouter = new Elysia()
               },
             });
 
-            const existingProductIds = existingProducts.map((p) => p.id);
+            const existingProductIds = existingProducts.map((p: { id: number }) => p.id);
             const missingProductIds = uniqueProductIds.filter(
               (id) => !existingProductIds.includes(id)
             );
@@ -164,4 +195,21 @@ export const stockInRouter = new Elysia()
           },
         }
       )
+      .get("/:id", async ({ params }) => {
+        const { id } = params;
+        const result = await prisma.StockIn.findUnique({
+          where: {
+            id,
+          },
+          select: {
+            remark: true,
+            productJoinStockIn: true
+          }
+        });
+        return JSON.stringify(new SuccessResponse(result, "进货记录查询成功"));
+      }, {
+        params: z.object({
+          id: z.coerce.number(),
+        }),
+      })
   });

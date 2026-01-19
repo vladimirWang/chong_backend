@@ -34,7 +34,7 @@ export const productRouter = new Elysia()
                 Vendor: true,
               },
             });
-            const total = await prisma.Product.count({ where: whereValues });
+            const total = await prisma.Product.count({where: whereValues});
 
             return JSON.stringify(
               new SuccessResponse({ total, list: products }, "产品列表获取成功")

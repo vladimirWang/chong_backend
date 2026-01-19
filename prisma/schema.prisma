@@ -53,7 +53,7 @@ model Product {
   id       Int      @id @default(autoincrement())
   name     String   @unique
   img      String?
-  vendorId Int?
+  vendorId Int
   remark   String?
   balance  Int?     @default(0) @db.UnsignedSmallInt
   deletedAt     DateTime?
@@ -62,9 +62,9 @@ model Product {
   // imports  ImportProduct[]
   Vendor   Vendor?  @relation(fields: [vendorId], references: [id])
   // StockIn   StockIn[]
-  price    Int? // 售价
-  cost     Int? // 成本价
-  productCode String? @db.VarChar(20) @unique
+  latestPrice    Int? // 售价,只有进库后才有
+  latestCost     Int? // 成本价,只有进库后才有
+  productCode String? @db.VarChar(20) @unique // 只有进库后才有
   productJoinStockIn ProductJoinStockIn[]
 
   @@index([vendorId], map: "Product_brandId_fkey")

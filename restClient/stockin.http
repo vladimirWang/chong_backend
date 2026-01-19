@@ -26,12 +26,12 @@ Content-Type: application/json
         {
             "cost": 100, 
             "count": 200,
-            "productId": 5
+            "productId": 3
         },
         {
             "cost": 200, 
             "count": 300,
-            "productId": 6
+            "productId": 4
         }
     ]
 }
