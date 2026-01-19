@@ -11,7 +11,7 @@ Content-Type: application/json
 
 {
     "remark": "importRemark",
-    "price": 10, 
+    "cost": 10, 
     "count": 20,
     "productId": 5
 }
@@ -24,12 +24,12 @@ Content-Type: application/json
     "remark": "importRemark",
     "joinData": [
         {
-            "price": 100, 
+            "cost": 100, 
             "count": 200,
             "productId": 5
         },
         {
-            "price": 200, 
+            "cost": 200, 
             "count": 300,
             "productId": 6
         }

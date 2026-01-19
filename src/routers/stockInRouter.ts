@@ -4,6 +4,8 @@ import { jwt } from "@elysiajs/jwt";
 import { errorCode, ErrorResponse, SuccessResponse } from "../models/Response";
 import { z, ZodError } from "zod";
 const { JWT_SECRET } = process.env;
+import { IProduct } from "../models/Product";
+
 
 export const stockInRouter = new Elysia()
   // .use(
@@ -22,15 +24,15 @@ export const stockInRouter = new Elysia()
       .post(
         "/single",
         async ({body}) => {
-            const {productId, price, count, remark} = body;
+            const {productId, cost, count, remark} = body;
           const res = await prisma.StockIn.create({
             data: {
                 remark,
-              totalPrice: price * count,
+              totalCost: cost * count,
               productJoinStockIn: {
                 create: [
                   {
-                    price,
+                    cost,
                     count,
                     product: {
                       connect: {
@@ -47,7 +49,7 @@ export const stockInRouter = new Elysia()
         {
           body: z.object({
             count: z.number(),
-            price: z.number(),
+            cost: z.number(),
             productId: z.number(),
             remark: z.string().optional(),
           }),
@@ -75,43 +77,19 @@ export const stockInRouter = new Elysia()
       .post(
         "/multiple",
         async ({ body }) => {
-          const totalPrice = body.joinData.reduce((a, c) => {
-            return a+c.price * c.count;
+          const totalCost = body.joinData.reduce((a, c) => {
+            return a+c.cost * c.count;
           }, 0)
-          // 使用事务批量创建
-          /**
-            body.map((item: { productId: number; price: number; count: number; remark?: string }) => {
-              return prisma.StockIn.create({
-                data: {
-                  remark: item.remark,
-                  totalPrice: item.price * item.count,
-                  productJoinStockIn: {
-                    create: [
-                      {
-                        price: item.price,
-                        count: item.count,
-                        product: {
-                          connect: {
-                            id: item.productId,
-                          },
-                        },
-                      },
-                    ],
-                  },
-                },
-              });
-            })
-           */
-          //  productJoinStockIn
           const results = await prisma.$transaction([
+            // 创建进库记录
             prisma.StockIn.create({
               data: {
                 remark: body.remark,
-                totalPrice,
+                totalCost,
                 productJoinStockIn: {
                   create: body.joinData.map(item => {
                     return {
-                      price: item.price,
+                      cost: item.cost,
                       count: item.count,
                       product: {
                         connect: {
@@ -123,18 +101,21 @@ export const stockInRouter = new Elysia()
                 }
               }
             }),
-            // body.map(item => {
-            //   return prisma.ProductJoinStockIn.create({
-            //     price: item.price,
-            //     count: item.count,
-            //     product: {
-            //       connect: {
-            //         id: item.productId
-            //       }
-            //     }
-            //   })
-            // })
-            
+            // 修改库存
+            ...(body.joinData.map(item => {
+              return prisma.Product.update({
+                data: {
+                  balance: {
+                    increment: item.count
+                    // increment: 5
+                  }
+                },
+                where: {
+                  id: item.productId
+                  // id: 4
+                }
+              })
+            }))
           ]);
           return JSON.stringify(new SuccessResponse(results, "进货记录批量新建成功"));
         },
@@ -144,7 +125,7 @@ export const stockInRouter = new Elysia()
             joinData: z.array(
               z.object({
                 count: z.number(),
-                price: z.number(),
+                cost: z.number(),
                 productId: z.number(),
 
               })
