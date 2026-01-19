@@ -166,5 +166,24 @@ export const productRouter = new Elysia()
             message: `文章 ${params.id} 删除成功`,
           };
         })
+        // 根据供应商id获取产品列表
+        .get("/getProductsByVendorId/:vendorId", async ({ params }) => {
+          const { vendorId } = params;
+          const products = await prisma.Product.findMany({
+            where: {
+              vendorId,
+            },
+          });
+          const total = await prisma.Product.count({
+            where: {
+              vendorId,
+            },
+          });
+          return JSON.stringify(new SuccessResponse({total, list: products}, "产品列表获取成功"));
+        }, {
+          params: z.object({
+            vendorId: z.coerce.number(),
+          }),
+        })
     );
   });
