@@ -5,6 +5,7 @@ import { errorCode, ErrorResponse, SuccessResponse } from "../models/Response";
 import { z } from "zod";
 import { ZodError } from "zod";
 const { JWT_SECRET } = process.env;
+import { loginUser, registerUser } from "../controllers/userController";
 
 // 使用 group 创建用户相关的路由组
 export const userRouter = new Elysia()
@@ -33,31 +34,7 @@ export const userRouter = new Elysia()
             };
         })
         // POST /api/users/register - 注册用户（需要 email 和 password）
-        .post("/register", async ({ body }) => {
-            // console.log("register body: ", prisma.user)
-            // return {code: '1'}
-            const user = await prisma.user.create({
-                data: {
-                    email: body.email,
-                    password: body.password
-                },
-                // select: [
-                //     'id',
-                //     "email",
-                //     "username",
-                //     "createdAt"
-                // ]
-            });
-
-            const userCreated = {
-                id: user.id,
-                email: user.email,
-                username: user.username,
-                createdAt: user.createdAt
-            }
-            const result = new SuccessResponse(userCreated, "用户创建成功");
-            return JSON.stringify(result);
-        }, {
+        .post("/register", registerUser, {
             body: z.object({
                 email: z.string().email(),
                 password: z.string().min(6)
@@ -83,25 +60,7 @@ export const userRouter = new Elysia()
                 }
             }
         })
-        .post("/login", async ({ body, jwt }) => {
-            const userExisted = await prisma.user.findFirst({
-                where: {
-                    email: body.email,
-                    password: body.password
-                }
-            })
-            if (!userExisted) {
-                const result = new ErrorResponse(errorCode.USER_NOT_FOUND, "用户不存在");
-                return JSON.stringify(result);
-            }
-            // 生成 token
-            const token = await jwt.sign({
-                userId: userExisted.id,
-                username: userExisted.username,
-            });
-
-            return JSON.stringify(new SuccessResponse<string>(token, "用户登录成功"));
-        }, {
+        .post("/login", loginUser, {
             body: z.object({
                 email: z.string().email(),
                 password: z.string().min(6)
