@@ -3,7 +3,7 @@
 @token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsInVzZXJuYW1lIjpudWxsLCJpYXQiOjE3Njg1NDkwNDV9.SOW5HNamDsp433xB3zq_L9DcjoCfb8gcmNElSa8Dd5Q
 
 ### brand list
-GET {{base}}?name=nike&limit=2&page=3
+GET {{base}}?deleteAt=2026-01-19T16:00:00.000Z
 Authorization: Bearer {{token}}
 
 ### create brand

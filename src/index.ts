@@ -8,6 +8,16 @@ import { ZodError } from "zod";
 import { authPlugin } from "./macro/auth.macro";
 import { jwt } from '@elysiajs/jwt'
 const { JWT_SECRET } = process.env;
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+
+// 注册插件
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+// dayjs.tz.setDefault("Asia/Shanghai");
+// dayjs.tz.setDefault("Europe/London");
 
 // 创建主应用并注册所有路由模块
 const app = new Elysia()
