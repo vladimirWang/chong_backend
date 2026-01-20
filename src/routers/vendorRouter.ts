@@ -69,7 +69,7 @@ export const vendorRouter = new Elysia()
             }
         })
         // PUT /api/posts/:id - 更新文章
-        .get("/byId/:id", async ({ params, body }) => {
+        .get("/byId/:id", async ({ params, body,  }) => {
             const vendor = await prisma.vendor.findUnique({
                 where: {
                     id: params.id
@@ -89,11 +89,44 @@ export const vendorRouter = new Elysia()
             })
         })
         // DELETE /api/posts/:id - 删除文章
-        .delete("/:id", ({ params }) => {
-            return {
-                message: `文章 ${params.id} 删除成功`
-            };
-        }).put('/:id', async ({ params, body }) => {
+        .delete("/:id", async ({ params }) => {
+            // 先检查是否有被其他表引用
+            const matchedProduct = await prisma.product.findUnique({
+                where: {
+                    id: params.id
+                }
+            })
+            // if (matchedProduct) {
+            //     set.status = 409;
+            //     return JSON.stringify(new ErrorResponse(20000, '要删除的供应商有对应品牌依赖'))
+            // }
+            return prisma.vendor.delete({
+                where: {
+                    id: params.id
+                }
+            })
+        }, {
+            params: z.object({
+                id: z.coerce.number()
+            }),
+            beforeHandle: async ({ params }) => {
+                const vendor = await prisma.vendor.findUnique({
+                    where: {
+                        id: params.id
+                    }
+                });
+                if (!vendor) {
+                    throw new ZodError([
+                        {
+                            code: "custom",
+                            path: ["id"],
+                            message: "供应商不存在"
+                        }
+                    ]);
+                }
+            }
+        })
+        .put('/:id', async ({ params, body }) => {
             const { name, remark } = body;
             const updatedVendor = await prisma.vendor.update({
                 where: {

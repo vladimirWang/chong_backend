@@ -23,3 +23,7 @@ Authorization: Bearer {{token}}
 ### token test
 GET http://localhost:3000/hi
 Authorization: {{token}}
+
+### token test
+DELETE http://localhost:3000/api/vendor/1
+Authorization: {{token}}
