@@ -4,8 +4,8 @@ import { z, ZodError } from "zod";
 import prisma from "../utils/prisma";
 import { errorCode, ErrorResponse, SuccessResponse } from "../models/Response";
 import {getPaginationValues, getWhereValues} from '../utils/db';
-import {getVendors} from '../controllers/vendorController'
-import { vendorQuerySchema } from "../validators/vendorValidator";
+import {getVendors, deleteVendor, batchDeleteVendor} from '../controllers/vendorController'
+import { vendorQuerySchema, vendorParamsSchema, VendorBatchDelete, vendorBatchDeleteSchema } from "../validators/vendorValidator";
 
 const { JWT_SECRET } = process.env;
 
@@ -88,27 +88,9 @@ export const vendorRouter = new Elysia()
                 id: z.coerce.number()
             })
         })
-        // DELETE /api/posts/:id - 删除文章
-        .delete("/:id", async ({ params }) => {
-            // 先检查是否有被其他表引用
-            const matchedProduct = await prisma.product.findUnique({
-                where: {
-                    id: params.id
-                }
-            })
-            // if (matchedProduct) {
-            //     set.status = 409;
-            //     return JSON.stringify(new ErrorResponse(20000, '要删除的供应商有对应品牌依赖'))
-            // }
-            return prisma.vendor.delete({
-                where: {
-                    id: params.id
-                }
-            })
-        }, {
-            params: z.object({
-                id: z.coerce.number()
-            }),
+        // DELETE /api/vendor/:id - 删除供应商
+        .delete("/:id", deleteVendor, {
+            params: vendorParamsSchema,
             beforeHandle: async ({ params }) => {
                 const vendor = await prisma.vendor.findUnique({
                     where: {
@@ -125,6 +107,9 @@ export const vendorRouter = new Elysia()
                     ]);
                 }
             }
+        })
+        .post("/batch", batchDeleteVendor, {
+            body: vendorBatchDeleteSchema
         })
         .put('/:id', async ({ params, body }) => {
             const { name, remark } = body;

@@ -25,4 +25,5 @@ export const errorCode = {
     VALIDATION_ERROR: 10002, // 校验失败
     USER_NOT_FOUND: 10003, // 用户不存在
     NOT_FOUND: 10004, // 路由不存在
+    VENDOR_HAS_PRODUCTS: 10005, // 供应商有关联产品
 }
