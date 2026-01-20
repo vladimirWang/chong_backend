@@ -2,6 +2,7 @@ import prisma from "../utils/prisma";
 import { errorCode, ErrorResponse, SuccessResponse } from "../models/Response";
 import { getPaginationValues, getWhereValues } from "../utils/db";
 import { VendorQuery, VendorParams, vendorBatchDeleteSchema, VendorBatchDelete } from "../validators/vendorValidator";
+import {getBeijingStartOfDay, getBeijingEndOfDay} from '../utils/date'
 
 export const getVendors = async ({
   query,
@@ -12,15 +13,22 @@ export const getVendors = async ({
   status?: any;
   headers: { authorization?: string };
 }) => {
-  const { limit = 10, page = 1, name, pagination = true } = query;
+  const { limit = 10, page = 1, name, pagination = true, deletedAt } = query;
   const { skip, take } = getPaginationValues({ limit, page });
-
   // 查询条件
   const whereValues = getWhereValues({ name });
   const vendors = await prisma.vendor.findMany({
     skip: pagination ? skip : undefined,
     take: pagination ? take : undefined,
-    where: whereValues,
+    where: {
+        ...whereValues,
+        deletedAt: deletedAt instanceof Date? {
+            lte: getBeijingEndOfDay(deletedAt),
+            gte: getBeijingStartOfDay(deletedAt)
+        }: (typeof deletedAt === 'boolean' ?  {
+            not: null
+        }: undefined)
+    },
   });
   const total = await prisma.vendor.count({ where: whereValues });
 

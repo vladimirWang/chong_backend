@@ -1,10 +1,11 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
+import type { Prisma } from "@prisma/client";
 
 const { DATABASE_URL } = process.env;
 
 const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
+  prisma: ReturnType<typeof createPrismaClient> | undefined;
 };
 
 function getDatabaseConfig(){
@@ -50,12 +51,44 @@ function getDatabaseConfig(){
 
 const adapter = new PrismaMariaDb(getDatabaseConfig());
 
-const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
+function createPrismaClient() {
+  const basePrisma = new PrismaClient({
     adapter,
-    log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
+    // log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
+    log: ["query", "error", "warn"]
   });
+
+  // 使用 $extends 添加软删除过滤逻辑
+  return basePrisma.$extends({
+    query: {
+      $allModels: {
+        async findMany({ args, query, model }) {
+          // 检查模型是否有 deletedAt 字段
+          // 只有 Vendor, Product, StockIn 有 deletedAt 字段
+          const hasDeletedAt = model === 'Vendor' || model === 'Product' || model === 'StockIn';
+          
+          if (hasDeletedAt) {
+            // 在查询之前修改 args
+            if (!args.where) {
+              args.where = {};
+            }
+            
+            // 只有当 deletedAt 条件未设置时，才自动过滤已删除的记录
+            if (!('deletedAt' in args.where)) {
+              (args.where as any).deletedAt = null;
+            }
+          }
+          
+          // 执行查询
+          const result = await query(args);
+          return result;
+        },
+      },
+    },
+  });
+}
+
+const prisma = globalForPrisma.prisma ?? createPrismaClient();
 
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;
