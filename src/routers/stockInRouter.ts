@@ -98,7 +98,7 @@ export const stockInRouter = new Elysia()
           });
 
           // 创建产品 id 到产品信息的映射
-          const productMap = new Map<number, { id: number; vendorId: number }>(products.map((p: { id: number; vendorId: number | null }) => [p.id, p]));
+          const productMap = new Map<number, { id: number; vendorId: number }>(products.map((p: { id: number; vendorId: number }) => [p.id, p]));
 
           const results = await prisma.$transaction([
             // 创建进库记录
