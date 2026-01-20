@@ -6,6 +6,11 @@ import { z } from "zod";
 import { ZodError } from "zod";
 const { JWT_SECRET } = process.env;
 import { loginUser, registerUser } from "../controllers/userController";
+import {
+  registerUserBodySchema,
+  loginUserBodySchema,
+  userParamsSchema,
+} from "../validators/userValidator";
 
 // 使用 group 创建用户相关的路由组
 export const userRouter = new Elysia()
@@ -35,10 +40,7 @@ export const userRouter = new Elysia()
         })
         // POST /api/users/register - 注册用户（需要 email 和 password）
         .post("/register", registerUser, {
-            body: z.object({
-                email: z.string().email(),
-                password: z.string().min(6)
-            }),
+            body: registerUserBodySchema,
             beforeHandle: async ({ body }) => {
                 // 检查邮箱是否已存在
                 const userExisted = await prisma.user.findFirst({
@@ -61,10 +63,7 @@ export const userRouter = new Elysia()
             }
         })
         .post("/login", loginUser, {
-            body: z.object({
-                email: z.string().email(),
-                password: z.string().min(6)
-            })
+            body: loginUserBodySchema
         })
         // PUT /api/users/:id - 更新用户
         .put("/:id", async ({ params, body }) => {

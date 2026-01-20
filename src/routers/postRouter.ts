@@ -1,6 +1,7 @@
 import { Elysia } from "elysia";
 import { jwt } from '@elysiajs/jwt'
 import { z } from "zod";
+import { postQuerySchema, postParamsSchema } from "../validators/postValidator";
 
 const { JWT_SECRET } = process.env;
 
@@ -32,9 +33,7 @@ export const postRouter = new Elysia()
                 ]
             };
         }, {
-            query: z.object({
-                cookie: z.string()
-            }),
+            query: postQuerySchema,
         })
         // GET /api/posts/:id - 获取单个文章
         .get("/:id", ({ params, status, cookie: {auth} }) => {

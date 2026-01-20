@@ -4,6 +4,8 @@ import { z, ZodError } from "zod";
 import prisma from "../utils/prisma";
 import { errorCode, ErrorResponse, SuccessResponse } from "../models/Response";
 import {getPaginationValues, getWhereValues} from '../utils/db';
+import {getVendors} from '../controllers/vendorController'
+import { vendorQuerySchema } from "../validators/vendorValidator";
 
 const { JWT_SECRET } = process.env;
 
@@ -12,31 +14,9 @@ export const vendorRouter = new Elysia()
     .group("/api/vendor", (app) => {
     return app
         // GET /api/posts - 获取文章列表
-        .get("/", async (
-            {query, status, headers: { authorization }}
-        ) => {
-            const { limit = 10, page = 1, name, pagination = true } = query;
-            const {skip, take} = getPaginationValues({limit, page});
-            console.log("------cookie: =======================", typeof limit, typeof page, name)
-
-            // 查询条件
-            const whereValues = getWhereValues({ name });
-            const vendors = await  prisma.vendor.findMany({
-                skip: pagination ? skip: undefined,
-                take: pagination ? take: undefined,
-                where: whereValues
-            });
-            const total = await prisma.vendor.count({ where: whereValues });
-            
-            return JSON.stringify(new SuccessResponse({total, list: vendors}, "供应商列表获取成功"));
-        }, 
+        .get("/", getVendors, 
         {
-            query: z.object({
-                pagination: z.coerce.boolean().optional(),
-                limit: z.coerce.number().optional(),
-                page: z.coerce.number().optional(),
-                name: z.string().optional()
-            }),
+            query: vendorQuerySchema,
         }
         )
         // GET /api/posts/:id - 获取单个文章

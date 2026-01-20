@@ -3,7 +3,20 @@ import { jwt } from "@elysiajs/jwt";
 import { z, ZodError } from "zod";
 import prisma from "../utils/prisma";
 import { errorCode, ErrorResponse, SuccessResponse } from "../models/Response";
-import { getPaginationValues, getWhereValues } from "../utils/db";
+import {
+  productQuerySchema,
+  createProductBodySchema,
+  updateProductBodySchema,
+  productParamsSchema,
+  productByVendorParamsSchema,
+} from "../validators/productValidator";
+import {
+  getProducts,
+  getProductById,
+  createProduct,
+  updateProduct,
+  getProductsByVendorId,
+} from "../controllers/productController";
 
 const { JWT_SECRET } = process.env;
 
@@ -12,91 +25,31 @@ export const productRouter = new Elysia()
   .group("/api/product", (app) => {
     return (
       app
-        // GET /api/posts - 获取文章列表
-        .get(
-          "/",
-          async ({ query, status, headers: { authorization } }) => {
-            const { limit, page, name, pagination = true } = query;
-            let skip = undefined, take = undefined;
-            if (pagination) {
-              const paginationInfo = getPaginationValues({ limit, page });
-              skip = paginationInfo.skip;
-              take = paginationInfo.take;
-            }
-
-            // 查询条件
-            const whereValues = getWhereValues({ name });
-            const products = await prisma.product.findMany({
-              skip,
-              take,
-              where: whereValues,
-              include: {
-                Vendor: true,
-              },
-            });
-            const total = await prisma.product.count({where: whereValues});
-
-            return JSON.stringify(
-              new SuccessResponse({ total, list: products }, "产品列表获取成功")
-            );
-          },
-          {
-            query: z.object({
-              limit: z.coerce.number().optional(),
-              page: z.coerce.number().optional(),
-              name: z.string().optional(),
-            }),
-            // auth: true
-          }
-        )
-        .get(
-          "/:id",
-          async ({ params, status, cookie: { auth } }) => {
-            const res = await prisma.product.findUnique({
-              where: {
-                id: params.id,
-              },
-            });
-            return JSON.stringify(new SuccessResponse(res, "产品信息查询成功"));
-          },
-          {
-            params: z.object({
-              id: z.coerce.number(),
-            }),
-          }
-        )
-        // POST /api/posts - 创建产品
+        // GET /api/product - 获取产品列表
+        .get("/", getProducts, {
+          query: productQuerySchema,
+          // auth: true
+        })
+        // GET /api/product/:id - 根据ID获取产品
+        .get("/:id", getProductById, {
+          params: productParamsSchema,
+        })
+        // POST /api/product - 创建产品
         .post(
           "/",
-          async ({ body }) => {
-            const { name, remark, vendorId } = body;
-            const vendor = await prisma.product.create({
-              data: {
-                name,
-                remark,
-                vendorId,
-              },
-            });
-            return JSON.stringify(
-              new SuccessResponse<string>(vendor, "供应商创建成功")
-            );
-          },
+          createProduct,
           {
-            body: z.object({
-              name: z.string().min(2),
-              remark: z.string().max(255).optional(),
-              vendorId: z.coerce.number(),
-            }),
+            body: createProductBodySchema,
             beforeHandle: async ({ body }) => {
-              // 检查品牌是否已存在
-              const userExisted = await prisma.product.findFirst({
+              // 检查产品是否已存在
+              const productExisted = await prisma.product.findFirst({
                 where: {
                   name: body.name,
                   vendorId: body.vendorId,
                 },
               });
 
-              if (userExisted) {
+              if (productExisted) {
                 // 抛出 zod 异常，使用自定义错误消息
                 throw new ZodError([
                   {
@@ -109,42 +62,17 @@ export const productRouter = new Elysia()
             },
           }
         )
+        // PATCH /api/product/:id - 更新产品
         .patch(
           "/:id",
-          async ({ params, body }) => {
-            const { price, cost, name, remark, img } = body;
-            const product = await prisma.product.update({
-              where: {
-                id: params.id,
-              },
-              data: {
-                name,
-                cost,
-                remark,
-                img,
-                price,
-              },
-            });
-            return JSON.stringify(
-              new SuccessResponse<string>(product, "产品更新成功")
-            );
-          },
+          updateProduct,
           {
-            params: z.object({
-              id: z.coerce.number(),
-            }),
-            body: z.object({
-              price: z.number().optional(),
-              cost: z.number().optional(),
-              name: z.string().optional(),
-              remark: z.string().optional(),
-              img: z.string().optional(),
-            }),
+            params: productParamsSchema,
+            body: updateProductBodySchema,
             beforeHandle: async ({ params }) => {
               const productExisted = await prisma.product.findUnique({
                 where: {
                   id: params.id,
-                  // password: body.password
                 },
               });
 
@@ -161,29 +89,17 @@ export const productRouter = new Elysia()
             },
           }
         )
+        // DELETE /api/product/:id - 删除产品
         .delete("/:id", ({ params }) => {
           return {
-            message: `文章 ${params.id} 删除成功`,
+            message: `产品 ${params.id} 删除成功`,
           };
-        })
-        // 根据供应商id获取产品列表
-        .get("/getProductsByVendorId/:vendorId", async ({ params }) => {
-          const { vendorId } = params;
-          const products = await prisma.product.findMany({
-            where: {
-              vendorId,
-            },
-          });
-          const total = await prisma.product.count({
-            where: {
-              vendorId,
-            },
-          });
-          return JSON.stringify(new SuccessResponse({total, list: products}, "产品列表获取成功"));
         }, {
-          params: z.object({
-            vendorId: z.coerce.number(),
-          }),
+          params: productParamsSchema,
+        })
+        // GET /api/product/getProductsByVendorId/:vendorId - 根据供应商ID获取产品列表
+        .get("/getProductsByVendorId/:vendorId", getProductsByVendorId, {
+          params: productByVendorParamsSchema,
         })
     );
   });

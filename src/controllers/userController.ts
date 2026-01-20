@@ -1,6 +1,8 @@
 import { errorCode, ErrorResponse, SuccessResponse } from "../models/Response";
+import { LoginUserBody, RegisterUserBody } from "../validators/userValidator";
+import prisma from "../utils/prisma";
 
-export const loginUser = async ({ body, jwt }) => {
+export const loginUser = async ({ body, jwt }: { body: LoginUserBody; jwt: any }) => {
     const userExisted = await prisma.user.findFirst({
         where: {
             email: body.email,
@@ -20,7 +22,7 @@ export const loginUser = async ({ body, jwt }) => {
     return JSON.stringify(new SuccessResponse<string>(token, "用户登录成功"));
 }
 
-export const registerUser = async ({ body }) => {
+export const registerUser = async ({ body }: { body: RegisterUserBody }) => {
     // console.log("register body: ", prisma.user)
     // return {code: '1'}
     const user = await prisma.user.create({
