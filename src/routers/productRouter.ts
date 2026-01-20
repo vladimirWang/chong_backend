@@ -26,7 +26,7 @@ export const productRouter = new Elysia()
 
             // 查询条件
             const whereValues = getWhereValues({ name });
-            const products = await prisma.Product.findMany({
+            const products = await prisma.product.findMany({
               skip,
               take,
               where: whereValues,
@@ -34,7 +34,7 @@ export const productRouter = new Elysia()
                 Vendor: true,
               },
             });
-            const total = await prisma.Product.count({where: whereValues});
+            const total = await prisma.product.count({where: whereValues});
 
             return JSON.stringify(
               new SuccessResponse({ total, list: products }, "产品列表获取成功")
@@ -52,7 +52,7 @@ export const productRouter = new Elysia()
         .get(
           "/:id",
           async ({ params, status, cookie: { auth } }) => {
-            const res = await prisma.Product.findUnique({
+            const res = await prisma.product.findUnique({
               where: {
                 id: params.id,
               },
@@ -70,7 +70,7 @@ export const productRouter = new Elysia()
           "/",
           async ({ body }) => {
             const { name, remark, vendorId } = body;
-            const vendor = await prisma.Product.create({
+            const vendor = await prisma.product.create({
               data: {
                 name,
                 remark,
@@ -89,7 +89,7 @@ export const productRouter = new Elysia()
             }),
             beforeHandle: async ({ body }) => {
               // 检查品牌是否已存在
-              const userExisted = await prisma.Product.findFirst({
+              const userExisted = await prisma.product.findFirst({
                 where: {
                   name: body.name,
                   vendorId: body.vendorId,
@@ -113,7 +113,7 @@ export const productRouter = new Elysia()
           "/:id",
           async ({ params, body }) => {
             const { price, cost, name, remark, img } = body;
-            const product = await prisma.Product.update({
+            const product = await prisma.product.update({
               where: {
                 id: params.id,
               },
@@ -141,7 +141,7 @@ export const productRouter = new Elysia()
               img: z.string().optional(),
             }),
             beforeHandle: async ({ params }) => {
-              const productExisted = await prisma.Product.findUnique({
+              const productExisted = await prisma.product.findUnique({
                 where: {
                   id: params.id,
                   // password: body.password
@@ -169,12 +169,12 @@ export const productRouter = new Elysia()
         // 根据供应商id获取产品列表
         .get("/getProductsByVendorId/:vendorId", async ({ params }) => {
           const { vendorId } = params;
-          const products = await prisma.Product.findMany({
+          const products = await prisma.product.findMany({
             where: {
               vendorId,
             },
           });
-          const total = await prisma.Product.count({
+          const total = await prisma.product.count({
             where: {
               vendorId,
             },

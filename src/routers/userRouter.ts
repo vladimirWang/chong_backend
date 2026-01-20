@@ -34,9 +34,9 @@ export const userRouter = new Elysia()
         })
         // POST /api/users/register - 注册用户（需要 email 和 password）
         .post("/register", async ({ body }) => {
-            // console.log("register body: ", prisma.User)
+            // console.log("register body: ", prisma.user)
             // return {code: '1'}
-            const user = await prisma.User.create({
+            const user = await prisma.user.create({
                 data: {
                     email: body.email,
                     password: body.password
@@ -64,7 +64,7 @@ export const userRouter = new Elysia()
             }),
             beforeHandle: async ({ body }) => {
                 // 检查邮箱是否已存在
-                const userExisted = await prisma.User.findFirst({
+                const userExisted = await prisma.user.findFirst({
                     where: {
                         email: body.email,
                         // password: body.password

@@ -21,12 +21,12 @@ export const vendorRouter = new Elysia()
 
             // 查询条件
             const whereValues = getWhereValues({ name });
-            const vendors = await  prisma.Vendor.findMany({
+            const vendors = await  prisma.vendor.findMany({
                 skip: pagination ? skip: undefined,
                 take: pagination ? take: undefined,
                 where: whereValues
             });
-            const total = await prisma.Vendor.count({ where: whereValues });
+            const total = await prisma.vendor.count({ where: whereValues });
             
             return JSON.stringify(new SuccessResponse({total, list: vendors}, "供应商列表获取成功"));
         }, 
@@ -41,7 +41,7 @@ export const vendorRouter = new Elysia()
         )
         // GET /api/posts/:id - 获取单个文章
         .get("/:id", async ({ params, status, cookie: {auth} }) => {
-            const vendor = await prisma.Vendor.findUnique({
+            const vendor = await prisma.vendor.findUnique({
                 where: {
                     id: params.id
                 }
@@ -55,7 +55,7 @@ export const vendorRouter = new Elysia()
         // POST /api/posts - 创建供应商
         .post("/", async ({ body }) => {
             const {name, remark} = body;
-            const vendor =  await prisma.Vendor.create({
+            const vendor =  await prisma.vendor.create({
                 data: {
                     name,
                     remark
@@ -69,7 +69,7 @@ export const vendorRouter = new Elysia()
             }),
             beforeHandle: async({body}) => {
                 // 检查品牌是否已存在
-                const userExisted = await prisma.Vendor.findFirst({
+                const userExisted = await prisma.vendor.findFirst({
                     where: {
                         name: body.name,
                         // password: body.password
@@ -90,7 +90,7 @@ export const vendorRouter = new Elysia()
         })
         // PUT /api/posts/:id - 更新文章
         .get("/byId/:id", async ({ params, body }) => {
-            const vendor = await prisma.Vendor.findUnique({
+            const vendor = await prisma.vendor.findUnique({
                 where: {
                     id: params.id
                 },
@@ -115,7 +115,7 @@ export const vendorRouter = new Elysia()
             };
         }).put('/:id', async ({ params, body }) => {
             const { name, remark } = body;
-            const updatedVendor = await prisma.Vendor.update({
+            const updatedVendor = await prisma.vendor.update({
                 where: {
                     id: params.id
                 },
