@@ -29,10 +29,10 @@ DELETE http://localhost:3000/api/vendor/1
 Authorization: {{token}}
 
 ### 批量删除供应商
-POST http://localhost:3000/api/vendor/batch
+DELETE http://localhost:3000/api/vendor/batch
 Authorization: {{token}}
 Content-Type: application/json
 
 {
-    "id": [1,2]
+    "id": [4]
 }

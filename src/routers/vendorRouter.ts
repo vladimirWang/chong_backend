@@ -108,7 +108,7 @@ export const vendorRouter = new Elysia()
                 }
             }
         })
-        .post("/batch", batchDeleteVendor, {
+        .delete("/batch", batchDeleteVendor, {
             body: vendorBatchDeleteSchema
         })
         .put('/:id', async ({ params, body }) => {
