@@ -32,6 +32,7 @@ export const getProducts = async ({
     where: whereValues,
     include: {
       Vendor: true,
+      historyCost: true
     },
   });
   const total = await prisma.product.count({ where: whereValues });

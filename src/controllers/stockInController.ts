@@ -124,6 +124,14 @@ export const createMultipleStockIn = async ({
         },
       });
     }),
+    ...(body.productJoinStockIn.map(item => {
+      return prisma.historyCost.create({
+        data: {
+          value: item.cost,
+          productId: item.productId
+        }
+      })
+    }))
   ]);
   return JSON.stringify(
     new SuccessResponse(results, "进货记录批量新建成功")

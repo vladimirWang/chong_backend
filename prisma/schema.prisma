@@ -37,6 +37,7 @@ model StockIn {
   productJoinStockIn ProductJoinStockIn[]
 }
 
+// 产品进货单中间表
 model ProductJoinStockIn {
   id        Int     @id @default(autoincrement())
   stockInId Int
@@ -66,6 +67,7 @@ model Product {
   latestCost         Int? // 成本价,只有进库后才有
   productCode        String?              @unique @db.VarChar(20) // 只有进库后才有
   productJoinStockIn ProductJoinStockIn[]
+  historyCost HistoryCost[]
 
   @@index([vendorId], map: "Product_brandId_fkey")
 }
@@ -81,18 +83,13 @@ model User {
   avatar    String?
 }
 
-// model StockInProduct {
-//   id        Int      @id @default(autoincrement())
-//   productId Int
-//   stockInId  Int
-//   price     Int      @db.UnsignedSmallInt
-//   count     Int      @db.UnsignedSmallInt
-//   remark    String?
-//   deletedAt     DateTime?
-//   createAt  DateTime @default(now())
-//   updateAt  DateTime @updatedAt
-//   stockIn    StockIn   @relation(fields: [stockInId], references: [id])
-//   product   Product  @relation(fields: [productId], references: [id])
-
-//   @@unique([productId, stockInId])
-// }
+// 历史成本
+model HistoryCost {
+  id        Int      @id @default(autoincrement())
+  productId Int
+  Product Product @relation(fields: [productId], references: [id])
+  value Int @db.UnsignedMediumInt
+  createAt  DateTime @default(now())
+  updateAt  DateTime @updatedAt
+  deletedAt     DateTime?
+}

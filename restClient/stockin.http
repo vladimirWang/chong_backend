@@ -22,15 +22,15 @@ Content-Type: application/json
 
 {
     "remark": "importRemark",
-    "joinData": [
+    "productJoinStockIn": [
         {
             "cost": 100, 
             "count": 200,
             "productId": 3
         },
         {
-            "cost": 200, 
-            "count": 300,
+            "cost": 10, 
+            "count": 20,
             "productId": 4
         }
     ]
