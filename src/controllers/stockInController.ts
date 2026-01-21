@@ -93,6 +93,12 @@ export const createMultipleStockIn = async ({
                   id: item.productId,
                 },
               },
+              historyCost: {
+                create: {
+                  value: item.cost,
+                  productId: item.productId,
+                },
+              },
             };
           }),
         },
@@ -124,14 +130,6 @@ export const createMultipleStockIn = async ({
         },
       });
     }),
-    ...(body.productJoinStockIn.map(item => {
-      return prisma.historyCost.create({
-        data: {
-          value: item.cost,
-          productId: item.productId
-        }
-      })
-    }))
   ]);
   return JSON.stringify(
     new SuccessResponse(results, "进货记录批量新建成功")
@@ -181,9 +179,6 @@ export const updateStockIn = async (
   const {productJoinStockIn} = body;
   const {added,modified, deleted, unchanged} = compareArrayMinLoop(existedRecord, body.productJoinStockIn, 'productId', ['id', 'stockInId'])
   console.log("modified: ", modified)
-  // console.log("added: ", added)
-  // console.log("deleted: ", deleted)
-  // const updateIds = 
   
   const existedInfoMap: Record<number, ProductInfo> = existedRecord.reduce((a: Record<number, ProductInfo>, c) => {
     a[c.productId] = {
@@ -192,17 +187,6 @@ export const updateStockIn = async (
     }
     return a
   }, {})
-
-  // const deletedInfoMap: Record<number, ProductInfo> = deleted.reduce((a: Record<number, ProductInfo>, c) => {
-  //   a[c.productId] = {
-  //     count: c.count,
-  //     cost: c.cost
-  //   }
-  //   return a
-  // }, {})
-
-  // console.log('modifiedInfoMap: ', modifiedInfoMap)
-  // console.log('deletedInfoMap: ', deletedInfoMap)
 
   await prisma.$transaction([
     // 更新进货记录
@@ -243,7 +227,9 @@ export const updateStockIn = async (
           deleteMany: deleted.map(item => {
             return {
               // TODO 解决没有属性id的问题
-              id: item.id!
+              // id: item.id!
+              stockInId: params.id,
+              productId: item.productId
             }
           })
         }
