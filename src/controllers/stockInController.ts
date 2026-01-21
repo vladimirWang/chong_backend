@@ -158,6 +158,13 @@ interface ProductInfo {
   count: number;
   cost: number;
 }
+type StockInLineComparable = {
+  id?: number;
+  stockInId?: number;
+  productId: number;
+  cost: number;
+  count: number;
+};
 export const updateStockIn = async (
   {
   params,
@@ -177,7 +184,25 @@ export const updateStockIn = async (
   console.log("prosudt: ", existedRecord)
   // return 'hhehh  '+params.id + '; length: ' +body.productJoinStockIn.length
   const {productJoinStockIn} = body;
-  const {added,modified, deleted, unchanged} = compareArrayMinLoop(existedRecord, body.productJoinStockIn, 'productId', ['id', 'stockInId'])
+  const totalCost = productJoinStockIn.reduce((a, c) => a + c.cost * c.count, 0);
+  const existedComparable: StockInLineComparable[] = existedRecord.map((r) => ({
+    id: r.id,
+    stockInId: r.stockInId,
+    productId: r.productId,
+    cost: r.cost,
+    count: r.count,
+  }));
+  const newComparable: StockInLineComparable[] = productJoinStockIn.map((r) => ({
+    productId: r.productId,
+    cost: r.cost,
+    count: r.count,
+  }));
+  const {added,modified, deleted, unchanged} = compareArrayMinLoop<StockInLineComparable>(
+    existedComparable,
+    newComparable,
+    'productId',
+    ['id', 'stockInId']
+  )
   console.log("modified: ", modified)
   
   const existedInfoMap: Record<number, ProductInfo> = existedRecord.reduce((a: Record<number, ProductInfo>, c) => {
@@ -187,14 +212,26 @@ export const updateStockIn = async (
     }
     return a
   }, {})
+  const deletedJoinIds = deleted
+    .map((item) => item.id)
+    .filter((id): id is number => typeof id === "number");
 
   await prisma.$transaction([
+    // 删除被移除商品对应的历史成本（即使有级联，也做显式兜底）
+    prisma.historyCost.deleteMany({
+      where: {
+        productJoinStockInId: {
+          in: deletedJoinIds,
+        },
+      },
+    }),
     // 更新进货记录
     prisma.stockIn.update({
       where: {
         id: params.id
       },
       data: {
+        totalCost,
         // 更新中间表
         productJoinStockIn: {
           // 新增原本没有的记录
@@ -205,6 +242,12 @@ export const updateStockIn = async (
               product: {
                 connect: {
                   id: item.productId,
+                },
+              },
+              historyCost: {
+                create: {
+                  value: item.cost,
+                  productId: item.productId,
                 },
               },
             };
@@ -220,7 +263,19 @@ export const updateStockIn = async (
               },
               data: {
                 cost: item.cost,
-                count: item.count
+                count: item.count,
+                historyCost: {
+                  upsert: {
+                    create: {
+                      value: item.cost,
+                      productId: item.productId,
+                    },
+                    update: {
+                      value: item.cost,
+                      productId: item.productId,
+                    },
+                  },
+                },
               }
             }
           }),
