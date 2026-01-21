@@ -6,7 +6,8 @@
     "dev": "bun run --watch src/index.ts",
     "perf:http": "bun run perf/http_load.ts",
     "migrate:dev": "bunx dotenv -e .env.development -- prisma migrate dev",
-    "generate:dev": "bunx dotenv -e .env.development -- prisma generate"
+    "generate:dev": "bunx dotenv -e .env.development -- prisma generate",
+    "reset:dev": "bunx dotenv -e .env.development -- prisma migrate reset"
   },
   "dependencies": {
     "@elysiajs/jwt": "^1.4.0",
@@ -15,9 +16,11 @@
     "dayjs": "^1.11.19",
     "dotenv": "^17.2.3",
     "elysia": "latest",
+    "lodash": "^4.17.21",
     "zod": "^4.2.1"
   },
   "devDependencies": {
+    "@types/lodash": "^4.17.23",
     "bun-types": "latest",
     "dotenv-cli": "^11.0.0",
     "prisma": "7.0.0"

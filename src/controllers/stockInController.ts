@@ -4,8 +4,10 @@ import {
   SingleStockInBody,
   MultipleStockInBody,
   StockInParams,
+  stockInUpdateParams,
 } from "../validators/stockInValidator";
-import { luhn } from "../utils/algo";
+import { compareArrayMinLoop, luhn } from "../utils/algo";
+import _ from 'lodash'
 
 // 获取进货记录列表
 export const getStockIns = async () => {
@@ -51,12 +53,12 @@ export const createMultipleStockIn = async ({
 }: {
   body: MultipleStockInBody;
 }) => {
-  const totalCost = body.joinData.reduce((a, c) => {
+  const totalCost = body.productJoinStockIn.reduce((a, c) => {
     return a + c.cost * c.count;
   }, 0);
 
   // 查询所有产品信息（包括 vendorId）
-  const productIds = body.joinData.map((item) => item.productId);
+  const productIds = body.productJoinStockIn.map((item) => item.productId);
   const uniqueProductIds = [...new Set(productIds)];
   const products = await prisma.product.findMany({
     where: {
@@ -79,10 +81,10 @@ export const createMultipleStockIn = async ({
     // 创建进库记录
     prisma.stockIn.create({
       data: {
-        remark: body.remark,
+        // remark: body.remark,
         totalCost,
         productJoinStockIn: {
-          create: body.joinData.map((item) => {
+          create: body.productJoinStockIn.map((item) => {
             return {
               cost: item.cost,
               count: item.count,
@@ -97,7 +99,7 @@ export const createMultipleStockIn = async ({
       },
     }),
     // 修改库存并生成产品编码
-    ...body.joinData.map((item) => {
+    ...body.productJoinStockIn.map((item) => {
       const product = productMap.get(item.productId);
       // 如果产品存在且有 vendorId，生成产品编码
       const updateData: {
@@ -146,3 +148,144 @@ export const getStockInById = async ({
   });
   return JSON.stringify(new SuccessResponse(result, "进货记录查询成功"));
 };
+interface ProductInfo {
+  count: number;
+  cost: number;
+}
+export const updateStockIn = async (
+  {
+  params,
+  body
+}
+: {
+  params: stockInUpdateParams,
+  body: MultipleStockInBody
+}
+) => {
+  // 查询已有数据
+  const existedRecord = await prisma.productJoinStockIn.findMany({
+    where: {
+      stockInId: params.id
+    }
+  })
+  console.log("prosudt: ", existedRecord)
+  // return 'hhehh  '+params.id + '; length: ' +body.productJoinStockIn.length
+  const {productJoinStockIn} = body;
+  const {added,modified, deleted, unchanged} = compareArrayMinLoop(existedRecord, body.productJoinStockIn, 'productId', ['id', 'stockInId'])
+  console.log("modified: ", modified)
+  // console.log("added: ", added)
+  // console.log("deleted: ", deleted)
+  // const updateIds = 
+  
+  const existedInfoMap: Record<number, ProductInfo> = existedRecord.reduce((a: Record<number, ProductInfo>, c) => {
+    a[c.productId] = {
+      count: c.count,
+      cost: c.cost
+    }
+    return a
+  }, {})
+
+  // const deletedInfoMap: Record<number, ProductInfo> = deleted.reduce((a: Record<number, ProductInfo>, c) => {
+  //   a[c.productId] = {
+  //     count: c.count,
+  //     cost: c.cost
+  //   }
+  //   return a
+  // }, {})
+
+  // console.log('modifiedInfoMap: ', modifiedInfoMap)
+  // console.log('deletedInfoMap: ', deletedInfoMap)
+
+  await prisma.$transaction([
+    // 更新进货记录
+    prisma.stockIn.update({
+      where: {
+        id: params.id
+      },
+      data: {
+        // 更新中间表
+        productJoinStockIn: {
+          // 新增原本没有的记录
+          create: added.map((item) => {
+            return {
+              cost: item.cost,
+              count: item.count,
+              product: {
+                connect: {
+                  id: item.productId,
+                },
+              },
+            };
+          }),
+          // 更新原本已有的数据
+          update: modified.map(item => {
+            return {
+              where: {
+                stockInId_productId: {
+                  stockInId: params.id,
+                  productId: item.productId
+                }
+              },
+              data: {
+                cost: item.cost,
+                count: item.count
+              }
+            }
+          }),
+          deleteMany: deleted.map(item => {
+            return {
+              // TODO 解决没有属性id的问题
+              id: item.id!
+            }
+          })
+        }
+      }
+    }),
+    // 更新产品库存和最新成本价-对新增的商品
+    // 不管新增还是编辑已有商品，最新成本都是直接赋值
+    // TODO 删除进货中某个商品时，要把最新成本还原到前一次，多加一个表来实现
+    ...(added.map(item => {
+      return prisma.product.update({
+        where: {
+          id: item.productId
+        },
+        data: {
+          balance: {
+            increment: item.count,
+          },
+          latestCost: item.cost
+        }
+      })
+    })),
+    // 更新产品库存-对修改的商品
+    ...(modified.map(item => {
+      console.log("updated balance: ", item.count, existedInfoMap[item.productId].count)
+      return prisma.product.update({
+        where: {
+          id: item.productId
+        },
+        data: {
+          balance: {
+            increment: item.count - existedInfoMap[item.productId].count
+          },
+          latestCost: item.cost
+        }
+      })
+    })),
+    // 更新产品库存-对删除的商品
+    ...(deleted.map(item => {
+      return prisma.product.update({
+        where: {
+          id: item.productId
+        },
+        data: {
+          balance: {
+            increment: -1 * existedInfoMap[item.productId].count
+          },
+          latestCost: item.cost
+        }
+      })
+    }))
+  ])
+  return JSON.stringify(new SuccessResponse(null, "进货单更新成功"))
+}

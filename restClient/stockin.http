@@ -35,3 +35,23 @@ Content-Type: application/json
         }
     ]
 }
+
+### update stockIn
+PUT {{base}}/2
+Content-Type: application/json
+
+{
+    "remark": "importRemark",
+    "productJoinStockIn": [
+        {
+            "cost": 19, 
+            "count": 40,
+            "productId": 1
+        },
+        {
+            "cost": 200, 
+            "count": 300,
+            "productId": 2
+        }
+    ]
+}

@@ -45,6 +45,7 @@ model ProductJoinStockIn {
   product   Product @relation(fields: [productId], references: [id])
   cost      Int     @db.UnsignedSmallInt // 售价
   count     Int     @db.UnsignedSmallInt // 数量
+  @@unique([stockInId, productId])
 }
 
 // 商品

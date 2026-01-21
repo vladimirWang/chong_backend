@@ -8,12 +8,15 @@ import {
   singleStockInBodySchema,
   multipleStockInBodySchema,
   stockInParamsSchema,
+  stockInUpdateParamsSchema,
+  mutilpleProductExistedValidator
 } from "../validators/stockInValidator";
 import {
   getStockIns,
   createSingleStockIn,
   createMultipleStockIn,
   getStockInById,
+  updateStockIn,
 } from "../controllers/stockInController";
 
 
@@ -60,43 +63,16 @@ export const stockInRouter = new Elysia()
         createMultipleStockIn,
         {
           body: multipleStockInBodySchema,
-          beforeHandle: async ({ body }) => {
-            // 验证所有产品是否存在
-            const productIds = body.joinData.map((item) => item.productId);
-            const uniqueProductIds = [...new Set(productIds)];
-
-            const existingProducts = await prisma.product.findMany({
-              where: {
-                id: {
-                  in: uniqueProductIds,
-                },
-              },
-              select: {
-                id: true,
-              },
-            });
-
-            const existingProductIds = existingProducts.map(
-              (p: { id: number }) => p.id
-            );
-            const missingProductIds = uniqueProductIds.filter(
-              (id) => !existingProductIds.includes(id)
-            );
-
-            if (missingProductIds.length > 0) {
-              throw new ZodError([
-                {
-                  code: "custom",
-                  path: ["productId"],
-                  message: `产品不存在: ${missingProductIds.join(", ")}`,
-                },
-              ]);
-            }
-          },
+          beforeHandle: mutilpleProductExistedValidator,
         }
       )
       // GET /api/stockin/:id - 根据ID获取进货记录
       .get("/:id", getStockInById, {
         params: stockInParamsSchema,
+      })
+      .put("/:id", updateStockIn, {
+        params: stockInUpdateParamsSchema,
+        body: multipleStockInBodySchema,
+        // beforeHandle: mutilpleProductExistedValidator,
       })
   });
