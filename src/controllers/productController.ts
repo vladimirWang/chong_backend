@@ -52,6 +52,16 @@ export const getProductById = async ({
     where: {
       id: params.id,
     },
+    select: {
+      historyCost: true,
+      name: true,
+      img: true,
+      balance: true,
+      vendorId: true,
+      remark: true,
+      latestCost: true,
+      latestPrice: true
+    }
   });
   return JSON.stringify(new SuccessResponse(res, "产品信息查询成功"));
 };
