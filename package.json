@@ -5,6 +5,7 @@
     "test": "bun test",
     "dev": "bun run --watch src/index.ts",
     "perf:http": "bun run perf/http_load.ts",
+    "db:push": "bunx dotenv -e .env.development -- prisma db push",
     "migrate:dev": "bunx dotenv -e .env.development -- prisma migrate dev",
     "generate:dev": "bunx dotenv -e .env.development -- prisma generate",
     "reset:dev": "bunx dotenv -e .env.development -- prisma migrate reset"

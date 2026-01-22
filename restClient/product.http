@@ -1,9 +1,8 @@
 @base=http://localhost:3000/api/product
-@token =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiIxMjM0NTZAcXEuY29tIiwidXNlcm5hbWUiOiIxMjM0NTYiLCJjcmVhdGVBdCI6IjIwMjUtMDItMTRUMDk6MTA6MTQuMDMwWiIsInVwZGF0ZUF0IjoiMjAyNS0wMi0xNFQwOToxMDoxNC4wMzBaIiwiYXZhdGFyIjpudWxsLCJpYXQiOjE3Mzk1MjQyMjgsImV4cCI6MTczOTYxMDYyOH0.CUanDrZHUfDFkt4IkdI5miNxYM_RwL8D40EL0qEtO88
-
+@token =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsInVzZXJuYW1lIjpudWxsLCJpYXQiOjE3NjkwNDc1OTB9.N11s-GuBoWAG7Tnys4PkndiUH9c5KnrM47dUS9OBZpI
 ### user list
-GET {{base}}?limit=10&page=1&name=beer
-Authorization: Bearer {{token}}
+GET {{base}}
+Authorization: {{token}}
 
 ### create product
 POST {{base}}
