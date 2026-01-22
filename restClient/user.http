@@ -1,5 +1,5 @@
 @base=http://localhost:3000/api
-@token =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjMsInVzZXJuYW1lIjpudWxsLCJpYXQiOjE3NjkwNDcxNjZ9.h3_1elht79kXMtfET87wvq-NGU30H_1fDJ75g4PR1XU
+@token =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImVtYWlsIjoiMTIzNDU2QHFxLmNvbSIsImlhdCI6MTc2OTA1MTk4N30.Ed6boqUBb5sDyhM5foKQfSH107oy-YNZ5Blu8Funfws
 ### user list
 GET {{base}}/user
 Authorization: Bearer {{token}}
@@ -23,6 +23,13 @@ Content-Type: application/json
     "email": "123456@qq.com"
 }
 
+### user login             done
+GET http://localhost:3000/profile?name=12
+Authorization: {{token}}
+
+
+### user login             done
+GET http://localhost:3000/public/test?name=12
 
 ### user list
 GET {{base}}/user

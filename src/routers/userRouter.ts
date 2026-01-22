@@ -14,12 +14,6 @@ import {
 
 // 使用 group 创建用户相关的路由组
 export const userRouter = new Elysia()
-    .use(
-        jwt({
-            name: 'jwt',
-            secret: JWT_SECRET!
-        })
-    )
     .group("/api/user", (app) => {
     return app
         // GET /api/users - 获取用户列表
@@ -32,12 +26,12 @@ export const userRouter = new Elysia()
             };
         })
         // GET /api/users/:id - 获取单个用户
-        .get("/:id", ({ params }) => {
-            return {
-                id: params.id,
-                name: `用户 ${params.id}`
-            };
-        })
+        // .get("/:id", ({ params }) => {
+        //     return {
+        //         id: params.id,
+        //         name: `用户 ${params.id}`
+        //     };
+        // })
         // POST /api/users/register - 注册用户（需要 email 和 password）
         .post("/register", registerUser, {
             body: registerUserBodySchema,

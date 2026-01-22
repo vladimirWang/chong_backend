@@ -7,12 +7,6 @@ const { JWT_SECRET } = process.env;
 
 // 文章相关路由模块
 export const postRouter = new Elysia()
-    .use(
-        jwt({
-            name: 'jwt',
-            secret: JWT_SECRET!
-        })
-    )
     .group("/api/post", (app) => {
     return app
         // GET /api/posts - 获取文章列表

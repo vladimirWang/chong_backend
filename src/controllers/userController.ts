@@ -16,7 +16,7 @@ export const loginUser = async ({ body, jwt }: { body: LoginUserBody; jwt: any }
     // 生成 token
     const token = await jwt.sign({
         userId: userExisted.id,
-        username: userExisted.username,
+        email: userExisted.email,
     });
 
     return JSON.stringify(new SuccessResponse<string>(token, "用户登录成功"));

@@ -11,6 +11,7 @@ const { JWT_SECRET } = process.env;
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
+import {authService} from './macro/auth.macro'
 
 // 注册插件
 dayjs.extend(utc);
@@ -21,7 +22,28 @@ dayjs.extend(timezone);
 
 // 创建主应用并注册所有路由模块
 const app = new Elysia()
+    .use(
+        jwt({
+            name: 'jwt',
+            secret: JWT_SECRET!
+        })
+    )
+    .use(authService)
     .get("/", () => "Hello Elysia")
+    .get('/profile', async ({ jwt, set, headers: { authorization }, user }) => {
+    // const profile = await jwt.verify(authorization);
+
+    // if (!profile) {
+    //   set.status = 401;
+    //   return 'Unauthorized';
+    // }
+
+    return `Hello ${JSON.stringify(user)}`;
+  }, {
+    isSignIn: true
+  }).get("/public/test", () => {
+    return 'hello public guest'
+  })
     // 全局错误处理 - 拦截 zod 校验异常
     .onError(({ code, error }) => {
         // 直接处理 ZodError（包括在 beforeHandle 中抛出的）
@@ -99,17 +121,6 @@ const app = new Elysia()
         // 其他错误继续抛出
         throw error;
     })
-    .use(
-        jwt({
-            name: 'jwt',
-            secret: JWT_SECRET!
-        })
-    )
-    .use(authPlugin)
-    .get("/hi", () => 'hi2', {
-        auth: true
-    })
-    // 使用 .use() 方法整合路由模块
     // 每个路由模块会自动添加其 group 前缀
     .use(userRouter)  // 注册 /api/users/* 路由
     .use(postRouter)  // 注册 /api/posts/* 路由
