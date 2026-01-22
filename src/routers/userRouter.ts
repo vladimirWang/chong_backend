@@ -56,6 +56,13 @@ export const userRouter = new Elysia()
                 }
             }
         })
+        .get("/current", async ({ jwt, status, user }) => {
+            console.log("current user: ", user)
+            // return '123'
+            return user
+        }, {
+            isSignIn: true
+        })
         .post("/login", loginUser, {
             body: loginUserBodySchema
         })

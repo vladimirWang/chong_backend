@@ -17,18 +17,19 @@ import {
   updateProduct,
   getProductsByVendorId,
 } from "../controllers/productController";
-import {authService} from '../macro/auth.macro'
 const { JWT_SECRET } = process.env;
 
 // 供应商相关路由模块
 export const productRouter = new Elysia()
-  .group("/api/product", (app) => {
+  .group("/api/product", {
+    isSignIn: true
+  }, (app) => {
     return (
       app
         // GET /api/product - 获取产品列表
         .get("/", getProducts, {
           query: productQuerySchema,
-          isSignIn: true
+          
         })
         // GET /api/product/:id - 根据ID获取产品
         .get("/:id", getProductById, {

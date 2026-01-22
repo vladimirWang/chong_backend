@@ -11,7 +11,9 @@ const { JWT_SECRET } = process.env;
 
 // 供应商相关路由模块
 export const vendorRouter = new Elysia()
-    .group("/api/vendor", (app) => {
+    .group("/api/vendor", {
+    isSignIn: true
+  }, (app) => {
     return app
         // GET /api/posts - 获取文章列表
         .get("/", getVendors, 

@@ -7,7 +7,9 @@ const { JWT_SECRET } = process.env;
 
 // 文章相关路由模块
 export const postRouter = new Elysia()
-    .group("/api/post", (app) => {
+    .group("/api/post", {
+    isSignIn: true
+  }, (app) => {
     return app
         // GET /api/posts - 获取文章列表
         .get("/", async (

@@ -6,14 +6,16 @@ export const authService = new Elysia({ name: 'Auth.Service' })
     .macro({
         isSignIn: {
             async resolve(ctx: Context) {                
+                console.log("inside auth macro: ")
                 const { cookie, status, headers: {authorization}, jwt, request, url, route } = ctx;
                 if (route.startsWith('/public')) {
-                    console.log("命中")
+                    console.log("public route: ", route)
                     return;
                 }
+                console.log("inside auth macro: authorization: ", authorization)
                 if (!authorization) return status(401)
                 const user = await jwt.verify(authorization)
-                console.log("authorization: ", route, Object.keys(request), url)
+                console.log("jwt verify result: ", user)
 
                 if (!user) return status(401)
 
