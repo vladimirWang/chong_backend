@@ -39,15 +39,16 @@ model StockIn {
 
 // 产品进货单中间表
 model ProductJoinStockIn {
-  id        Int     @id @default(autoincrement())
-  stockInId Int
-  stockIn   StockIn @relation(fields: [stockInId], references: [id])
-  productId Int
-  product   Product @relation(fields: [productId], references: [id])
-  cost      Int     @db.UnsignedSmallInt // 售价
-  count     Int     @db.UnsignedSmallInt // 数量
+  id          Int          @id @default(autoincrement())
+  stockInId   Int
+  stockIn     StockIn      @relation(fields: [stockInId], references: [id])
+  productId   Int
+  product     Product      @relation(fields: [productId], references: [id])
+  cost        Int          @db.UnsignedSmallInt // 售价
+  count       Int          @db.UnsignedSmallInt // 数量
   historyCost HistoryCost?
-  @@unique([stockInId, productId])
+
+  @@unique([stockInId, productId, cost])
 }
 
 // 商品
@@ -68,7 +69,7 @@ model Product {
   latestCost         Int? // 成本价,只有进库后才有
   productCode        String?              @unique @db.VarChar(20) // 只有进库后才有
   productJoinStockIn ProductJoinStockIn[]
-  historyCost HistoryCost[]
+  historyCost        HistoryCost[]        @relation("HistoryCostProduct")
 
   @@index([vendorId], map: "Product_brandId_fkey")
 }
@@ -86,13 +87,13 @@ model User {
 
 // 历史成本
 model HistoryCost {
-  id        Int      @id @default(autoincrement())
-  productJoinStockInId Int @unique
+  id                   Int                @id @default(autoincrement())
+  productJoinStockInId Int                @unique
   productJoinStockIn   ProductJoinStockIn @relation(fields: [productJoinStockInId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  productId Int
-  Product Product @relation(fields: [productId], references: [id])
-  value Int @db.UnsignedMediumInt
-  createAt  DateTime @default(now())
-  updateAt  DateTime @updatedAt
-  deletedAt     DateTime?
+  productId            Int
+  Product              Product            @relation("HistoryCostProduct", fields: [productId], references: [id])
+  value                Int                @db.UnsignedMediumInt
+  createAt             DateTime           @default(now())
+  updateAt             DateTime           @updatedAt
+  deletedAt            DateTime?
 }
