@@ -22,12 +22,12 @@ export const getVendors = async ({
     take: pagination ? take : undefined,
     where: {
         ...whereValues,
-        deletedAt: deletedAt instanceof Date? {
-            lte: getBeijingEndOfDay(deletedAt),
-            gte: getBeijingStartOfDay(deletedAt)
-        }: (typeof deletedAt === 'boolean' ?  {
-            not: null
-        }: undefined)
+        // deletedAt: deletedAt instanceof Date? {
+        //     lte: getBeijingEndOfDay(deletedAt),
+        //     gte: getBeijingStartOfDay(deletedAt)
+        // }: (typeof deletedAt === 'boolean' ?  {
+        //     not: null
+        // }: undefined)
     },
   });
   const total = await prisma.vendor.count({ where: whereValues });
