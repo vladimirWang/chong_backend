@@ -1,9 +1,12 @@
 import {CreateMultipleStockOut} from '../validators/stockOutValidator'
 import {sum2} from '../utils/algo'
 import {SuccessResponse} from '../models/Response'
+import prisma from "../utils/prisma";
 
-export const getStockOuts = () => {
-    return 'get outs'
+export const getStockOuts = async () => {
+    const result = await prisma.stockOut.findMany()    
+    const total = await prisma.stockOut.count()
+    return JSON.stringify(new SuccessResponse({ list: result, total }, "出货记录列表获取成功"))
 }
 
 export const createMultipleStockOut = async ({
