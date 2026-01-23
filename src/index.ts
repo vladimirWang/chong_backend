@@ -1,7 +1,8 @@
-import { Elysia } from "elysia";
+import { Elysia, t } from "elysia";
 import "dotenv/config";
 // 从 routers/index.ts 统一导入所有路由模块
 import { userRouter, postRouter, vendorRouter, productRouter, stockInRouter } from "./routers";
+import { uploadFile } from "./controllers/uploadController";
 import { ErrorResponse, errorCode } from "./models/Response";
 import { ValidationError } from "elysia";
 import { ZodError } from "zod";
@@ -12,6 +13,9 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import {authService} from './macro/auth.macro'
+import { readFile } from "fs/promises";
+import { join } from "path";
+import { existsSync } from "fs";
 
 // 注册插件
 dayjs.extend(utc);
@@ -43,6 +47,46 @@ const app = new Elysia()
     isSignIn: true
   }).get("/public/test", () => {
     return 'hello public guest'
+  })
+  // 静态文件服务 - 提供上传的图片访问
+  .get("/uploads/:filename", async ({ params, set }) => {
+    const filename = params.filename;
+    const filePath = join(process.cwd(), "uploads", filename);
+    
+    // 检查文件是否存在
+    if (!existsSync(filePath)) {
+      set.status = 404;
+      return { error: "文件不存在" };
+    }
+    
+    try {
+      const fileBuffer = await readFile(filePath);
+      // 根据文件扩展名设置 Content-Type
+      const ext = filename.split(".").pop()?.toLowerCase();
+      const contentTypeMap: Record<string, string> = {
+        jpg: "image/jpeg",
+        jpeg: "image/jpeg",
+        png: "image/png",
+        gif: "image/gif",
+        webp: "image/webp",
+        svg: "image/svg+xml",
+      };
+      const contentType = contentTypeMap[ext || ""] || "application/octet-stream";
+      
+      set.headers["Content-Type"] = contentType;
+      return fileBuffer;
+    } catch (error) {
+      set.status = 500;
+      return { error: "读取文件失败" };
+    }
+  })
+  .post("/api/upload", async ({ body }) => {
+    const result = await uploadFile({ file: body.file });
+    return JSON.parse(result);
+  }, {
+    body: t.Object({
+      file: t.File({ format: 'image/*' })
+    })
   })
     // 全局错误处理 - 拦截 zod 校验异常
     .onError(({ code, error }) => {
