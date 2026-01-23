@@ -2,6 +2,15 @@ import { SuccessResponse } from "../models/Response";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { existsSync } from "fs";
+import * as XLSX from "xlsx";
+
+// Excel 解析后的数据格式
+export interface StockInRecord {
+  productId: number;
+  vendorId: number;
+  count: number;
+  cost: number;
+}
 
 // 上传目录路径
 const UPLOAD_DIR = join(process.cwd(), "uploads");
@@ -91,6 +100,82 @@ function isValidExcelFile(file: File): boolean {
   return hasValidExtension && hasValidMimeType;
 }
 
+// 解析 Excel 文件为 StockInRecord[]
+// Excel 文件格式：从第三行开始为进货数据，字段顺序固定为 vendorId, productId, count, cost
+function parseExcelToStockInRecords(buffer: Buffer): StockInRecord[] {
+  try {
+    // 读取 Excel 文件
+    const workbook = XLSX.read(buffer, { type: "buffer" });
+    
+    // 获取第一个工作表
+    const firstSheetName = workbook.SheetNames[0];
+    if (!firstSheetName) {
+      throw new Error("Excel 文件中没有工作表");
+    }
+    
+    const worksheet = workbook.Sheets[firstSheetName];
+    
+    // 将工作表转换为 JSON 数组
+    const jsonData = XLSX.utils.sheet_to_json(worksheet, {
+      header: 1, // 使用数组格式，第一行作为数据
+      defval: null, // 空单元格返回 null
+    }) as any[][];
+    
+    if (jsonData.length < 3) {
+      throw new Error("Excel 文件数据不足，至少需要3行（前两行为表头，第三行开始为数据）");
+    }
+    
+    // 字段顺序固定：vendorId, productId, count, cost
+    const vendorIdIndex = 0;
+    const productIdIndex = 1;
+    const countIndex = 2;
+    const costIndex = 3;
+    
+    // 从第三行开始解析数据（索引为2）
+    const dataStartRow = 2;
+    const records: StockInRecord[] = [];
+    
+    for (let i = dataStartRow; i < jsonData.length; i++) {
+      const row = jsonData[i];
+      
+      // 跳过空行
+      if (!row || row.length === 0 || row.every((cell: any) => cell === null || cell === undefined || cell === "")) {
+        continue;
+      }
+      
+      // 提取数据（按固定顺序：vendorId, productId, count, cost）
+      const vendorId = Number(row[vendorIdIndex]);
+      const productId = Number(row[productIdIndex]);
+      const count = Number(row[countIndex]);
+      const cost = Number(row[costIndex]);
+      
+      // 验证数据有效性
+      if (isNaN(vendorId) || isNaN(productId) || isNaN(count) || isNaN(cost)) {
+        throw new Error(`第 ${i + 1} 行数据格式不正确，请确保所有字段都是数字`);
+      }
+      
+      if (vendorId <= 0 || productId <= 0 || count <= 0 || cost < 0) {
+        throw new Error(`第 ${i + 1} 行数据无效，供应商ID、产品ID和数量必须大于0，成本不能为负数`);
+      }
+      
+      records.push({
+        productId,
+        vendorId,
+        count,
+        cost,
+      });
+    }
+    
+    if (records.length === 0) {
+      throw new Error("Excel 文件中没有有效的数据行（从第三行开始）");
+    }
+    
+    return records;
+  } catch (error: any) {
+    throw new Error(`解析 Excel 文件失败: ${error.message}`);
+  }
+}
+
 // 处理 Excel 文件上传
 export const uploadExcelFile = async ({
   file,
@@ -125,17 +210,21 @@ export const uploadExcelFile = async ({
     const buffer = Buffer.from(arrayBuffer);
     await writeFile(filePath, buffer);
 
-    // 返回文件信息
-    const fileInfo = {
+    // 解析 Excel 文件
+    const records = parseExcelToStockInRecords(buffer);
+
+    // 返回文件信息和解析后的数据
+    const result = {
       originalName: file.name,
       fileName: fileName,
       filePath: `/uploads/excel/${fileName}`,
       size: file.size,
       type: file.type || "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      records: records,
     };
 
     return JSON.stringify(
-      new SuccessResponse(fileInfo, "Excel 文件上传成功")
+      new SuccessResponse(result, "Excel 文件上传并解析成功")
     );
   } catch (error) {
     throw error;
