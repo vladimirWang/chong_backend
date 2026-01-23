@@ -18,6 +18,12 @@ model Vendor {
   // stockIns   StockIn[]
 }
 
+// 进货单的状态
+enum StockInStatus {
+  PENDING // 处理中
+  COMPLETED // 完成
+}
+
 // 进货
 model StockIn {
   id                 Int                  @id @default(autoincrement())
@@ -26,15 +32,9 @@ model StockIn {
   updatedAt          DateTime             @updatedAt
   deletedAt          DateTime?
   totalCost          Int                  @db.UnsignedMediumInt // 订单总价
-  // cost        Int //  进货价
-  // count        Int // 数量
-  // productId    Int?
-  // product      Product? @relation(fields: [productId], references: [id])
-  // vendorId     Int? // 供应商
-  // vendor       Vendor?  @relation(fields: [vendorId], references: [id])
-  // ImportProduct ImportProduct[]
-  // @@map("StockIn")
   productJoinStockIn ProductJoinStockIn[]
+  status             StockInStatus        @default(PENDING) // 进货单的状态
+  completedAt        DateTime?
 }
 
 // 产品进货单中间表

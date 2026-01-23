@@ -361,3 +361,17 @@ export const updateStockIn = async (
   ])
   return JSON.stringify(new SuccessResponse(null, "进货单更新成功"))
 }
+
+export const confirmCompleted = async ({params}: {params: stockInUpdateParams}) => {
+  const record = await prisma.stockIn.update({
+    where: {
+      id: params.id
+    },
+    data: {
+      status: 'COMPLETED',
+      completedAt: new Date()
+    }
+  })
+  console.log("record: ", record)
+  return JSON.stringify(new SuccessResponse(record, "进货单确认成功"))
+}

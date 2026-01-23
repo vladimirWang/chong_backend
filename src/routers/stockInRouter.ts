@@ -17,6 +17,7 @@ import {
   createMultipleStockIn,
   getStockInById,
   updateStockIn,
+  confirmCompleted
 } from "../controllers/stockInController";
 
 
@@ -74,5 +75,7 @@ export const stockInRouter = new Elysia()
         params: stockInUpdateParamsSchema,
         body: multipleStockInBodySchema,
         // beforeHandle: mutilpleProductExistedValidator,
+      }).patch("/confirmCompleted/:id", confirmCompleted, {
+        params: stockInUpdateParamsSchema,
       })
   });
