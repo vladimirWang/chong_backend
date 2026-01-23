@@ -2,7 +2,7 @@ import { Elysia, t } from "elysia";
 import "dotenv/config";
 // 从 routers/index.ts 统一导入所有路由模块
 import { userRouter, postRouter, vendorRouter, productRouter, stockInRouter } from "./routers";
-import { uploadFile } from "./controllers/uploadController";
+import { uploadFile, uploadExcelFile } from "./controllers/uploadController";
 import { ErrorResponse, errorCode } from "./models/Response";
 import { ValidationError } from "elysia";
 import { ZodError } from "zod";
@@ -86,6 +86,37 @@ const app = new Elysia()
   }, {
     body: t.Object({
       file: t.File({ format: 'image/*' })
+    })
+  })
+  .post("/api/upload/excel", async ({ body, set }) => {
+    try {
+      // 路由层验证：检查文件扩展名
+      const fileName = body.file.name.toLowerCase();
+      const allowedExtensions = [".xlsx", ".xls", ".xlsm"];
+      const isValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext));
+      
+      if (!isValidExtension) {
+        set.status = 400;
+        return {
+          code: 10002,
+          message: "文件类型必须是 Excel 格式（.xlsx, .xls, .xlsm）",
+          data: null
+        };
+      }
+
+      const result = await uploadExcelFile({ file: body.file });
+      return JSON.parse(result);
+    } catch (error: any) {
+      set.status = 400;
+      return {
+        code: 10002,
+        message: error.message || "Excel 文件上传失败",
+        data: null
+      };
+    }
+  }, {
+    body: t.Object({
+      file: t.File()
     })
   })
     // 全局错误处理 - 拦截 zod 校验异常
