@@ -53,12 +53,35 @@ export const createMultipleStockIn = async ({
 }: {
   body: MultipleStockInBody;
 }) => {
-  const totalCost = body.productJoinStockIn.reduce((a, c) => {
+  // 合并相同 productId 和 cost 的数据，count 相加
+  // [{productId: 1, cost: 10, count: 10}, {productId: 1, cost: 10, count: 30}]
+  // => [{productId: 1, cost: 10, count: 40}]
+  const mergedMap = new Map<string, { productId: number; cost: number; count: number }>();
+  const productIds = [];
+  body.productJoinStockIn.forEach((item) => {
+    productIds.push(item.productId);
+    const key = `${item.productId}-${item.cost}`;
+    const existing = mergedMap.get(key);
+    if (existing) {
+      existing.count += item.count;
+    } else {
+      mergedMap.set(key, {
+        productId: item.productId,
+        cost: item.cost,
+        count: item.count,
+      });
+    }
+  });
+
+  // 转换为数组
+  const mergedProductJoinStockIn = Array.from(mergedMap.values());
+
+  const totalCost = mergedProductJoinStockIn.reduce((a, c) => {
     return a + c.cost * c.count;
   }, 0);
 
   // 查询所有产品信息（包括 vendorId）
-  const productIds = body.productJoinStockIn.map((item) => item.productId);
+
   const uniqueProductIds = [...new Set(productIds)];
   const products = await prisma.product.findMany({
     where: {
@@ -84,7 +107,7 @@ export const createMultipleStockIn = async ({
         // remark: body.remark,
         totalCost,
         productJoinStockIn: {
-          create: body.productJoinStockIn.map((item) => {
+          create: mergedProductJoinStockIn.map((item) => {
             return {
               cost: item.cost,
               count: item.count,
