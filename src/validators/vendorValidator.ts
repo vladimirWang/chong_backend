@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { paginationSchema } from "./commonValidator";
 
 // deletedAt query 既可能用于“是否已删除”(boolean)，也可能用于“按日期过滤”(date)。
 // 注意：Elysia 的 query 参数通常是 string；直接 z.coerce.boolean() 会把任何非空字符串都转成 true，
@@ -19,12 +20,9 @@ const deletedAtQuerySchema = z.preprocess((val) => {
 
 // 定义 getVendors 查询参数的 Schema
 export const vendorQuerySchema = z.object({
-  pagination: z.coerce.boolean().optional(),
-  limit: z.coerce.number().optional(),
-  page: z.coerce.number().optional(),
   name: z.string().optional(),
   deletedAt: z.union([deletedAtQuerySchema, z.boolean().optional()])
-});
+}).merge(paginationSchema);
 
 // 从 Schema 推断 TypeScript 类型
 export type VendorQuery = z.infer<typeof vendorQuerySchema>;

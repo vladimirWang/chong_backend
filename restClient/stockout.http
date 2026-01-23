@@ -14,8 +14,18 @@ Content-Type: application/json
     "productJoinStockOut": [
         {
             "price": 10, 
+            "count": 1,
+            "productId": 1
+        },
+        {
+            "price": 20, 
             "count": 2,
             "productId": 2
+        },
+        {
+            "price": 30, 
+            "count": 3,
+            "productId": 3
         }
     ]
 }
