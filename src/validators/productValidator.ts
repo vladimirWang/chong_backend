@@ -29,13 +29,6 @@ export const updateProductBodySchema = z.object({
 
 export type UpdateProductBody = z.infer<typeof updateProductBodySchema>;
 
-// 产品参数 Schema
-export const productParamsSchema = z.object({
-  id: z.coerce.number(),
-});
-
-export type ProductParams = z.infer<typeof productParamsSchema>;
-
 // 根据供应商ID获取产品参数 Schema
 export const productByVendorParamsSchema = z.object({
   vendorId: z.coerce.number(),

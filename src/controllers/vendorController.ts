@@ -1,8 +1,9 @@
 import prisma from "../utils/prisma";
 import { errorCode, ErrorResponse, SuccessResponse } from "../models/Response";
 import { getPaginationValues, getWhereValues } from "../utils/db";
-import { VendorQuery, VendorParams, vendorBatchDeleteSchema, VendorBatchDelete } from "../validators/vendorValidator";
+import { VendorQuery, vendorBatchDeleteSchema, VendorBatchDelete } from "../validators/vendorValidator";
 import {getBeijingStartOfDay, getBeijingEndOfDay} from '../utils/date'
+import {UpdateId} from '../validators/commonValidator'
 
 export const getVendors = async ({
   query,
@@ -42,7 +43,7 @@ export const deleteVendor = async ({
   params,
   status,
 }: {
-  params: VendorParams;
+  params: UpdateId;
   status: any;
 }) => {
   // 检查是否有关联产品

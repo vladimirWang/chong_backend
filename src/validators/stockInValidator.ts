@@ -25,19 +25,6 @@ export const multipleStockInBodySchema = z.object({
 
 export type MultipleStockInBody = z.infer<typeof multipleStockInBodySchema>;
 
-// 进货记录参数 Schema
-export const stockInParamsSchema = z.object({
-  id: z.coerce.number(),
-});
-
-export type StockInParams = z.infer<typeof stockInParamsSchema>;
-
-export const stockInUpdateParamsSchema = z.object({
-  id: z.coerce.number(),
-});
-
-export type stockInUpdateParams = z.infer<typeof stockInUpdateParamsSchema>;
-
 // 校验产品是否存在
 export const mutilpleProductExistedValidator = async ({
   body,

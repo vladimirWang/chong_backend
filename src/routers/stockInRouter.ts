@@ -7,8 +7,7 @@ const { JWT_SECRET } = process.env;
 import {
   singleStockInBodySchema,
   multipleStockInBodySchema,
-  stockInParamsSchema,
-  stockInUpdateParamsSchema,
+  // stockInUpdateParamsSchema,
   mutilpleProductExistedValidator
 } from "../validators/stockInValidator";
 import {
@@ -19,6 +18,7 @@ import {
   updateStockIn,
   confirmCompleted
 } from "../controllers/stockInController";
+import {updateIdSchema} from '../validators/commonValidator'
 
 
 export const stockInRouter = new Elysia()
@@ -69,13 +69,13 @@ export const stockInRouter = new Elysia()
       )
       // GET /api/stockin/:id - 根据ID获取进货记录
       .get("/:id", getStockInById, {
-        params: stockInParamsSchema,
+        params: updateIdSchema,
       })
       .put("/:id", updateStockIn, {
-        params: stockInUpdateParamsSchema,
+        params: updateIdSchema,
         body: multipleStockInBodySchema,
         // beforeHandle: mutilpleProductExistedValidator,
       }).patch("/confirmCompleted/:id", confirmCompleted, {
-        params: stockInUpdateParamsSchema,
+        params: updateIdSchema,
       })
   });

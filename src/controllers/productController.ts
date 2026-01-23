@@ -5,9 +5,9 @@ import {
   ProductQuery,
   CreateProductBody,
   UpdateProductBody,
-  ProductParams,
   ProductByVendorParams,
 } from "../validators/productValidator";
+import { UpdateId } from "../validators/commonValidator";
 
 // 获取产品列表
 export const getProducts = async ({
@@ -46,7 +46,7 @@ export const getProducts = async ({
 export const getProductById = async ({
   params,
 }: {
-  params: ProductParams;
+  params: UpdateId;
 }) => {
   const res = await prisma.product.findUnique({
     where: {
@@ -88,7 +88,7 @@ export const updateProduct = async ({
   params,
   body,
 }: {
-  params: ProductParams;
+  params: UpdateId;
   body: UpdateProductBody;
 }) => {
   const { price, cost, name, remark, img } = body;

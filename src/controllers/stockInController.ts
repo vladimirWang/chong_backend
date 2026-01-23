@@ -4,10 +4,10 @@ import {
   SingleStockInBody,
   MultipleStockInBody,
   StockInParams,
-  stockInUpdateParams,
 } from "../validators/stockInValidator";
 import { compareArrayMinLoop, luhn } from "../utils/algo";
 import _ from 'lodash'
+import {updateIdSchema} from '../validators/commonValidator'
 
 // 获取进货记录列表
 export const getStockIns = async () => {
@@ -194,7 +194,7 @@ export const updateStockIn = async (
   body
 }
 : {
-  params: stockInUpdateParams,
+  params: updateIdSchema,
   body: MultipleStockInBody
 }
 ) => {
@@ -362,7 +362,8 @@ export const updateStockIn = async (
   return JSON.stringify(new SuccessResponse(null, "进货单更新成功"))
 }
 
-export const confirmCompleted = async ({params}: {params: stockInUpdateParams}) => {
+// 确认收货
+export const confirmCompleted = async ({params}: {params: UpdateId}) => {
   const record = await prisma.stockIn.update({
     where: {
       id: params.id

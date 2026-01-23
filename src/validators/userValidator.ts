@@ -15,10 +15,3 @@ export const loginUserBodySchema = z.object({
 });
 
 export type LoginUserBody = z.infer<typeof loginUserBodySchema>;
-
-// 用户参数 Schema
-export const userParamsSchema = z.object({
-  id: z.coerce.number(),
-});
-
-export type UserParams = z.infer<typeof userParamsSchema>;

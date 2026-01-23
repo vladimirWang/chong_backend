@@ -7,9 +7,9 @@ import {
   productQuerySchema,
   createProductBodySchema,
   updateProductBodySchema,
-  productParamsSchema,
   productByVendorParamsSchema,
 } from "../validators/productValidator";
+import { updateIdSchema } from "../validators/commonValidator";
 import {
   getProducts,
   getProductById,
@@ -33,7 +33,7 @@ export const productRouter = new Elysia()
         })
         // GET /api/product/:id - 根据ID获取产品
         .get("/:id", getProductById, {
-          params: productParamsSchema,
+          params: updateIdSchema,
         })
         // POST /api/product - 创建产品
         .post(
@@ -68,7 +68,7 @@ export const productRouter = new Elysia()
           "/:id",
           updateProduct,
           {
-            params: productParamsSchema,
+            params: updateIdSchema,
             body: updateProductBodySchema,
             beforeHandle: async ({ params }) => {
               const productExisted = await prisma.product.findUnique({
@@ -96,7 +96,7 @@ export const productRouter = new Elysia()
             message: `产品 ${params.id} 删除成功`,
           };
         }, {
-          params: productParamsSchema,
+          params: updateIdSchema,
         })
         // GET /api/product/getProductsByVendorId/:vendorId - 根据供应商ID获取产品列表
         .get("/getProductsByVendorId/:vendorId", getProductsByVendorId, {

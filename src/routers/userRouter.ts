@@ -9,7 +9,6 @@ import { loginUser, registerUser } from "../controllers/userController";
 import {
   registerUserBodySchema,
   loginUserBodySchema,
-  userParamsSchema,
 } from "../validators/userValidator";
 
 // 使用 group 创建用户相关的路由组

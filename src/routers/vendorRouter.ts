@@ -5,7 +5,8 @@ import prisma from "../utils/prisma";
 import { errorCode, ErrorResponse, SuccessResponse } from "../models/Response";
 import {getPaginationValues, getWhereValues} from '../utils/db';
 import {getVendors, deleteVendor, batchDeleteVendor} from '../controllers/vendorController'
-import { vendorQuerySchema, vendorParamsSchema, VendorBatchDelete, vendorBatchDeleteSchema } from "../validators/vendorValidator";
+import { vendorQuerySchema, VendorBatchDelete, vendorBatchDeleteSchema } from "../validators/vendorValidator";
+import {updateIdSchema} from '../validators/commonValidator'
 
 const { JWT_SECRET } = process.env;
 
@@ -34,9 +35,7 @@ export const vendorRouter = new Elysia()
             }
             return JSON.stringify(new SuccessResponse(vendor, "供应商获取成功"));
         }, {
-            params: z.object({
-                id: z.coerce.number()
-            })
+            params: updateIdSchema
         })
         // POST /api/posts - 创建供应商
         .post("/", async ({ body }) => {
@@ -90,13 +89,11 @@ export const vendorRouter = new Elysia()
             //     post: { id: params.id, ...(body as Record<string, any>) }
             // };
         }, {
-            params: z.object({
-                id: z.coerce.number()
-            })
+            params: updateIdSchema
         })
         // DELETE /api/vendor/:id - 删除供应商
         .delete("/:id", deleteVendor, {
-            params: vendorParamsSchema,
+            params: updateIdSchema,
             beforeHandle: async ({ params }) => {
                 const vendor = await prisma.vendor.findUnique({
                     where: {
@@ -130,9 +127,7 @@ export const vendorRouter = new Elysia()
             });
             return JSON.stringify(new SuccessResponse<string>(updatedVendor, "供应商更新成功"));
         }, {
-            params: z.object({
-                id: z.coerce.number()
-            }),
+            params: updateIdSchema,
             body: z.object({
                 name: z.string().min(2).optional(),
                 remark: z.string().optional()
