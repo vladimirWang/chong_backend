@@ -29,6 +29,7 @@ export const getValidationNumber = (str: string): number => {
     return result;
 }
 
+// 数字左边补零
 export const numberPadLeft = (n: number, length: number, padChar: string = '0'): string => {
     if (n < 0 || Math.floor(n) !== n) {
         throw new Error("待补零的数字必须是大于等于 0 的整数");
@@ -36,7 +37,7 @@ export const numberPadLeft = (n: number, length: number, padChar: string = '0'):
     return (n+'').padStart(length, padChar);
 }
 
-// luhn算法
+// luhn算法-生成条形码数字
 export const luhn= (product: IProduct | { id: number; vendorId: number }): string => {
     const date = dayjs().format('YYMMDD');
     // // <YYMMDD><vendorId><productId><validationNumber>
@@ -118,4 +119,12 @@ export function compareArrayMinLoop<T extends Record<string, any>>(
   // 4. 剩余旧项即为删除项
   result.deleted = Object.values(oldMap);
   return result;
+}
+
+
+export function sum2<T extends Record<K, number>, K extends keyof T>(data: T[], key: K): number {
+  return data.reduce((a, c) => {
+    const currentValue = c[key] ?? 0;
+    return a+currentValue
+  }, 0)
 }

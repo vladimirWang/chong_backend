@@ -68,8 +68,9 @@ model Product {
   latestPrice        Int? // 售价,只有进库后才有
   latestCost         Int? // 成本价,只有进库后才有
   productCode        String?              @unique @db.VarChar(20) // 只有进库后才有
-  productJoinStockIn ProductJoinStockIn[]
+  productJoinStockIn ProductJoinStockIn[] // 进货中间表
   historyCost        HistoryCost[]        @relation("HistoryCostProduct")
+  productJoinStockOut ProductJoinStockOut[] // 出货中间表
 
   @@index([vendorId], map: "Product_brandId_fkey")
 }
@@ -96,4 +97,27 @@ model HistoryCost {
   createAt             DateTime           @default(now())
   updateAt             DateTime           @updatedAt
   deletedAt            DateTime?
+}
+
+// 出货表
+model StockOut {
+  id Int @id @default(autoincrement())
+  createAt             DateTime           @default(now())
+  updateAt             DateTime           @updatedAt
+  deletedAt            DateTime?
+  totalPrice Int @db.UnsignedMediumInt
+  status StockInStatus @default(PENDING)
+  completedAt DateTime?
+  remark String?
+  productJoinStockOut ProductJoinStockOut[]
+}
+
+model ProductJoinStockOut {
+  id Int @id @default(autoincrement())
+  productId Int
+  product Product @relation(fields: [productId], references: [id])
+  stockOutId Int
+  stockOut StockOut @relation(fields: [stockOutId], references: [id])
+  price Int  @db.UnsignedSmallInt // 售价
+  count Int @db.UnsignedTinyInt // 数量
 }
