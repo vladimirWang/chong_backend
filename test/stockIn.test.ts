@@ -78,16 +78,14 @@ describe("进货功能测试", () => {
     };
     expect(responseData.code).toBe(200);
 
-    // 4. 用 SQL 直接查询 Product 表的 balance
-    const product1 = await prisma.product.findUnique({
-      where: { id: 1 },
-      select: { id: true, name: true, balance: true },
-    });
+    // 4. 用原始 SQL 直接查询 Product 表的 balance
+    const [product1] = await prisma.$queryRaw<
+      { id: number; name: string; balance: number }[]
+    >`SELECT id, name, balance FROM Product WHERE id = 1`;
 
-    const product2 = await prisma.product.findUnique({
-      where: { id: 2 },
-      select: { id: true, name: true, balance: true },
-    });
+    const [product2] = await prisma.$queryRaw<
+      { id: number; name: string; balance: number }[]
+    >`SELECT id, name, balance FROM Product WHERE id = 2`;
 
     console.log(
       `Product 1 (${product1?.name}): balance = ${product1?.balance}`,

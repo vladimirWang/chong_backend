@@ -2,7 +2,7 @@
   "name": "app",
   "version": "1.0.50",
   "scripts": {
-    "test": "bunx dotenv -e .env.development -- bun test",
+    "test": "./test-setup.sh && bunx dotenv -e .env.test -- bun test",
     "test:setup": "./test-setup.sh",
     "dev": "bun run --watch src/index.ts",
     "perf:http": "bun run perf/http_load.ts",

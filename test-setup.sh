@@ -4,12 +4,12 @@
 # 1. 删除并重建数据库
 # 2. 导入初始数据
 
-# 数据库配置
+# 数据库配置（使用测试数据库）
 DB_HOST="localhost"
 DB_PORT="3306"
 DB_USER="root"
 DB_PASSWORD="123456"
-DB_NAME="gallary_development"
+DB_NAME="gallary_test"
 
 MYSQL_CMD="mysql -h${DB_HOST} -P${DB_PORT} -u${DB_USER} -p${DB_PASSWORD}"
 
@@ -51,7 +51,7 @@ echo ""
 echo ">>> Step 2: 执行 Prisma db push 创建表结构"
 echo "----------------------------------------"
 
-bun run db:push
+bunx dotenv -e .env.test -- prisma db push
 
 if [ $? -eq 0 ]; then
   echo "✅ 表结构创建成功"
