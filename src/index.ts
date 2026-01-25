@@ -25,7 +25,7 @@ dayjs.extend(timezone);
 // dayjs.tz.setDefault("Europe/London");
 
 // 创建主应用并注册所有路由模块
-const app = new Elysia()
+export const app = new Elysia()
     .use(
         jwt({
             name: 'jwt',
