@@ -35,11 +35,5 @@ PUT {{base}}/1
 content-type: application/json
 
 {
-    "productJoinStockOut": [
-        {
-            "price": 20, 
-            "count": 10,
-            "productId": 2
-        }
-    ]
+    "productJoinStockOut": []
 }

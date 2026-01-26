@@ -120,7 +120,7 @@ model ProductJoinStockOut {
   productId Int
   product Product @relation(fields: [productId], references: [id])
   stockOutId Int
-  stockOut StockOut @relation(fields: [stockOutId], references: [id])
+  stockOut StockOut @relation(fields: [stockOutId], references: [id], onDelete: Cascade)
   price Int  @db.UnsignedSmallInt // 售价
   count Int @db.UnsignedTinyInt // 数量
 
