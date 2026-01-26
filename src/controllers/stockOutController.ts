@@ -314,3 +314,16 @@ export const updateStockOut = async ({
   ]);
   return JSON.stringify(new SuccessResponse(null, "出货单更新成功"));
 };
+
+
+export const getStockOutDetailById = async({params}: {params: UpdateId}) => {
+  const result = await prisma.stockOut.findUnique({
+    where: {
+      id: params.id
+    },
+    select: {
+      productJoinStockOut: true
+    }
+  })
+  return JSON.stringify(new SuccessResponse(result, "出货单更新成功"));
+}
