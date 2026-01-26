@@ -1,4 +1,4 @@
-import {z} from 'zod'
+import { z } from "zod";
 
 export const updateIdSchema = z.object({
   id: z.coerce.number(),
@@ -13,3 +13,11 @@ export const paginationSchema = z.object({
 });
 
 export type Pagination = z.infer<typeof paginationSchema>;
+
+export const completedAtSchema = z
+  .object({
+    completedAt: z.coerce.date().optional(),
+  })
+  .optional();
+
+export type CompletedAt = z.infer<typeof completedAtSchema>;

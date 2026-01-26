@@ -2,7 +2,7 @@ import { CreateMultipleStockOut } from "../validators/stockOutValidator";
 import { sum2, compareArrayMinLoop } from "../utils/algo";
 import { SuccessResponse, ErrorResponse } from "../models/Response";
 import prisma from "../utils/prisma";
-import { Pagination, UpdateId } from "../validators/commonValidator";
+import { Pagination, UpdateId, CompletedAt } from "../validators/commonValidator";
 import { getPaginationValues, getWhereValues } from "../utils/db";
 import { CommonStockLineComparable } from "./stockInController";
 
@@ -83,8 +83,10 @@ export const createMultipleStockOut = async ({
 export const confirmStockOutCompleted = async ({
   params,
   status,
+  body
 }: {
   params: UpdateId;
+  body:  CompletedAt
 }) => {
   const productsInRecord = await prisma.productJoinStockOut.findMany({
     where: {
@@ -101,6 +103,7 @@ export const confirmStockOutCompleted = async ({
     },
     {},
   );
+  const {completedAt = new Date()} = body || {}
   await prisma.$transaction([
     prisma.stockOut.update({
       where: {
@@ -108,6 +111,7 @@ export const confirmStockOutCompleted = async ({
       },
       data: {
         status: "COMPLETED",
+        completedAt
       },
     }),
     ...productsInRecord.map((item) => {
@@ -124,7 +128,7 @@ export const confirmStockOutCompleted = async ({
       });
     }),
   ]);
-  return JSON.stringify(new SuccessResponse(null, "出货创建成功"));
+  return JSON.stringify(new SuccessResponse(null, "出货确认成功"));
 };
 
 // 通过id更新出货

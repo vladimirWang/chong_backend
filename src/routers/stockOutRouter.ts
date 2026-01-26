@@ -12,6 +12,7 @@ import {
 import {
   paginationSchema,
   updateIdSchema,
+  completedAtSchema
 } from "../validators/commonValidator";
 
 export const stockOutRouter = new Elysia().group("/api/stockout", (app) => {
@@ -29,5 +30,6 @@ export const stockOutRouter = new Elysia().group("/api/stockout", (app) => {
     })
     .patch("/confirmCompleted/:id", confirmStockOutCompleted, {
       params: updateIdSchema,
+      body: completedAtSchema
     });
 });
