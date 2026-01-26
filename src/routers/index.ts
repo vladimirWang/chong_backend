@@ -7,4 +7,4 @@ export { vendorRouter } from "./vendorRouter";
 export { productRouter } from "./productRouter";
 export { stockInRouter } from "./stockInRouter";
 export { stockOutRouter } from "./stockOutRouter";
-
+export { statisticsOutRouter } from "./statisticsOutRouter";

@@ -139,8 +139,8 @@ export const createMultipleStockIn = async ({
         productCode?: string;
         latestCost?: number;
       } = {
-        balance: {
-          stockInPending: item.count,
+        stockInPending: {
+          increment: item.count,
         },
       };
 
@@ -371,18 +371,27 @@ export const updateStockIn = async ({
 };
 
 // 确认收货
-export const confirmCompleted = async ({ params, body }: { params: UpdateId, body: CompletedAt }) => {
+export const confirmCompleted = async ({
+  params,
+  body,
+}: {
+  params: UpdateId;
+  body: CompletedAt;
+}) => {
   const relatedProducts = await prisma.productJoinStockIn.findMany({
     where: {
-      stockInId: params.id
-    }
-  })
-  const relatedProductMap = relatedProducts.reduce((a: Record<number, StockOutLineComparable>, c) => {
-    a[c.productId] = c;
-    return a
-  }, {})
+      stockInId: params.id,
+    },
+  });
+  const relatedProductMap = relatedProducts.reduce(
+    (a: Record<number, StockOutLineComparable>, c) => {
+      a[c.productId] = c;
+      return a;
+    },
+    {},
+  );
 
-  const {completedAt = new Date()} = body || {}
+  const { completedAt = new Date() } = body || {};
   const record = await prisma.$transaction([
     // 改进货单状态
     prisma.stockIn.update({
@@ -395,23 +404,22 @@ export const confirmCompleted = async ({ params, body }: { params: UpdateId, bod
       },
     }),
     // 改产品表，把待进货加到库存数中
-    ...relatedProducts.map(item => {
+    ...relatedProducts.map((item) => {
       return prisma.product.update({
         where: {
           id: item.productId,
         },
         data: {
           balance: {
-            increment: item.count
+            increment: item.count,
           },
           stockInPending: {
-            increment: -1 * item.count
+            increment: -1 * item.count,
           },
-          latestCost: item.cost
-        }
-      })
-    })
-  ])
-  console.log("record: ", record);
+          latestCost: item.cost,
+        },
+      });
+    }),
+  ]);
   return JSON.stringify(new SuccessResponse(record, "进货单确认成功"));
 };
