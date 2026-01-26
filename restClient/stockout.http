@@ -37,3 +37,7 @@ content-type: application/json
 {
     "productJoinStockOut": []
 }
+
+### update stockOut
+PATCH {{base}}/confirmCompleted/5
+content-type: application/json

@@ -1,6 +1,6 @@
 import { CreateMultipleStockOut } from "../validators/stockOutValidator";
 import { sum2, compareArrayMinLoop } from "../utils/algo";
-import { SuccessResponse } from "../models/Response";
+import { SuccessResponse, ErrorResponse } from "../models/Response";
 import prisma from "../utils/prisma";
 import { Pagination, UpdateId } from "../validators/commonValidator";
 import { getPaginationValues, getWhereValues } from "../utils/db";
@@ -38,6 +38,7 @@ export const createMultipleStockOut = async ({
   const { productJoinStockOut, remark } = body;
   const totalPrice = sum2(productJoinStockOut, "price");
   await prisma.$transaction([
+    // 创建出货记录
     prisma.stockOut.create({
       data: {
         totalPrice,
@@ -57,6 +58,22 @@ export const createMultipleStockOut = async ({
         },
       },
     }),
+    // 更新产品表库存数和出货中数量
+    ...productJoinStockOut.map((item) => {
+      return prisma.product.update({
+        where: {
+          id: item.productId,
+        },
+        data: {
+          balance: {
+            decrement: item.count,
+          },
+          stockOutPending: {
+            increment: item.count,
+          },
+        },
+      });
+    }),
   ]);
 
   return JSON.stringify(new SuccessResponse(null, "出货创建成功"));
@@ -65,9 +82,50 @@ export const createMultipleStockOut = async ({
 // 确认出货完成
 export const confirmStockOutCompleted = async ({
   params,
+  status,
 }: {
   params: UpdateId;
-}) => {};
+}) => {
+  const productsInRecord = await prisma.productJoinStockOut.findMany({
+    where: {
+      stockOutId: params.id,
+    },
+  });
+  if (!productsInRecord || productsInRecord.length === 0) {
+    return JSON.stringify(new ErrorResponse(null, "出货单对应产品不存在"));
+  }
+  const productMap = productsInRecord.reduce(
+    (a: Record<number, StockOutLineComparable>, c) => {
+      a[c.productId] = c;
+      return a;
+    },
+    {},
+  );
+  await prisma.$transaction([
+    prisma.stockOut.update({
+      where: {
+        id: params.id,
+      },
+      data: {
+        status: "COMPLETED",
+      },
+    }),
+    ...productsInRecord.map((item) => {
+      return prisma.product.update({
+        where: {
+          id: item.productId,
+        },
+        data: {
+          stockOutPending: {
+            decrement: item.count,
+          },
+          latestPrice: item.price,
+        },
+      });
+    }),
+  ]);
+  return JSON.stringify(new SuccessResponse(null, "出货创建成功"));
+};
 
 // 通过id更新出货
 export const updateStockOut = async ({
@@ -78,7 +136,7 @@ export const updateStockOut = async ({
   body: MultipleStockOutBody;
 }) => {
   const { productJoinStockOut } = body;
-    // 查询已有数据
+  // 查询已有数据
   const existedRecord = await prisma.productJoinStockOut.findMany({
     where: {
       stockOutId: params.id,
@@ -142,11 +200,7 @@ export const updateStockOut = async ({
       "productId",
       ["id", "stockInId"],
     );
-  console.log("existedComparable: ", existedComparable);
-  console.log("added: ", added);
-  console.log("modified: ", modified);
-  console.log("deleted: ", deleted);
-  console.log("unchanged: ", unchanged);
+
   const existedInfoMap: Record<number, StockOutInfo> = existedRecord.reduce(
     (a: Record<number, StockOutInfo>, c) => {
       a[c.productId] = {
