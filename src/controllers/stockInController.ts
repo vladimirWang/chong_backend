@@ -130,7 +130,7 @@ export const createMultipleStockIn = async ({
         },
       },
     }),
-    // 修改库存并生成产品编码
+    // 修改待进库数并生成产品编码
     ...body.productJoinStockIn.map((item) => {
       const product = productMap.get(item.productId);
       // 如果产品存在且有 vendorId，生成产品编码
@@ -140,9 +140,8 @@ export const createMultipleStockIn = async ({
         latestCost?: number;
       } = {
         balance: {
-          increment: item.count,
+          stockInPending: item.count,
         },
-        latestCost: item.cost,
       };
 
       // TODO 正确处理判空
@@ -319,8 +318,8 @@ export const updateStockIn = async ({
         },
       },
     }),
-    // 更新产品库存和最新成本价-对新增的商品
-    // 不管新增还是编辑已有商品，最新成本都是直接赋值
+    // 更新产品待进库-对新增的商品
+    // 不管新增还是编辑已有商品
     // TODO 删除进货中某个商品时，要把最新成本还原到前一次，多加一个表来实现
     ...added.map((item) => {
       return prisma.product.update({
@@ -328,10 +327,9 @@ export const updateStockIn = async ({
           id: item.productId,
         },
         data: {
-          balance: {
+          stockInPending: {
             increment: item.count,
           },
-          latestCost: item.cost,
         },
       });
     }),
@@ -347,7 +345,7 @@ export const updateStockIn = async ({
           id: item.productId,
         },
         data: {
-          balance: {
+          stockInPending: {
             increment: item.count - existedInfoMap[item.productId].count,
           },
           latestCost: item.cost,
@@ -361,7 +359,7 @@ export const updateStockIn = async ({
           id: item.productId,
         },
         data: {
-          balance: {
+          stockInPending: {
             increment: -1 * existedInfoMap[item.productId].count,
           },
           latestCost: item.cost,
@@ -373,16 +371,47 @@ export const updateStockIn = async ({
 };
 
 // 确认收货
-export const confirmCompleted = async ({ params }: { params: UpdateId }) => {
-  const record = await prisma.stockIn.update({
+export const confirmCompleted = async ({ params, body }: { params: UpdateId, body: CompletedAt }) => {
+  const relatedProducts = await prisma.productJoinStockIn.findMany({
     where: {
-      id: params.id,
-    },
-    data: {
-      status: "COMPLETED",
-      completedAt: new Date(),
-    },
-  });
+      stockInId: params.id
+    }
+  })
+  const relatedProductMap = relatedProducts.reduce((a: Record<number, StockOutLineComparable>, c) => {
+    a[c.productId] = c;
+    return a
+  }, {})
+
+  const {completedAt = new Date()} = body || {}
+  const record = await prisma.$transaction([
+    // 改进货单状态
+    prisma.stockIn.update({
+      where: {
+        id: params.id,
+      },
+      data: {
+        status: "COMPLETED",
+        completedAt,
+      },
+    }),
+    // 改产品表，把待进货加到库存数中
+    ...relatedProducts.map(item => {
+      return prisma.product.update({
+        where: {
+          id: item.productId,
+        },
+        data: {
+          balance: {
+            increment: item.count
+          },
+          stockInPending: {
+            increment: -1 * item.count
+          },
+          latestCost: item.cost
+        }
+      })
+    })
+  ])
   console.log("record: ", record);
   return JSON.stringify(new SuccessResponse(record, "进货单确认成功"));
 };

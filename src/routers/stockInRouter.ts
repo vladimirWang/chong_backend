@@ -18,7 +18,7 @@ import {
   updateStockIn,
   confirmCompleted
 } from "../controllers/stockInController";
-import {updateIdSchema} from '../validators/commonValidator'
+import {updateIdSchema, completedAtSchema} from '../validators/commonValidator'
 
 
 export const stockInRouter = new Elysia()
@@ -77,5 +77,6 @@ export const stockInRouter = new Elysia()
         // beforeHandle: mutilpleProductExistedValidator,
       }).patch("/confirmCompleted/:id", confirmCompleted, {
         params: updateIdSchema,
+        body: completedAtSchema
       })
   });
