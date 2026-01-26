@@ -71,6 +71,8 @@ model Product {
   productJoinStockIn ProductJoinStockIn[] // 进货中间表
   historyCost        HistoryCost[]        @relation("HistoryCostProduct")
   productJoinStockOut ProductJoinStockOut[] // 出货中间表
+  stockOutPending Int @db.UnsignedSmallInt @default(0) // 出货中产品
+  stockInPending Int @db.UnsignedSmallInt @default(0) // 进货中产品
 
   @@index([vendorId], map: "Product_brandId_fkey")
 }
@@ -110,6 +112,7 @@ model StockOut {
   completedAt DateTime?
   remark String?
   productJoinStockOut ProductJoinStockOut[]
+
 }
 
 model ProductJoinStockOut {
@@ -120,4 +123,6 @@ model ProductJoinStockOut {
   stockOut StockOut @relation(fields: [stockOutId], references: [id])
   price Int  @db.UnsignedSmallInt // 售价
   count Int @db.UnsignedTinyInt // 数量
+
+  @@unique([stockOutId, productId])
 }

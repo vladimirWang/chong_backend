@@ -72,8 +72,8 @@ export function compareArrayMinLoop<T extends Record<string, any>>(
 ): CompareArrayResult<T> {
   const result: CompareArrayResult<T> = {
     added: [],
-    modified: [],
-    deleted: [],
+    modified: [], // 修改后的数据
+    deleted: [], // 被删除的数据（原始值）
     unchanged: []
   };
 

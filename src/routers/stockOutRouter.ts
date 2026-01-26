@@ -1,14 +1,33 @@
 import { Elysia } from "elysia";
-import {getStockOuts, createMultipleStockOut} from '../controllers/stockOutController'
-import {createMultipleStockOutSchema} from '../validators/stockOutValidator'
-import {paginationSchema} from '../validators/commonValidator'
+import {
+  getStockOuts,
+  createMultipleStockOut,
+  confirmStockOutCompleted,
+  updateStockOut,
+} from "../controllers/stockOutController";
+import {
+  multipleStockOutBodySchema,
+  createMultipleStockOutSchema,
+} from "../validators/stockOutValidator";
+import {
+  paginationSchema,
+  updateIdSchema,
+} from "../validators/commonValidator";
 
-export const stockOutRouter = new Elysia()
-    .group('/api/stockout', app => {
-        return app.get("/", getStockOuts, {
-            query: paginationSchema
-        })
-        .post("/multiple", createMultipleStockOut, {
-            body: createMultipleStockOutSchema
-        })
+export const stockOutRouter = new Elysia().group("/api/stockout", (app) => {
+  return app
+    .get("/", getStockOuts, {
+      query: paginationSchema,
     })
+    .post("/multiple", createMultipleStockOut, {
+      body: createMultipleStockOutSchema,
+    })
+    .put("/:id", updateStockOut, {
+      params: updateIdSchema,
+      body: multipleStockOutBodySchema,
+      // beforeHandle: mutilpleProductExistedValidator,
+    })
+    .patch("/confirmCompleted/:id", confirmStockOutCompleted, {
+      params: updateIdSchema,
+    });
+});
