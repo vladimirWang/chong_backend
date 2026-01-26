@@ -15,40 +15,47 @@ export const getHotSales = async ({ query }: { query: GetHotSalesQuery }) => {
   const endDateTime = new Date(endDate);
   endDateTime.setHours(23, 59, 59, 999);
 
-  // 使用原始 SQL 查询，在数据库层面按 price * count 排序并限制为10条
+  // 使用原始 SQL 查询，按商品分组计算总成交额，在数据库层面排序并限制为10条
   // Prisma 会自动将 Date 对象转换为数据库兼容的格式
   const sortedResult = await prisma.$queryRaw<
     Array<{
-      id: number;
       productId: number;
-      stockOutId: number;
-      price: number;
-      count: number;
+      totalAmount: bigint; // SUM 的结果可能是 bigint
     }>
   >`
-    SELECT pjso.id, pjso.productId, pjso.stockOutId, pjso.price, pjso.count
+    SELECT 
+      pjso.productId,
+      SUM(pjso.price * pjso.count) as totalAmount
     FROM ProductJoinStockOut pjso
     INNER JOIN StockOut so ON pjso.stockOutId = so.id
     WHERE so.completedAt >= ${startDateTime} AND so.completedAt <= ${endDateTime}
-    ORDER BY pjso.price * pjso.count DESC
+    GROUP BY pjso.productId
+    ORDER BY totalAmount DESC
     LIMIT 10
   `;
 
-  // 如果需要包含关联的 product 和 stockOut 数据，需要额外查询
-  const resultWithRelations = await Promise.all(
-    sortedResult
-      .map(async (item) => {
-        const res = await prisma.productJoinStockOut.findFirst({
-          where: { id: item.id },
-          include: {
-            product: true,
-            stockOut: true,
-          },
-        });
-        return res;
-      })
-      .filter(Boolean),
-  );
+  // 查询这些商品的信息
+  const productIds = sortedResult.map((item) => item.productId);
+  const products = await prisma.product.findMany({
+    where: {
+      id: {
+        in: productIds,
+      },
+    },
+    include: {
+      Vendor: true,
+    },
+  });
+
+  // 将商品信息和总成交额组合
+  const resultWithRelations = sortedResult.map((item) => {
+    const product = products.find((p) => p.id === item.productId);
+    return {
+      productId: item.productId,
+      totalAmount: Number(item.totalAmount), // 将 bigint 转换为 number
+      product: product || null,
+    };
+  });
 
   return JSON.stringify(
     new SuccessResponse(resultWithRelations, "热销商品获取成功"),
