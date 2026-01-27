@@ -44,8 +44,8 @@ model ProductJoinStockIn {
   stockIn     StockIn      @relation(fields: [stockInId], references: [id])
   productId   Int
   product     Product      @relation(fields: [productId], references: [id])
-  cost        Int          @db.UnsignedSmallInt // 售价
-  count       Int          @db.UnsignedSmallInt // 数量
+  cost        Int // 售价
+  count       Int // 数量
   historyCost HistoryCost?
 
   @@unique([stockInId, productId, cost])
@@ -119,8 +119,8 @@ model ProductJoinStockOut {
   product    Product  @relation(fields: [productId], references: [id])
   stockOutId Int
   stockOut   StockOut @relation(fields: [stockOutId], references: [id], onDelete: Cascade)
-  price      Int      @db.UnsignedSmallInt // 售价
-  count      Int      @db.UnsignedTinyInt // 数量
+  price      Int // 售价
+  count      Int // 数量
 
   @@unique([stockOutId, productId])
 }

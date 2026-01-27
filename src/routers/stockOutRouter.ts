@@ -4,7 +4,7 @@ import {
   createMultipleStockOut,
   confirmStockOutCompleted,
   updateStockOut,
-  getStockOutDetailById
+  getStockOutDetailById,
 } from "../controllers/stockOutController";
 import {
   multipleStockOutBodySchema,
@@ -13,8 +13,9 @@ import {
 import {
   paginationSchema,
   updateIdSchema,
-  completedAtSchema
+  completedAtSchema,
 } from "../validators/commonValidator";
+import { ZodError } from "zod";
 
 export const stockOutRouter = new Elysia().group("/api/stockout", (app) => {
   return app
@@ -23,23 +24,38 @@ export const stockOutRouter = new Elysia().group("/api/stockout", (app) => {
     })
     .post("/multiple", createMultipleStockOut, {
       body: createMultipleStockOutSchema,
-      beforeHandle: async ({body}) => {
-        // const productExisted = await prisma.product.findUnique({
-        //   where: {
-        //     id: params.id,
+      beforeHandle: async ({ body }) => {
+        // throw new ZodError([
+        //   {
+        //     code: "custom",
+        //     path: ["id"],
+        //     message: "产品超卖了",
         //   },
-        // });
-
-        // if (!productExisted) {
-        //   // 抛出 zod 异常，使用自定义错误消息
-        //   throw new ZodError([
-        //     {
-        //       code: "custom",
-        //       path: ["id"],
-        //       message: "产品不存在",
-        //     },
-        //   ]);
-        // }
+        // ]);
+        // ----------
+        const data = body.productJoinStockOut;
+        const result = await Promise.all(
+          data.map((item) => {
+            return prisma.product.findUnique({
+              where: {
+                id: item.productId,
+              },
+            });
+          }),
+        );
+        const balanceInvalid = data.some((item, index) => {
+          console.log(item.count, result[index]);
+          return item.count > result[index].balance;
+        });
+        if (balanceInvalid) {
+          throw new ZodError([
+            {
+              code: "custom",
+              path: ["id"],
+              message: "产品超卖了",
+            },
+          ]);
+        }
       },
     })
     .put("/:id", updateStockOut, {
@@ -48,9 +64,9 @@ export const stockOutRouter = new Elysia().group("/api/stockout", (app) => {
     })
     .patch("/confirmCompleted/:id", confirmStockOutCompleted, {
       params: updateIdSchema,
-      body: completedAtSchema
+      body: completedAtSchema,
     })
     .get("/:id", getStockOutDetailById, {
       params: updateIdSchema,
-    })
+    });
 });
