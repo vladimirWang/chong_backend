@@ -53,26 +53,26 @@ model ProductJoinStockIn {
 
 // 商品
 model Product {
-  id                 Int                  @id @default(autoincrement())
-  name               String               @unique
-  img                String?
-  vendorId           Int
-  remark             String?
-  balance            Int?                 @default(0) @db.UnsignedSmallInt
-  deletedAt          DateTime?
-  createAt           DateTime             @default(now())
-  updateAt           DateTime             @updatedAt
+  id                  Int                   @id @default(autoincrement())
+  name                String                @unique
+  img                 String?
+  vendorId            Int
+  remark              String?
+  balance             Int?                  @default(0) @db.UnsignedSmallInt
+  deletedAt           DateTime?
+  createAt            DateTime              @default(now())
+  updateAt            DateTime              @updatedAt
   // imports  ImportProduct[]
-  Vendor             Vendor?              @relation(fields: [vendorId], references: [id])
+  Vendor              Vendor?               @relation(fields: [vendorId], references: [id])
   // StockIn   StockIn[]
-  latestPrice        Int? // 售价,只有进库后才有
-  latestCost         Int? // 成本价,只有进库后才有
-  productCode        String?              @unique @db.VarChar(20) // 只有进库后才有
-  productJoinStockIn ProductJoinStockIn[] // 进货中间表
-  historyCost        HistoryCost[]        @relation("HistoryCostProduct")
+  latestPrice         Int? // 售价,只有进库后才有
+  latestCost          Int? // 成本价,只有进库后才有
+  productCode         String?               @unique @db.VarChar(20) // 只有进库后才有
+  productJoinStockIn  ProductJoinStockIn[] // 进货中间表
+  historyCost         HistoryCost[]         @relation("HistoryCostProduct")
   productJoinStockOut ProductJoinStockOut[] // 出货中间表
-  stockOutPending Int @db.UnsignedSmallInt @default(0) // 出货中产品
-  stockInPending Int @db.UnsignedSmallInt @default(0) // 进货中产品
+  stockOutPending     Int                   @default(0) @db.UnsignedSmallInt // 出货中产品
+  stockInPending      Int                   @default(0) @db.UnsignedSmallInt // 进货中产品
 
   @@index([vendorId], map: "Product_brandId_fkey")
 }
@@ -92,37 +92,35 @@ model User {
 model HistoryCost {
   id                   Int                @id @default(autoincrement())
   productJoinStockInId Int                @unique
-  productJoinStockIn   ProductJoinStockIn @relation(fields: [productJoinStockInId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  productJoinStockIn   ProductJoinStockIn @relation(fields: [productJoinStockInId], references: [id], onDelete: Cascade)
   productId            Int
   Product              Product            @relation("HistoryCostProduct", fields: [productId], references: [id])
   value                Int                @db.UnsignedMediumInt
   createAt             DateTime           @default(now())
   updateAt             DateTime           @updatedAt
-  deletedAt            DateTime?
 }
 
 // 出货表
 model StockOut {
-  id Int @id @default(autoincrement())
-  createAt             DateTime           @default(now())
-  updateAt             DateTime           @updatedAt
-  deletedAt            DateTime?
-  totalPrice Int @db.UnsignedMediumInt
-  status StockInStatus @default(PENDING)
-  completedAt DateTime?
-  remark String?
+  id                  Int                   @id @default(autoincrement())
+  createAt            DateTime              @default(now())
+  updateAt            DateTime              @updatedAt
+  deletedAt           DateTime?
+  totalPrice          Int                   @db.UnsignedMediumInt
+  status              StockInStatus         @default(PENDING)
+  completedAt         DateTime?
+  remark              String?
   productJoinStockOut ProductJoinStockOut[]
-
 }
 
 model ProductJoinStockOut {
-  id Int @id @default(autoincrement())
-  productId Int
-  product Product @relation(fields: [productId], references: [id])
+  id         Int      @id @default(autoincrement())
+  productId  Int
+  product    Product  @relation(fields: [productId], references: [id])
   stockOutId Int
-  stockOut StockOut @relation(fields: [stockOutId], references: [id], onDelete: Cascade)
-  price Int  @db.UnsignedSmallInt // 售价
-  count Int @db.UnsignedTinyInt // 数量
+  stockOut   StockOut @relation(fields: [stockOutId], references: [id], onDelete: Cascade)
+  price      Int      @db.UnsignedSmallInt // 售价
+  count      Int      @db.UnsignedTinyInt // 数量
 
   @@unique([stockOutId, productId])
 }
