@@ -1,13 +1,16 @@
 import { z, ZodError } from "zod";
 import prisma from "../utils/prisma";
+import { paginationSchema } from "./commonValidator";
 
 // 单个进货 Body Schema
-export const singleStockInBodySchema = z.object({
-  count: z.number(),
-  cost: z.number(),
-  productId: z.number(),
-  remark: z.string().optional(),
-});
+export const singleStockInBodySchema = z
+  .object({
+    count: z.number(),
+    cost: z.number(),
+    productId: z.number(),
+    remark: z.string().optional(),
+  })
+  .merge(paginationSchema);
 
 export type SingleStockInBody = z.infer<typeof singleStockInBodySchema>;
 
@@ -19,6 +22,7 @@ export const multipleStockInBodySchema = z.object({
       count: z.number(),
       cost: z.number(),
       productId: z.number(),
+      createdAt: z.string().optional(),
     }),
   ),
 });

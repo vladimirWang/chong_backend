@@ -7,11 +7,21 @@ import {
 } from "../validators/stockInValidator";
 import { compareArrayMinLoop, luhn } from "../utils/algo";
 import _ from "lodash";
-import { updateIdSchema } from "../validators/commonValidator";
+import { updateIdSchema, Pagination } from "../validators/commonValidator";
+import dayjs from "dayjs";
+import { getPaginationValues } from "../utils/db";
 
 // 获取进货记录列表
-export const getStockIns = async () => {
-  const result = await prisma.stockIn.findMany();
+export const getStockIns = async ({ query }: { query: Pagination }) => {
+  const { pagination = false, limit, page } = query;
+  const { skip, take } = getPaginationValues({ limit, page });
+  const result = await prisma.stockIn.findMany({
+    skip,
+    take,
+    orderBy: {
+      updatedAt: "desc",
+    },
+  });
   const total = await prisma.stockIn.count();
   return JSON.stringify(
     new SuccessResponse({ list: result, total }, "进货记录列表获取成功"),
@@ -58,7 +68,7 @@ export const createMultipleStockIn = async ({
   // => [{productId: 1, cost: 10, count: 40}]
   const mergedMap = new Map<
     string,
-    { productId: number; cost: number; count: number }
+    { productId: number; cost: number; count: number; createdAt: string }
   >();
   const productIds = [];
   body.productJoinStockIn.forEach((item) => {
@@ -72,6 +82,7 @@ export const createMultipleStockIn = async ({
         productId: item.productId,
         cost: item.cost,
         count: item.count,
+        createdAt: item.createdAt,
       });
     }
   });
@@ -103,10 +114,15 @@ export const createMultipleStockIn = async ({
     products.map((p: { id: number; vendorId: number }) => [p.id, p]),
   );
 
+  const bodyCreatedAtStr = mergedProductJoinStockIn[0]?.createdAt;
+  const createdAt = bodyCreatedAtStr
+    ? dayjs(bodyCreatedAtStr).toDate()
+    : new Date();
   const results = await prisma.$transaction([
     // 创建进库记录
     prisma.stockIn.create({
       data: {
+        createdAt,
         // remark: body.remark,
         totalCost,
         productJoinStockIn: {
@@ -117,6 +133,11 @@ export const createMultipleStockIn = async ({
               product: {
                 connect: {
                   id: item.productId,
+                },
+              },
+              vendor: {
+                connect: {
+                  id: productMap.get(item.productId)?.vendorId,
                 },
               },
               historyCost: {
@@ -130,26 +151,14 @@ export const createMultipleStockIn = async ({
         },
       },
     }),
-    // 修改待进库数并生成产品编码
+    // 修改待进库数
     ...body.productJoinStockIn.map((item) => {
-      const product = productMap.get(item.productId);
-      // 如果产品存在且有 vendorId，生成产品编码
-      const updateData: {
-        balance: { increment: number };
-        productCode?: string;
-        latestCost?: number;
-      } = {
-        stockInPending: {
-          increment: item.count,
-        },
-      };
-
-      // TODO 正确处理判空
-      const productCode = luhn(product!);
-      updateData.productCode = productCode;
-
       return prisma.product.update({
-        data: updateData,
+        data: {
+          stockInPending: {
+            increment: item.count,
+          },
+        },
         where: {
           id: item.productId,
         },
@@ -200,7 +209,6 @@ export const updateStockIn = async ({
       stockInId: params.id,
     },
   });
-  console.log("prosudt: ", existedRecord);
   // return 'hhehh  '+params.id + '; length: ' +body.productJoinStockIn.length
   const { productJoinStockIn } = body;
   const totalCost = productJoinStockIn.reduce(
@@ -405,11 +413,14 @@ export const confirmCompleted = async ({
     }),
     // 改产品表，把待进货加到库存数中
     ...relatedProducts.map((item) => {
+      // // TODO 正确处理判空
+      const productCode = luhn(item!);
       return prisma.product.update({
         where: {
           id: item.productId,
         },
         data: {
+          productCode,
           balance: {
             increment: item.count,
           },
