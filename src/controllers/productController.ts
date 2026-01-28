@@ -10,12 +10,8 @@ import {
 import { UpdateId } from "../validators/commonValidator";
 
 // 获取产品列表
-export const getProducts = async ({
-  query,
-}: {
-  query: ProductQuery;
-}) => {
-  const { limit, page, name, pagination = true } = query;
+export const getProducts = async ({ query }: { query: ProductQuery }) => {
+  const { limit, page, productName, pagination = true } = query;
   let skip = undefined,
     take = undefined;
   if (pagination) {
@@ -25,29 +21,25 @@ export const getProducts = async ({
   }
 
   // 查询条件
-  const whereValues = getWhereValues({ name });
+  const whereValues = getWhereValues({ name: productName });
   const products = await prisma.product.findMany({
     skip,
     take,
     where: whereValues,
     include: {
       Vendor: true,
-      historyCost: true
+      historyCost: true,
     },
   });
   const total = await prisma.product.count({ where: whereValues });
 
   return JSON.stringify(
-    new SuccessResponse({ total, list: products }, "产品列表获取成功")
+    new SuccessResponse({ total, list: products }, "产品列表获取成功"),
   );
 };
 
 // 根据ID获取产品
-export const getProductById = async ({
-  params,
-}: {
-  params: UpdateId;
-}) => {
+export const getProductById = async ({ params }: { params: UpdateId }) => {
   const res = await prisma.product.findUnique({
     where: {
       id: params.id,
@@ -60,18 +52,14 @@ export const getProductById = async ({
       vendorId: true,
       remark: true,
       latestCost: true,
-      latestPrice: true
-    }
+      latestPrice: true,
+    },
   });
   return JSON.stringify(new SuccessResponse(res, "产品信息查询成功"));
 };
 
 // 创建产品
-export const createProduct = async ({
-  body,
-}: {
-  body: CreateProductBody;
-}) => {
+export const createProduct = async ({ body }: { body: CreateProductBody }) => {
   const { name, remark, vendorId } = body;
   const product = await prisma.product.create({
     data: {
@@ -125,6 +113,6 @@ export const getProductsByVendorId = async ({
     },
   });
   return JSON.stringify(
-    new SuccessResponse({ total, list: products }, "产品列表获取成功")
+    new SuccessResponse({ total, list: products }, "产品列表获取成功"),
   );
 };

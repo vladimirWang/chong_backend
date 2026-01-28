@@ -10,11 +10,11 @@ datasource db {
 model Vendor {
   id                  Int                  @id @default(autoincrement())
   name                String               @unique
-  deletedAt           DateTime?
   remark              String?
   products            Product[]
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
+  deletedAt           DateTime?
   // stockIns   StockIn[]
   productJoinStockIns ProductJoinStockIn[]
 }
@@ -50,6 +50,9 @@ model ProductJoinStockIn {
   historyCost HistoryCost?
   vendorId    Int
   vendor      Vendor?      @relation(fields: [vendorId], references: [id])
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  deletedAt   DateTime?
 
   @@unique([stockInId, productId, cost])
 }
@@ -62,9 +65,9 @@ model Product {
   vendorId            Int
   remark              String?
   balance             Int?                  @default(0) @db.UnsignedSmallInt
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
   deletedAt           DateTime?
-  createAt            DateTime              @default(now())
-  updateAt            DateTime              @updatedAt
   // imports  ImportProduct[]
   Vendor              Vendor?               @relation(fields: [vendorId], references: [id])
   // StockIn   StockIn[]
@@ -82,11 +85,12 @@ model Product {
 
 // 用户
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
+  id        Int       @id @default(autoincrement())
+  email     String    @unique
   username  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
   password  String
   avatar    String?
 }
@@ -101,6 +105,7 @@ model HistoryCost {
   value                Int                @db.UnsignedMediumInt
   createAt             DateTime           @default(now())
   updateAt             DateTime           @updatedAt
+  deletedAt            DateTime?
 }
 
 // 出货表
@@ -117,13 +122,16 @@ model StockOut {
 }
 
 model ProductJoinStockOut {
-  id         Int      @id @default(autoincrement())
+  id         Int       @id @default(autoincrement())
   productId  Int
-  product    Product  @relation(fields: [productId], references: [id])
+  product    Product   @relation(fields: [productId], references: [id])
   stockOutId Int
-  stockOut   StockOut @relation(fields: [stockOutId], references: [id], onDelete: Cascade)
+  stockOut   StockOut  @relation(fields: [stockOutId], references: [id], onDelete: Cascade)
   price      Int // 售价
   count      Int // 数量
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
 
   @@unique([stockOutId, productId])
 }

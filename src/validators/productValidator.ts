@@ -4,7 +4,7 @@ import { z } from "zod";
 export const productQuerySchema = z.object({
   limit: z.coerce.number().optional(),
   page: z.coerce.number().optional(),
-  name: z.string().optional(),
+  productName: z.string().optional(),
 });
 
 export type ProductQuery = z.infer<typeof productQuerySchema>;
