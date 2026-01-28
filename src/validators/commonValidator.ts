@@ -21,3 +21,27 @@ export const completedAtSchema = z
   .optional();
 
 export type CompletedAt = z.infer<typeof completedAtSchema>;
+
+export const deletedStartEndSchema = z
+  .object({
+    deletedStart: z.coerce.date().optional(),
+    deletedEnd: z.coerce.date().optional(),
+  })
+  .optional()
+  .refine(
+    (data) => {
+      if (!data.deletedStart || !data.deletedEnd) {
+        return false;
+      }
+      return (
+        new Date(data.deletedEnd).getTime() <=
+        new Date(data.deletedStart).getTime()
+      );
+    },
+    {
+      message: "startDate 和 endDate 相差不能超过一年",
+      path: ["endDate"],
+    },
+  );
+
+export type DeletedStartEnd = z.infer<typeof deletedStartEndSchema>;

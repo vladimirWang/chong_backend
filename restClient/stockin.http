@@ -1,8 +1,8 @@
 @base=http://localhost:3000/api/stockin
 @token =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiI0MTMxMTQ0QHFxLmNvbSIsInVzZXJuYW1lIjoibWlrMTEyIiwiYXZhdGFyIjoiMTIzMTIiLCJjcmVhdGVBdCI6IjIwMjUtMDEtMjVUMDU6MjM6NDcuNDU4WiIsInVwZGF0ZUF0IjoiMjAyNS0wMi0wMlQyMzowOTo1Ny4wMjVaIiwiaWF0IjoxNzM4NTUwOTAyLCJleHAiOjE3Mzg2MzczMDJ9.jPCKGmaEOLe-JrITR8-whbYfoS3r-Xf1y8JOVVrCOK4
 
-### user list
-GET {{base}}?limit=10&page=1
+### stockIn list
+GET {{base}}?productName=puma&deletedStart=2025-11-12&deletedEnd=2026-03-02
 Authorization: Bearer {{token}}
 
 ### create import
@@ -55,3 +55,7 @@ Content-Type: application/json
         }
     ]
 }
+
+### 删除进货单
+DELETE {{base}}/86
+Authorization: {{token}}

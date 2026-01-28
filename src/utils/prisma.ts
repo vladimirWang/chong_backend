@@ -9,7 +9,7 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function getDatabaseConfig(){
-    if (
+  if (
     process.env.DATABASE_HOST &&
     process.env.DATABASE_USER &&
     process.env.DATABASE_NAME
@@ -23,7 +23,7 @@ function getDatabaseConfig(){
       connectionLimit: 10,
     };
   }
-    const url = process.env.DATABASE_URL;
+  const url = process.env.DATABASE_URL;
   if (url) {
     const match = url.match(/mysql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)/);
     if (match) {
@@ -65,20 +65,28 @@ function createPrismaClient() {
         async findMany({ args, query, model }) {
           // 检查模型是否有 deletedAt 字段
           // 只有 Vendor, Product, StockIn 有 deletedAt 字段
-          const hasDeletedAt = model === 'Vendor' || model === 'Product' || model === 'StockIn';
-          
+          const hasDeletedAt = [
+            "Vendor",
+            "Product",
+            "StockIn",
+            "StockOut",
+            "User",
+            "ProductJoinStockIn",
+            "ProductJoinStockOut",
+            "HistoryCost",
+          ].includes(model);
           if (hasDeletedAt) {
             // 在查询之前修改 args
             if (!args.where) {
               args.where = {};
             }
-            
+
             // 只有当 deletedAt 条件未设置时，才自动过滤已删除的记录
             if (!('deletedAt' in args.where)) {
               (args.where as any).deletedAt = null;
             }
           }
-          
+
           // 执行查询
           const result = await query(args);
           return result;

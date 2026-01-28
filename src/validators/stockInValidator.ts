@@ -65,3 +65,14 @@ export const mutilpleProductExistedValidator = async ({
     ]);
   }
 };
+
+export const stockInQuerySchema = z
+  .object({
+    productName: z.string().optional(),
+    deletedStart: z.coerce.date().optional(),
+    deletedEnd: z.coerce.date().optional(),
+    vendorName: z.string().optional(),
+    completedStart: z.coerce.date().optional(),
+    completedEnd: z.coerce.date().optional(),
+  })
+  .merge(paginationSchema);

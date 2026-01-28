@@ -8,7 +8,8 @@ import {
   singleStockInBodySchema,
   multipleStockInBodySchema,
   // stockInUpdateParamsSchema,
-  mutilpleProductExistedValidator
+  mutilpleProductExistedValidator,
+  stockInQuerySchema,
 } from "../validators/stockInValidator";
 import {
   getStockIns,
@@ -16,10 +17,14 @@ import {
   createMultipleStockIn,
   getStockInById,
   updateStockIn,
-  confirmCompleted
+  confirmCompleted,
+  deleteStockIn,
 } from "../controllers/stockInController";
-import {updateIdSchema, completedAtSchema} from '../validators/commonValidator'
-
+import {
+  updateIdSchema,
+  completedAtSchema,
+  paginationSchema,
+} from "../validators/commonValidator";
 
 export const stockInRouter = new Elysia()
   // .use(
@@ -29,14 +34,14 @@ export const stockInRouter = new Elysia()
   //   })
   // )
   .group("/api/stockin", (app) => {
-    return app
-      // GET /api/stockin - 获取进货记录列表
-      .get("/", getStockIns)
-      // POST /api/stockin/single - 单个产品进货
-      .post(
-        "/single",
-        createSingleStockIn,
-        {
+    return (
+      app
+        // GET /api/stockin - 获取进货记录列表
+        .get("/", getStockIns, {
+          query: stockInQuerySchema,
+        })
+        // POST /api/stockin/single - 单个产品进货
+        .post("/single", createSingleStockIn, {
           body: singleStockInBodySchema,
           beforeHandle: async ({ body }) => {
             const productExisted = await prisma.product.findUnique({
@@ -56,27 +61,27 @@ export const stockInRouter = new Elysia()
               ]);
             }
           },
-        }
-      )
-      // POST /api/stockin/multiple - 批量产品进货
-      .post(
-        "/multiple",
-        createMultipleStockIn,
-        {
+        })
+        // POST /api/stockin/multiple - 批量产品进货
+        .post("/multiple", createMultipleStockIn, {
           body: multipleStockInBodySchema,
           beforeHandle: mutilpleProductExistedValidator,
-        }
-      )
-      // GET /api/stockin/:id - 根据ID获取进货记录
-      .get("/:id", getStockInById, {
-        params: updateIdSchema,
-      })
-      .put("/:id", updateStockIn, {
-        params: updateIdSchema,
-        body: multipleStockInBodySchema,
-        // beforeHandle: mutilpleProductExistedValidator,
-      }).patch("/confirmCompleted/:id", confirmCompleted, {
-        params: updateIdSchema,
-        body: completedAtSchema
-      })
+        })
+        // GET /api/stockin/:id - 根据ID获取进货记录
+        .get("/:id", getStockInById, {
+          params: updateIdSchema,
+        })
+        .put("/:id", updateStockIn, {
+          params: updateIdSchema,
+          body: multipleStockInBodySchema,
+          // beforeHandle: mutilpleProductExistedValidator,
+        })
+        .patch("/confirmCompleted/:id", confirmCompleted, {
+          params: updateIdSchema,
+          body: completedAtSchema,
+        })
+        .delete("/:id", deleteStockIn, {
+          params: updateIdSchema,
+        })
+    );
   });
