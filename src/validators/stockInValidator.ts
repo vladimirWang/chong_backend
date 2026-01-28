@@ -76,3 +76,13 @@ export const stockInQuerySchema = z
     completedEnd: z.coerce.date().optional(),
   })
   .merge(paginationSchema);
+
+export type StockInQuery = z.infer<typeof stockInQuerySchema>;
+
+// 根据id批量删除
+export const batchDeleteStockInQuerySchema = z.object({
+  id: z.array(z.coerce.number()),
+});
+export type BatchDeleteStockInQuery = z.infer<
+  typeof batchDeleteStockInQuerySchema
+>;

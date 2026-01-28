@@ -10,6 +10,7 @@ import {
   // stockInUpdateParamsSchema,
   mutilpleProductExistedValidator,
   stockInQuerySchema,
+  batchDeleteStockInQuerySchema,
 } from "../validators/stockInValidator";
 import {
   getStockIns,
@@ -18,7 +19,7 @@ import {
   getStockInById,
   updateStockIn,
   confirmCompleted,
-  deleteStockIn,
+  batchDeleteStockIn,
 } from "../controllers/stockInController";
 import {
   updateIdSchema,
@@ -80,8 +81,8 @@ export const stockInRouter = new Elysia()
           params: updateIdSchema,
           body: completedAtSchema,
         })
-        .delete("/:id", deleteStockIn, {
-          params: updateIdSchema,
+        .delete("/batchDelete", batchDeleteStockIn, {
+          query: batchDeleteStockInQuerySchema,
         })
     );
   });

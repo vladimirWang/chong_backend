@@ -5,6 +5,7 @@ import {
   SingleStockInBody,
   MultipleStockInBody,
   StockInParams,
+  BatchDeleteStockInQuery,
 } from "../validators/stockInValidator";
 import { compareArrayMinLoop, luhn } from "../utils/algo";
 import _ from "lodash";
@@ -17,11 +18,7 @@ import dayjs from "dayjs";
 import { getPaginationValues } from "../utils/db";
 
 // 获取进货记录列表
-export const getStockIns = async ({
-  query,
-}: {
-  query: Pagination & DeletedStartEnd;
-}) => {
+export const getStockIns = async ({ query }: { query: StockInQuery }) => {
   const {
     pagination = true,
     limit = 10,
@@ -84,11 +81,11 @@ export const getStockIns = async ({
 
   if (completedStart) {
     whereClauses.push("s.completedAt >= ?");
-    params.push(dayjs(completedStart).toDate());
+    params.push(dayjs(completedStart).format("YYYY-MM-DD HH:mm:ss"));
   }
   if (completedEnd) {
     whereClauses.push("s.completedAt <= ?");
-    params.push(dayjs(completedEnd).toDate());
+    params.push(dayjs(completedEnd).format("YYYY-MM-DD HH:mm:ss"));
   }
   if (deletedStart) {
     whereClauses.push("s.deletedStart >= ?");
@@ -554,21 +551,52 @@ export const confirmCompleted = async ({
   return JSON.stringify(new SuccessResponse(record, "进货单确认成功"));
 };
 
-export const deleteStockIn = async ({
-  params,
+export const batchDeleteStockIn = async ({
+  query,
   // query,
 }: {
-  params: updateIdSchema;
+  query: BatchDeleteStockInQuery;
   // query: DeletedStartEnd;
 }) => {
-  const { id } = params;
-  const result = await prisma.stockIn.update({
-    where: {
-      id,
-    },
-    data: {
-      deletedAt: new Date(),
-    },
+  // const { id } = params;
+  // const result = await prisma.stockIn.update({
+  //   where: {
+  //     id,
+  //   },
+  //   data: {
+  //     deletedAt: new Date(),
+  //   },
+  // });
+  const tasks = query.id.map((id) => {
+    return prisma.$transaction([
+      // 进货单软删除
+      prisma.stockIn.update({
+        where: {
+          id,
+        },
+        data: {
+          deletedAt: new Date(),
+        },
+      }),
+      // 中间表软删除
+      prisma.productJoinStockIn.update({
+        where: {
+          stockInId: id,
+        },
+        data: {
+          deletedAt: new Date(),
+          // product: {
+          //   update:
+          // }
+        },
+      }),
+      // prisma.product.update({
+      //   where: {
+      //     id:
+      //   }
+      // })
+    ]);
   });
-  return JSON.stringify(new SuccessResponse(result, "进货单删除成功"));
+  const results = await Promise.all(tasks);
+  return JSON.stringify(new SuccessResponse(results, "进货单删除成功"));
 };
