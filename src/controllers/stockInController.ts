@@ -58,7 +58,7 @@ export const getStockIns = async ({ query }: { query: StockInQuery }) => {
   const whereClauses: string[] = ["1=1"];
   const params: unknown[] = [];
 
-  if (productNameStr) {
+    if (productNameStr) {
     whereClauses.push("p.name LIKE ?");
     params.push(`%${productNameStr}%`);
   }

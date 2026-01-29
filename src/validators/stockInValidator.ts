@@ -79,10 +79,18 @@ export const stockInQuerySchema = z
 
 export type StockInQuery = z.infer<typeof stockInQuerySchema>;
 
-// 根据id批量删除
-export const batchDeleteStockInQuerySchema = z.object({
-  id: z.array(z.coerce.number()),
-});
+// 根据id批量删除：数字数组直接通过，单个数字转为长度为1的数组
+export const batchDeleteStockInQuerySchema = z
+  .union([
+    z.object({
+      id: z.array(z.coerce.number()),
+    }),
+    z.object({
+      id: z.coerce.number(),
+    }),
+  ])
+  .transform((val) => (typeof val.id === "number" ? { id: [val.id] } : val));
+
 export type BatchDeleteStockInQuery = z.infer<
   typeof batchDeleteStockInQuerySchema
 >;
