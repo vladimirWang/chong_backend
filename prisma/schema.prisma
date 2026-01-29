@@ -79,6 +79,7 @@ model Product {
   productJoinStockOut ProductJoinStockOut[] // 出货中间表
   stockOutPending     Int                   @default(0) @db.UnsignedSmallInt // 出货中产品
   stockInPending      Int                   @default(0) @db.UnsignedSmallInt // 进货中产品
+  shelfPrice          Int // 货架价
 
   @@index([vendorId], map: "Product_brandId_fkey")
 }

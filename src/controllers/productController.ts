@@ -60,12 +60,13 @@ export const getProductById = async ({ params }: { params: UpdateId }) => {
 
 // 创建产品
 export const createProduct = async ({ body }: { body: CreateProductBody }) => {
-  const { name, remark, vendorId } = body;
+  const { name, remark, vendorId, shelfPrice } = body;
   const product = await prisma.product.create({
     data: {
       name,
       remark,
       vendorId,
+      shelfPrice
     },
   });
   return JSON.stringify(new SuccessResponse(product, "产品创建成功"));
