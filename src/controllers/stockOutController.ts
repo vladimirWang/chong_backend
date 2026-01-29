@@ -2,7 +2,11 @@ import { CreateMultipleStockOut } from "../validators/stockOutValidator";
 import { sum2, compareArrayMinLoop } from "../utils/algo";
 import { SuccessResponse, ErrorResponse } from "../models/Response";
 import prisma from "../utils/prisma";
-import { Pagination, UpdateId, CompletedAt } from "../validators/commonValidator";
+import {
+  Pagination,
+  UpdateId,
+  CompletedAt,
+} from "../validators/commonValidator";
 import { getPaginationValues, getWhereValues } from "../utils/db";
 import { CommonStockLineComparable } from "./stockInController";
 
@@ -48,6 +52,11 @@ export const createMultipleStockOut = async ({
             return {
               price: item.price,
               count: item.count,
+              vendor: {
+                connect: {
+                  id: item.vendorId,
+                },
+              },
               product: {
                 connect: {
                   id: item.productId,
@@ -83,10 +92,10 @@ export const createMultipleStockOut = async ({
 export const confirmStockOutCompleted = async ({
   params,
   status,
-  body
+  body,
 }: {
   params: UpdateId;
-  body:  CompletedAt
+  body: CompletedAt;
 }) => {
   const productsInRecord = await prisma.productJoinStockOut.findMany({
     where: {
@@ -103,7 +112,7 @@ export const confirmStockOutCompleted = async ({
     },
     {},
   );
-  const {completedAt = new Date()} = body || {}
+  const { completedAt = new Date() } = body || {};
   await prisma.$transaction([
     prisma.stockOut.update({
       where: {
@@ -111,7 +120,7 @@ export const confirmStockOutCompleted = async ({
       },
       data: {
         status: "COMPLETED",
-        completedAt
+        completedAt,
       },
     }),
     ...productsInRecord.map((item) => {
@@ -315,15 +324,18 @@ export const updateStockOut = async ({
   return JSON.stringify(new SuccessResponse(null, "出货单更新成功"));
 };
 
-
-export const getStockOutDetailById = async({params}: {params: UpdateId}) => {
+export const getStockOutDetailById = async ({
+  params,
+}: {
+  params: UpdateId;
+}) => {
   const result = await prisma.stockOut.findUnique({
     where: {
-      id: params.id
+      id: params.id,
     },
     select: {
-      productJoinStockOut: true
-    }
-  })
+      productJoinStockOut: true,
+    },
+  });
   return JSON.stringify(new SuccessResponse(result, "出货单更新成功"));
-}
+};

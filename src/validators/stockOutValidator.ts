@@ -6,6 +6,7 @@ export const createMultipleStockOutSchema = z.object({
       price: z.number(),
       count: z.number(),
       productId: z.number(),
+      vendorId: z.number(),
     }),
   ),
   remark: z.string().optional(),

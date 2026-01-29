@@ -8,15 +8,16 @@ datasource db {
 
 // 供应商
 model Vendor {
-  id                  Int                  @id @default(autoincrement())
-  name                String               @unique
-  remark              String?
-  products            Product[]
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
-  deletedAt           DateTime?
+  id                   Int                   @id @default(autoincrement())
+  name                 String                @unique
+  remark               String?
+  products             Product[]
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  deletedAt            DateTime?
   // stockIns   StockIn[]
-  productJoinStockIns ProductJoinStockIn[]
+  productJoinStockIns  ProductJoinStockIn[]
+  productJoinStockOuts ProductJoinStockOut[]
 }
 
 // 进货单的状态
@@ -130,9 +131,11 @@ model ProductJoinStockOut {
   stockOut   StockOut  @relation(fields: [stockOutId], references: [id], onDelete: Cascade)
   price      Int // 售价
   count      Int // 数量
+  vendorId   Int
+  vendor     Vendor?   @relation(fields: [vendorId], references: [id])
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   deletedAt  DateTime?
 
-  @@unique([stockOutId, productId])
+  @@unique([stockOutId, productId, count])
 }
