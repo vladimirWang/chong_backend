@@ -15,10 +15,12 @@
     "@elysiajs/jwt": "^1.4.0",
     "@prisma/adapter-mariadb": "^7.3.0",
     "@prisma/client": "^7.3.0",
+    "@redis/client": "^5.10.0",
     "dayjs": "^1.11.19",
     "dotenv": "^17.2.3",
     "elysia": "latest",
     "lodash": "^4.17.21",
+    "svg-captcha": "^1.4.0",
     "xlsx": "^0.18.5",
     "zod": "^4.2.1"
   },
