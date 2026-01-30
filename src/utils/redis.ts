@@ -5,8 +5,19 @@ const redisClient: RedisClientType = createClient({
   // 未设置用户名密码，使用默认无认证连接
 });
 
-redisClient.on("error", (err) => {
-  console.error("Redis error: ", err);
-});
-
-export { redisClient };
+function connectRedis() {
+  return redisClient
+    .on("error", (err) => {
+      console.error("Redis error: ", err);
+    })
+    .connect()
+    .then((res) => {
+      console.log("redis connect success: ");
+      return res;
+    })
+    .catch((err) => {
+      console.error("redis connect fail: ", err);
+      return Promise.reject(err);
+    });
+}
+export { redisClient, connectRedis };

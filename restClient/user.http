@@ -75,3 +75,6 @@ Authorization: Bearer {{token}}
 ### user current
 GET {{base}}/user/current
 Authorization: Bearer {{token}}
+
+### user current
+GET {{base}}/user/captcha?q=123

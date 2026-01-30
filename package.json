@@ -21,6 +21,7 @@
     "elysia": "latest",
     "lodash": "^4.17.21",
     "svg-captcha": "^1.4.0",
+    "uuid": "^13.0.0",
     "xlsx": "^0.18.5",
     "zod": "^4.2.1"
   },

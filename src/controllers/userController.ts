@@ -3,6 +3,7 @@ import { LoginUserBody, RegisterUserBody } from "../validators/userValidator";
 import prisma from "../utils/prisma";
 import svgCaptcha from "svg-captcha";
 import { redisClient } from "../utils/redis";
+import { v4 as uuidv4 } from "uuid";
 
 export const loginUser = async ({
   body,
@@ -11,6 +12,19 @@ export const loginUser = async ({
   body: LoginUserBody;
   jwt: any;
 }) => {
+  const redisKey = `captcha:login:${body.captchaId}`;
+  const storedCaptcha = await redisClient.get(redisKey);
+  if (!storedCaptcha) {
+    return JSON.stringify(
+      new ErrorResponse(errorCode.CAPTCHA_EXPIRED, "验证码已过期"),
+    );
+  }
+  if (storedCaptcha.toLowerCase() !== body.captchaText.toLowerCase()) {
+    return JSON.stringify(
+      new ErrorResponse(errorCode.CAPTCHA_INCORRECT, "验证码不正确"),
+    );
+  }
+  await redisClient.del(redisKey);
   const userExisted = await prisma.user.findFirst({
     where: {
       email: body.email,
@@ -30,7 +44,7 @@ export const loginUser = async ({
   return JSON.stringify(new SuccessResponse<string>(token, "用户登录成功"));
 };
 
-export const generateCaptcha = async ({ set }) => {
+export const generateCaptcha = async ({ set, request }) => {
   const captcha = svgCaptcha.create({
     size: 4, // 验证码长度
     fontSize: 50,
@@ -39,13 +53,30 @@ export const generateCaptcha = async ({ set }) => {
     width: 100,
     height: 30,
   });
+  const captchaId = uuidv4();
+  const captchaText = captcha.text.toLowerCase();
+
+  await redisClient.setEx(
+    `captcha:login:${captchaId}`,
+    5 * 60, // 5分钟
+    captchaText,
+  );
+  // const clientIp = request.headers.get("x-forwarded-for") || request.ip;
+  // const freqKey = `captcha:freq:${clientIp}`;
+  // console.log(
+  //   "--------freqKey----------: ",
+  //   request.headers,
+  //   freqKey,
+  //   clientIp,
+  //   request,
+  // );
   // 将 SVG 转为 base64，方便前端直接用于 img src
   const base64 = Buffer.from(captcha.data, "utf-8").toString("base64");
   const dataUrl = `data:image/svg+xml;base64,${base64}`;
   set.headers["Content-Type"] = "application/json";
   return JSON.stringify(
     new SuccessResponse<{ image: string }>(
-      { image: dataUrl },
+      { image: dataUrl, captchaId },
       "验证码生成成功",
     ),
   );

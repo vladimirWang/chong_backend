@@ -23,11 +23,13 @@ import { authService } from "./macro/auth.macro";
 import { readFile } from "fs/promises";
 import { join } from "path";
 import { existsSync } from "fs";
+import { connectRedis } from "./utils/redis";
 
 // 注册插件
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
+await connectRedis();
 // dayjs.tz.setDefault("Asia/Shanghai");
 // dayjs.tz.setDefault("Europe/London");
 
