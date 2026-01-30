@@ -105,16 +105,16 @@ model HistoryCost {
   productId            Int
   Product              Product            @relation("HistoryCostProduct", fields: [productId], references: [id])
   value                Int                @db.UnsignedMediumInt
-  createAt             DateTime           @default(now())
-  updateAt             DateTime           @updatedAt
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
   deletedAt            DateTime?
 }
 
 // 出货表
 model StockOut {
   id                  Int                   @id @default(autoincrement())
-  createAt            DateTime              @default(now())
-  updateAt            DateTime              @updatedAt
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
   deletedAt           DateTime?
   totalPrice          Int                   @db.UnsignedMediumInt
   status              StockInStatus         @default(PENDING)

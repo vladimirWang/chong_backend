@@ -16,6 +16,18 @@ import {
 } from "../validators/commonValidator";
 import dayjs from "dayjs";
 import { getPaginationValues } from "../utils/db";
+import { generateStockOperationSql } from "../sqlMap/stockOperation";
+
+export type StockOperationListRow = {
+  id: number;
+  remark: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+  // totalCost: number;
+  status: string;
+  completedAt: Date | null;
+};
 
 // 获取进货记录列表
 export const getStockIns = async ({ query }: { query: StockInQuery }) => {
@@ -31,92 +43,21 @@ export const getStockIns = async ({ query }: { query: StockInQuery }) => {
     completedEnd,
   } = query;
   const { skip, take } = getPaginationValues({ limit, page });
-  type StockInListRow = {
-    id: number;
-    remark: string | null;
-    createdAt: Date;
-    updatedAt: Date;
-    deletedAt: Date | null;
-    totalCost: number;
-    status: string;
-    completedAt: Date | null;
-  };
 
-  // 校验后已是 string | undefined，只做 trim
-  const productNameStr =
-    productName != null && typeof productName === "string"
-      ? productName.trim()
-      : undefined;
-  const vendorNameStr =
-    vendorName != null && typeof vendorName === "string"
-      ? vendorName.trim()
-      : undefined;
-
-  const hasVendorFilter = Boolean(vendorNameStr && vendorNameStr.length > 0);
-
-  // 用片段 + 参数数组拼 SQL，避免 Prisma.sql 嵌套导致参数顺序错乱（MariaDB）
-  const whereClauses: string[] = ["1=1"];
-  const params: unknown[] = [];
-
-    if (productNameStr) {
-    whereClauses.push("p.name LIKE ?");
-    params.push(`%${productNameStr}%`);
-  }
-
-  // raw 查询不经过 $extends，需手动加「未删除」条件，与 findMany 行为一致
-  if (deletedStart || deletedEnd) {
-    if (deletedStart) {
-      whereClauses.push("s.deletedAt >= ?");
-      params.push(dayjs(deletedStart).format("YYYY-MM-DD HH:mm:ss"));
-    }
-    if (deletedEnd) {
-      whereClauses.push("s.deletedAt <= ?");
-      params.push(dayjs(deletedEnd).format("YYYY-MM-DD HH:mm:ss"));
-    }
-  } else {
-    whereClauses.push("s.deletedAt IS NULL");
-  }
-
-  if (completedStart) {
-    whereClauses.push("s.completedAt >= ?");
-    params.push(dayjs(completedStart).format("YYYY-MM-DD HH:mm:ss"));
-  }
-  if (completedEnd) {
-    whereClauses.push("s.completedAt <= ?");
-    params.push(dayjs(completedEnd).format("YYYY-MM-DD HH:mm:ss"));
-  }
-
-  if (hasVendorFilter) {
-    whereClauses.push("v.name LIKE ?");
-    params.push(`%${vendorNameStr}%`);
-  }
-
-  const vendorJoinSql = hasVendorFilter
-    ? " INNER JOIN Vendor v ON v.id = p.vendorId "
-    : "";
-  const whereSql = "WHERE " + whereClauses.join(" AND ");
-
-  const listSql =
-    `SELECT DISTINCT s.id, s.remark, s.createdAt, s.updatedAt, s.deletedAt, s.totalCost, s.status, s.completedAt ` +
-    `FROM StockIn s ` +
-    `INNER JOIN ProductJoinStockIn pjs ON pjs.stockInId = s.id ` +
-    `INNER JOIN Product p ON p.id = pjs.productId` +
-    vendorJoinSql +
-    ` ${whereSql} ORDER BY s.updatedAt DESC` +
-    (pagination ? " LIMIT ? OFFSET ?" : "");
+  const { listSql, params, countSql } = generateStockOperationSql<StockInQuery>(
+    "StockIn",
+    "ProductJoinStockIn",
+    query,
+  );
   const listParams = pagination ? [...params, take, skip] : params;
-
+  type StockInListRow = StockOperationListRow & {
+    totalCost: number;
+  };
   const list = await prisma.$queryRawUnsafe<StockInListRow[]>(
     listSql,
     ...listParams,
   );
 
-  const countSql =
-    `SELECT COUNT(DISTINCT s.id) as cnt FROM StockIn s ` +
-    `INNER JOIN ProductJoinStockIn pjs ON pjs.stockInId = s.id ` +
-    `INNER JOIN Product p ON p.id = pjs.productId` +
-    vendorJoinSql +
-    ` ${whereSql}`;
   const countRows = await prisma.$queryRawUnsafe<{ cnt: bigint }[]>(
     countSql,
     ...params,
@@ -635,7 +576,5 @@ export const batchDeleteStockIn = async ({
     ),
   ]);
 
-  return JSON.stringify(
-    new SuccessResponse(txResults, "进货单批量删除成功"),
-  );
+  return JSON.stringify(new SuccessResponse(txResults, "进货单批量删除成功"));
 };

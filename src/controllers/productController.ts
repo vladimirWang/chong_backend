@@ -66,7 +66,7 @@ export const createProduct = async ({ body }: { body: CreateProductBody }) => {
       name,
       remark,
       vendorId,
-      shelfPrice
+      shelfPrice,
     },
   });
   return JSON.stringify(new SuccessResponse(product, "产品创建成功"));

@@ -9,6 +9,7 @@ import {
 } from "../validators/commonValidator";
 import { getPaginationValues, getWhereValues } from "../utils/db";
 import { CommonStockLineComparable } from "./stockInController";
+import { generateStockOperationSql } from "../sqlMap/stockOperation";
 
 type StockOutLineComparable = CommonStockLineComparable & {
   stockOutId?: number;
@@ -21,15 +22,47 @@ type StockOutInfo = {
 };
 
 export const getStockOuts = async ({ query }: { query: Pagination }) => {
-  const { limit = 10, page = 1, pagination = true } = query;
+  const {
+    pagination = true,
+    limit = 10,
+    page = 1,
+    deletedStart,
+    deletedEnd,
+    productName,
+    vendorName,
+    completedStart,
+    completedEnd,
+  } = query;
   const { skip, take } = getPaginationValues({ limit, page });
-  const result = await prisma.stockOut.findMany({
-    skip,
-    take,
-  });
-  const total = await prisma.stockOut.count();
+
+  const { listSql, params, countSql } = generateStockOperationSql<StockInQuery>(
+    "StockOut",
+    "ProductJoinStockOut",
+    query,
+  );
+  const listParams = pagination ? [...params, take, skip] : params;
+  type StockOutListRow = StockOperationListRow & {
+    totalPrice: number;
+  };
+  const list = await prisma.$queryRawUnsafe<StockOutListRow[]>(
+    listSql,
+    ...listParams,
+  );
+
+  const countRows = await prisma.$queryRawUnsafe<{ cnt: bigint }[]>(
+    countSql,
+    ...params,
+  );
+  const total = Number(countRows[0]?.cnt ?? 0);
+
   return JSON.stringify(
-    new SuccessResponse({ list: result, total }, "出货记录列表获取成功"),
+    new SuccessResponse(
+      {
+        list,
+        total,
+      },
+      "出货记录列表获取成功",
+    ),
   );
 };
 
