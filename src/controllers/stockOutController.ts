@@ -10,6 +10,7 @@ import {
 import { getPaginationValues, getWhereValues } from "../utils/db";
 import { CommonStockLineComparable } from "./stockInController";
 import { generateStockOperationSql } from "../sqlMap/stockOperation";
+import dayjs from "dayjs";
 
 type StockOutLineComparable = CommonStockLineComparable & {
   stockOutId?: number;
@@ -38,7 +39,7 @@ export const getStockOuts = async ({ query }: { query: Pagination }) => {
   const { listSql, params, countSql } = generateStockOperationSql<StockInQuery>(
     "StockOut",
     "ProductJoinStockOut",
-    query,
+    query
   );
   const listParams = pagination ? [...params, take, skip] : params;
   type StockOutListRow = StockOperationListRow & {
@@ -46,12 +47,12 @@ export const getStockOuts = async ({ query }: { query: Pagination }) => {
   };
   const list = await prisma.$queryRawUnsafe<StockOutListRow[]>(
     listSql,
-    ...listParams,
+    ...listParams
   );
 
   const countRows = await prisma.$queryRawUnsafe<{ cnt: bigint }[]>(
     countSql,
-    ...params,
+    ...params
   );
   const total = Number(countRows[0]?.cnt ?? 0);
 
@@ -61,8 +62,8 @@ export const getStockOuts = async ({ query }: { query: Pagination }) => {
         list,
         total,
       },
-      "出货记录列表获取成功",
-    ),
+      "出货记录列表获取成功"
+    )
   );
 };
 
@@ -74,10 +75,14 @@ export const createMultipleStockOut = async ({
 }) => {
   const { productJoinStockOut, remark } = body;
   const totalPrice = sum2(productJoinStockOut, "price");
+  const createdAt = body.createdAt
+    ? dayjs(body.createdAt).toDate()
+    : new Date();
   await prisma.$transaction([
     // 创建出货记录
     prisma.stockOut.create({
       data: {
+        createdAt,
         totalPrice,
         remark,
         productJoinStockOut: {
@@ -143,7 +148,7 @@ export const confirmStockOutCompleted = async ({
       a[c.productId] = c;
       return a;
     },
-    {},
+    {}
   );
   const { completedAt = new Date() } = body || {};
   await prisma.$transaction([
@@ -215,12 +220,12 @@ export const updateStockOut = async ({
       }),
     ]);
     return JSON.stringify(
-      new SuccessResponse(null, "出货单已删除（无产品数据）"),
+      new SuccessResponse(null, "出货单已删除（无产品数据）")
     );
   }
   const totalPrice = productJoinStockOut.reduce(
     (a, c) => a + c.price * c.count,
-    0,
+    0
   );
 
   const existedComparable: StockOutLineComparable[] = existedRecord.map(
@@ -230,21 +235,21 @@ export const updateStockOut = async ({
       productId: r.productId,
       price: r.price,
       count: r.count,
-    }),
+    })
   );
   const newComparable: StockOutLineComparable[] = productJoinStockOut.map(
     (r) => ({
       productId: r.productId,
       price: r.price,
       count: r.count,
-    }),
+    })
   );
   const { added, modified, deleted, unchanged } =
     compareArrayMinLoop<StockOutLineComparable>(
       existedComparable,
       newComparable,
       "productId",
-      ["id", "stockInId"],
+      ["id", "stockInId"]
     );
 
   const existedInfoMap: Record<number, StockOutInfo> = existedRecord.reduce(
@@ -255,7 +260,7 @@ export const updateStockOut = async ({
       };
       return a;
     },
-    {},
+    {}
   );
   console.log("existedInfoMap: ", JSON.stringify(existedInfoMap));
   const result = await prisma.$transaction([

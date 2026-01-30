@@ -7,9 +7,10 @@ export const createMultipleStockOutSchema = z.object({
       count: z.number(),
       productId: z.number(),
       vendorId: z.number(),
-    }),
+    })
   ),
   remark: z.string().optional(),
+  createdAt: z.string().optional(),
 });
 
 export type CreateMultipleStockOut = z.infer<createMultipleStockOutSchema>;
@@ -22,7 +23,7 @@ export const multipleStockOutBodySchema = z.object({
       count: z.number(),
       price: z.number(),
       productId: z.number(),
-    }),
+    })
   ),
 });
 
