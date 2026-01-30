@@ -6,9 +6,10 @@ Authorization: {{token}}
 ### create product
 POST {{base}}
 Content-Type: application/json
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImVtYWlsIjoiMTIzNDU2QHFxLmNvbSIsImlhdCI6MTc2OTc1MDk5Mn0.-qGHh9I4_SeoaB32R2-fHHIWUMQKR2oC1VTJcV6p9Ik
 
 {
-    "name": "beer445",
+    "name": "beer123",
     "vendorId": 3,
     "shelfPrice": 100
 }
