@@ -1,14 +1,7 @@
 import { Elysia, t } from "elysia";
 import "dotenv/config";
 // 从 routers/index.ts 统一导入所有路由模块
-import {
-  userRouter,
-  vendorRouter,
-  productRouter,
-  stockInRouter,
-  stockOutRouter,
-  statisticsOutRouter,
-} from "./routers";
+import { apiRouter } from "./routers";
 import { uploadFile, uploadExcelFile } from "./controllers/uploadController";
 import { ErrorResponse, errorCode } from "./models/Response";
 import { ValidationError } from "elysia";
@@ -43,109 +36,8 @@ export const app = new Elysia()
   )
   .use(authService)
   .get("/", () => "Hello Elysia")
-  .get(
-    "/profile",
-    async ({ jwt, set, headers: { authorization }, user }) => {
-      // const profile = await jwt.verify(authorization);
-
-      // if (!profile) {
-      //   set.status = 401;
-      //   return 'Unauthorized';
-      // }
-
-      return `Hello ${JSON.stringify(user)}`;
-    },
-    {
-      isSignIn: true,
-    },
-  )
-  .get("/public/test", () => {
-    return "hello public guest";
-  })
-  // 静态文件服务 - 提供上传的图片访问
-  .get("/uploads/:filename", async ({ params, set }) => {
-    const filename = params.filename;
-    const filePath = join(process.cwd(), "uploads", filename);
-
-    // 检查文件是否存在
-    if (!existsSync(filePath)) {
-      set.status = 404;
-      return { error: "文件不存在" };
-    }
-
-    try {
-      const fileBuffer = await readFile(filePath);
-      // 根据文件扩展名设置 Content-Type
-      const ext = filename.split(".").pop()?.toLowerCase();
-      const contentTypeMap: Record<string, string> = {
-        jpg: "image/jpeg",
-        jpeg: "image/jpeg",
-        png: "image/png",
-        gif: "image/gif",
-        webp: "image/webp",
-        svg: "image/svg+xml",
-      };
-      const contentType =
-        contentTypeMap[ext || ""] || "application/octet-stream";
-
-      set.headers["Content-Type"] = contentType;
-      return fileBuffer;
-    } catch (error) {
-      set.status = 500;
-      return { error: "读取文件失败" };
-    }
-  })
-  .post(
-    "/api/upload",
-    async ({ body }) => {
-      const result = await uploadFile({ file: body.file });
-      return JSON.parse(result);
-    },
-    {
-      body: t.Object({
-        file: t.File({ format: "image/*" }),
-      }),
-    },
-  )
-  .post(
-    "/api/upload/excel",
-    async ({ body, set }) => {
-      try {
-        // 路由层验证：检查文件扩展名
-        const fileName = body.file.name.toLowerCase();
-        const allowedExtensions = [".xlsx", ".xls", ".xlsm"];
-        const isValidExtension = allowedExtensions.some((ext) =>
-          fileName.endsWith(ext),
-        );
-
-        if (!isValidExtension) {
-          set.status = 400;
-          return {
-            code: 10002,
-            message: "文件类型必须是 Excel 格式（.xlsx, .xls, .xlsm）",
-            data: null,
-          };
-        }
-
-        const result = await uploadExcelFile({ file: body.file });
-        return JSON.parse(result);
-      } catch (error: any) {
-        set.status = 400;
-        return {
-          code: 10002,
-          message: error.message || "Excel 文件上传失败",
-          data: null,
-        };
-      }
-    },
-    {
-      body: t.Object({
-        file: t.File(),
-      }),
-    },
-  )
   // 全局错误处理 - 拦截 zod 校验异常
-  .onError(({ code, error }) => {
+  .onError(({ code, error, url }) => {
     // 直接处理 ZodError（包括在 beforeHandle 中抛出的）
     if (error instanceof ZodError) {
       const errorMessages = error.issues.map((issue) => issue.message);
@@ -222,7 +114,10 @@ export const app = new Elysia()
 
     // 处理 404 错误（路由不存在）
     if (code === "NOT_FOUND") {
-      const result = new ErrorResponse(errorCode.NOT_FOUND, "路由不存在");
+      const result = new ErrorResponse(
+        errorCode.NOT_FOUND,
+        "路由不存在: " + url,
+      );
       return new Response(JSON.stringify(result), {
         status: 404,
         headers: { "Content-Type": "application/json" },
@@ -232,13 +127,7 @@ export const app = new Elysia()
     // 其他错误继续抛出
     throw error;
   })
-  // 每个路由模块会自动添加其 group 前缀
-  .use(userRouter) // 注册 /api/users/* 路由
-  .use(vendorRouter) // 注册 /api/vendor/* 路由
-  .use(productRouter) // 注册 /api/vendor/* 路由
-  .use(stockInRouter) // 注册 /api/vendor/* 路由
-  .use(stockOutRouter)
-  .use(statisticsOutRouter)
+  .use(apiRouter)
   .listen(3000);
 
 console.log(
