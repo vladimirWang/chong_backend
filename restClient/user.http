@@ -20,7 +20,9 @@ Content-Type: application/json
 
 {
     "password": "123456",
-    "email": "123456@qq.com"
+    "email": "123456@qq.com",
+    "captchaText": "wkwc",
+    "captchaId": "79ad487a-e17c-4d44-88a5-4bd854681343"
 }
 
 ### user login             done

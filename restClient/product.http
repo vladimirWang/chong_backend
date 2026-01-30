@@ -8,8 +8,9 @@ POST {{base}}
 Content-Type: application/json
 
 {
-    "name": "beer4",
-    "vendorId": 3
+    "name": "beer445",
+    "vendorId": 3,
+    "shelfPrice": 100
 }
 
 
