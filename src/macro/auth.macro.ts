@@ -10,6 +10,8 @@ export const authService = new Elysia({ name: "Auth.Service" }).macro({
         "/api/user/login",
         "/api/user/register",
         "/api/user/captcha",
+        "/api/util/sendEmailVerificationCode",
+        '/api/util/checkEmailValidation'
       ];
       // 对于公共路由，不进行鉴权
       if (publicRoutes.includes(ctx.route) || ctx.route.startsWith("/public")) {

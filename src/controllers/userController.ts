@@ -111,10 +111,12 @@ export const generateCaptcha = async ({ set, request }) => {
 export const registerUser = async ({ body }: { body: RegisterUserBody }) => {
   // console.log("register body: ", prisma.user)
   // return {code: '1'}
+  const {username, email, password} = body;
   const user = await prisma.user.create({
     data: {
-      email: body.email,
-      password: body.password,
+      email,
+      password,
+      username
     },
     // select: [
     //     'id',
