@@ -28,4 +28,5 @@ export const errorCode = {
   VENDOR_HAS_PRODUCTS: 10005, // 供应商有关联产品
   CAPTCHA_EXPIRED: 10006, // 供应商有关联产品
   CAPTCHA_INCORRECT: 10007, // 供应商有关联产品
+  PASSWORD_INCORRECT: 10008, // 密码不正确
 };

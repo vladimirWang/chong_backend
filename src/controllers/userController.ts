@@ -16,23 +16,49 @@ export const loginUser = async ({
   const storedCaptcha = await redisClient.get(redisKey);
   if (!storedCaptcha) {
     return JSON.stringify(
-      new ErrorResponse(errorCode.CAPTCHA_EXPIRED, "验证码已过期"),
+      new ErrorResponse(errorCode.CAPTCHA_EXPIRED, "验证码已过期")
     );
   }
+  // redis中存的验证码与用户提交的验证码不一致
   if (storedCaptcha.toLowerCase() !== body.captchaText.toLowerCase()) {
     return JSON.stringify(
-      new ErrorResponse(errorCode.CAPTCHA_INCORRECT, "验证码不正确"),
+      new ErrorResponse(errorCode.CAPTCHA_INCORRECT, "验证码不正确")
     );
   }
+  // 如果验证码校验通过就在redis中删除
   await redisClient.del(redisKey);
   const userExisted = await prisma.user.findFirst({
     where: {
       email: body.email,
-      password: body.password,
     },
   });
+
   if (!userExisted) {
+    // 记录
     const result = new ErrorResponse(errorCode.USER_NOT_FOUND, "用户不存在");
+    return JSON.stringify(result);
+  }
+  // 如果密码不对就记录次数
+  if (userExisted.password !== body.password) {
+    const loginFailedKey = `login:failed:${body.email}`;
+    // 记录登录失败次数
+    const loginFailedCount = await redisClient.get(loginFailedKey);
+    // 如果登录失败次数大于5次，则返回错误
+    console.log(
+      "loginFailedCount: ",
+      loginFailedCount,
+      typeof loginFailedCount
+    );
+    if (loginFailedCount) {
+      await redisClient.incr(loginFailedKey);
+      await redisClient.expire(loginFailedKey, 10 * 60);
+    } else {
+      await redisClient.setEx(loginFailedKey, 10 * 60, "1");
+    }
+    const result = new ErrorResponse(
+      errorCode.PASSWORD_INCORRECT,
+      "密码不正确"
+    );
     return JSON.stringify(result);
   }
   // 生成 token
@@ -51,7 +77,7 @@ export const generateCaptcha = async ({ set, request }) => {
     ignoreChars: "0o1i", // 忽略的字符
     noise: 3,
     width: 100,
-    height: 30,
+    height: 40,
   });
   const captchaId = uuidv4();
   const captchaText = captcha.text.toLowerCase();
@@ -59,7 +85,7 @@ export const generateCaptcha = async ({ set, request }) => {
   await redisClient.setEx(
     `captcha:login:${captchaId}`,
     5 * 60, // 5分钟
-    captchaText,
+    captchaText
   );
   // const clientIp = request.headers.get("x-forwarded-for") || request.ip;
   // const freqKey = `captcha:freq:${clientIp}`;
@@ -77,8 +103,8 @@ export const generateCaptcha = async ({ set, request }) => {
   return JSON.stringify(
     new SuccessResponse<{ image: string }>(
       { image: dataUrl, captchaId },
-      "验证码生成成功",
-    ),
+      "验证码生成成功"
+    )
   );
 };
 
