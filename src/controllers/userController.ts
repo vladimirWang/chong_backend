@@ -38,22 +38,35 @@ export const loginUser = async ({
     const result = new ErrorResponse(errorCode.USER_NOT_FOUND, "用户不存在");
     return JSON.stringify(result);
   }
+  
+  // 当前账号是否冻结
+  const ACCOUNT_LOCKED_KEY = 'login:locked:' + body.email
+  const lockStatus = await redisClient.get(ACCOUNT_LOCKED_KEY)
+  console.log('lockStatus: ', lockStatus)
+  if (lockStatus) {
+    const result = new ErrorResponse(errorCode.ACCOUNT_LOCKED, "账号已锁定");
+    return JSON.stringify(result);
+  }
+  // 密码错误次数的key
+  const loginFailedKey = `login:failed:${body.email}`;
   // 如果密码不对就记录次数
   if (userExisted.password !== body.password) {
-    const loginFailedKey = `login:failed:${body.email}`;
-    // 记录登录失败次数
+    // 一小时
+    const FREEZE_DURATION = 60*60
+
+    // 登录失败次数
     const loginFailedCount = await redisClient.get(loginFailedKey);
-    // 如果登录失败次数大于5次，则返回错误
-    console.log(
-      "loginFailedCount: ",
-      loginFailedCount,
-      typeof loginFailedCount
-    );
     if (loginFailedCount) {
       await redisClient.incr(loginFailedKey);
-      await redisClient.expire(loginFailedKey, 10 * 60);
+      await redisClient.expire(loginFailedKey, FREEZE_DURATION);
+      // 密码最多错误次数
+      const COUNT_OF_PASSWORD_WRONG = 6
+      console.log("loginFailedCount: ", loginFailedCount)
+      if (Number(loginFailedCount) === COUNT_OF_PASSWORD_WRONG - 1) {
+        await redisClient.setEx(ACCOUNT_LOCKED_KEY, FREEZE_DURATION, "1")
+      }
     } else {
-      await redisClient.setEx(loginFailedKey, 10 * 60, "1");
+      await redisClient.setEx(loginFailedKey, FREEZE_DURATION, "1");
     }
     const result = new ErrorResponse(
       errorCode.PASSWORD_INCORRECT,
@@ -61,6 +74,8 @@ export const loginUser = async ({
     );
     return JSON.stringify(result);
   }
+  // 如果密码正确，就清空密码错误次数
+  await redisClient.del(loginFailedKey)
   // 生成 token
   const token = await jwt.sign({
     userId: userExisted.id,
@@ -89,13 +104,10 @@ export const generateCaptcha = async ({ set, request }) => {
   );
   // const clientIp = request.headers.get("x-forwarded-for") || request.ip;
   // const freqKey = `captcha:freq:${clientIp}`;
-  // console.log(
-  //   "--------freqKey----------: ",
-  //   request.headers,
-  //   freqKey,
-  //   clientIp,
-  //   request,
-  // );
+  console.log(
+    "--------图形验证码----------: ",
+    captchaText
+  );
   // 将 SVG 转为 base64，方便前端直接用于 img src
   const base64 = Buffer.from(captcha.data, "utf-8").toString("base64");
   const dataUrl = `data:image/svg+xml;base64,${base64}`;

@@ -29,5 +29,6 @@ export const errorCode = {
   CAPTCHA_EXPIRED: 10006, // 供应商有关联产品
   CAPTCHA_INCORRECT: 10007, // 供应商有关联产品
   PASSWORD_INCORRECT: 10008, // 密码不正确
-  EMAIL_VALIDATION_FAIL: 1000, // 邮箱验证失败
+  EMAIL_VALIDATION_FAIL: 10009, // 邮箱验证失败
+  ACCOUNT_LOCKED: 10010, // 密码错账号锁定
 };
