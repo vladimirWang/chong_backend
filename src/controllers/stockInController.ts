@@ -113,49 +113,52 @@ export const createMultipleStockIn = async ({
   // 合并相同 productId 和 cost 的数据，count 相加
   // [{productId: 1, cost: 10, count: 10}, {productId: 1, cost: 10, count: 30}]
   // => [{productId: 1, cost: 10, count: 40}]
-  const mergedMap = new Map<
-    string,
-    { productId: number; cost: number; count: number; createdAt: string }
-  >();
-  const productIds = [];
-  body.productJoinStockIn.forEach((item) => {
-    productIds.push(item.productId);
-    const key = `${item.productId}-${item.cost}`;
-    const existing = mergedMap.get(key);
-    if (existing) {
-      existing.count += item.count;
-    } else {
-      mergedMap.set(key, {
-        productId: item.productId,
-        cost: item.cost,
-        count: item.count,
-        vendorId: item.vendorId,
-      });
-    }
-  });
+  // const mergedMap = new Map<
+  //   string,
+  //   { productId: number; cost: number; count: number; createdAt: string }
+  // >();
+  // const productIds = [];
+  // body.productJoinStockIn.forEach((item) => {
+  //   productIds.push(item.productId);
+  //   const key = `${item.productId}-${item.cost}`;
+  //   const existing = mergedMap.get(key);
+  //   if (existing) {
+  //     existing.count += item.count;
+  //   } else {
+  //     mergedMap.set(key, {
+  //       productId: item.productId,
+  //       cost: item.cost,
+  //       count: item.count,
+  //       vendorId: item.vendorId,
+  //       shelfPrice: item.shelfPrice
+  //     });
+  //   }
+  // });
 
   // 转换为数组
-  const mergedProductJoinStockIn = Array.from(mergedMap.values());
+  // const mergedProductJoinStockIn = Array.from(mergedMap.values());
+  const {productJoinStockIn, createdAt, remark} = body
 
-  const totalCost = mergedProductJoinStockIn.reduce((a, c) => {
+  const totalCost = productJoinStockIn.reduce((a, c) => {
     return a + c.cost * c.count;
   }, 0);
 
-  const createdAt = body.createdAt
-    ? dayjs(body.createdAt).toDate()
+  const createdAtVal = createdAt
+    ? dayjs(createdAt).toDate()
     : new Date();
   const results = await prisma.$transaction([
     // 创建进库记录
     prisma.stockIn.create({
       data: {
-        createdAt,
-        remark: body.remark,
+        createdAt: createdAtVal,
+        remark,
         totalCost,
         productJoinStockIn: {
-          create: mergedProductJoinStockIn.map((item) => {
+          create: productJoinStockIn.map((item) => {
             return {
               cost: item.cost,
               count: item.count,
+              shelfPrice: item.shelfPrice || 100,
               product: {
                 connect: {
                   id: item.productId,
@@ -166,19 +169,19 @@ export const createMultipleStockIn = async ({
                   id: item.vendorId,
                 },
               },
-              historyCost: {
-                create: {
-                  value: item.cost,
-                  productId: item.productId,
-                },
-              },
+              // historyCost: {
+              //   create: {
+              //     value: item.cost,
+              //     productId: item.productId,
+              //   },
+              // },
             };
           }),
         },
       },
     }),
     // 修改待进库数
-    ...body.productJoinStockIn.map((item) => {
+    ...productJoinStockIn.map((item) => {
       return prisma.product.update({
         data: {
           stockInPending: {
