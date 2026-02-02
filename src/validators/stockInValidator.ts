@@ -23,6 +23,7 @@ export const multipleStockInBodySchema = z.object({
       cost: z.number(),
       productId: z.number(),
       vendorId: z.number(),
+      shelfPrice: z.number().optional()
     }),
   ),
   createdAt: z.string().optional(),

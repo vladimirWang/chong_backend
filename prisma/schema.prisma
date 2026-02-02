@@ -54,6 +54,7 @@ model ProductJoinStockIn {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   deletedAt   DateTime?
+  shelfPrice  Int 
 
   @@unique([stockInId, productId, cost])
 }
@@ -70,7 +71,7 @@ model Product {
   updatedAt           DateTime              @updatedAt
   deletedAt           DateTime?
   // imports  ImportProduct[]
-  Vendor              Vendor?               @relation(fields: [vendorId], references: [id])
+  vendor              Vendor?               @relation(fields: [vendorId], references: [id])
   // StockIn   StockIn[]
   latestPrice         Int? // 售价,只有进库后才有
   latestCost          Int? // 成本价,只有进库后才有
@@ -80,7 +81,7 @@ model Product {
   productJoinStockOut ProductJoinStockOut[] // 出货中间表
   stockOutPending     Int                   @default(0) @db.UnsignedSmallInt // 出货中产品
   stockInPending      Int                   @default(0) @db.UnsignedSmallInt // 进货中产品
-  shelfPrice          Int // 货架价
+  shelfPrice          Int? // 货架价
 
   @@index([vendorId], map: "Product_brandId_fkey")
 }

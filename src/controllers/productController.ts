@@ -27,7 +27,7 @@ export const getProducts = async ({ query }: { query: ProductQuery }) => {
     take,
     where: whereValues,
     include: {
-      Vendor: true,
+      vendor: true,
       historyCost: true,
     },
   });
@@ -65,7 +65,11 @@ export const createProduct = async ({ body }: { body: CreateProductBody }) => {
     data: {
       name,
       remark,
-      vendorId,
+      vendor: {
+        connect: {
+          id: vendorId
+        }
+      },
       shelfPrice,
     },
   });

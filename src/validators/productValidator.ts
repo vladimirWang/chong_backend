@@ -14,7 +14,7 @@ export const createProductBodySchema = z.object({
   name: z.string().min(2),
   remark: z.string().max(255).optional(),
   vendorId: z.coerce.number(),
-  shelfPrice: z.number()
+  shelfPrice: z.number().optional(),
 });
 
 export type CreateProductBody = z.infer<typeof createProductBodySchema>;
