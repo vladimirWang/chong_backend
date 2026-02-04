@@ -20,9 +20,9 @@ Content-Type: application/json
 
 {
     "password": "123456",
-    "email": "123456@qq.com",
-    "captchaText": "blfk",
-    "captchaId": "2ca5d593-00f4-41ec-9c48-d93efc02f9e2"
+    "email": "aachen2012@outlook.com",
+    "captchaText": "a56r",
+    "captchaId": "6e7a8eb0-a4bc-4851-b951-0b33b88f3ca2"
 }
 
 ### user login             done
@@ -78,5 +78,5 @@ Authorization: Bearer {{token}}
 GET {{base}}/user/current
 Authorization: Bearer {{token}}
 
-### user current
+### user captcha
 GET {{base}}/user/captcha?q=123

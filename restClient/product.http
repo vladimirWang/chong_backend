@@ -1,5 +1,6 @@
 @base=http://localhost:3000/api/product
-@token =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsInVzZXJuYW1lIjpudWxsLCJpYXQiOjE3NjkwNDc1OTB9.N11s-GuBoWAG7Tnys4PkndiUH9c5KnrM47dUS9OBZpI
+@token =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImVtYWlsIjoiYWFjaGVuMjAxMkBvdXRsb29rLmNvbSIsImlhdCI6MTc3MDEzMzY1Nn0.Hgphom8mFDkxSkmJ760AiG-DbwIghSDba5K8B3muXpU
+
 ### user list
 GET {{base}}
 Authorization: {{token}}
@@ -17,3 +18,7 @@ Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImVtYWlsIjoi
 
 ### 根据id获取产品
 GET {{base}}/getProductById/3
+
+### 根据id获取最近建议零售价
+GET {{base}}/getLatestShelfPriceByProductId/1
+Authorization: {{token}}

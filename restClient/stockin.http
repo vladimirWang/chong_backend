@@ -1,5 +1,5 @@
 @base=http://localhost:3000/api/stockin
-@token =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiI0MTMxMTQ0QHFxLmNvbSIsInVzZXJuYW1lIjoibWlrMTEyIiwiYXZhdGFyIjoiMTIzMTIiLCJjcmVhdGVBdCI6IjIwMjUtMDEtMjVUMDU6MjM6NDcuNDU4WiIsInVwZGF0ZUF0IjoiMjAyNS0wMi0wMlQyMzowOTo1Ny4wMjVaIiwiaWF0IjoxNzM4NTUwOTAyLCJleHAiOjE3Mzg2MzczMDJ9.jPCKGmaEOLe-JrITR8-whbYfoS3r-Xf1y8JOVVrCOK4
+@token =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImVtYWlsIjoiYWFjaGVuMjAxMkBvdXRsb29rLmNvbSIsImlhdCI6MTc3MDAyNjUzOH0.vX_3XViZeOJQGRXpDdEinzeWe9AVTZJHuyEGp-CNW1I
 
 ### stockIn list
 GET {{base}}?productName=puma&deletedStart=2025-11-12&deletedEnd=2026-03-02
@@ -19,6 +19,7 @@ Content-Type: application/json
 ### create import
 POST {{base}}/multiple
 Content-Type: application/json
+Authorization: {{token}}
 
 {
     "remark": "importRemark",
@@ -26,12 +27,16 @@ Content-Type: application/json
         {
             "cost": 100, 
             "count": 200,
-            "productId": 3
+            "productId": 3,
+            "shelfPrice":1,
+            "vendorId": 1
         },
         {
             "cost": 10, 
             "count": 20,
-            "productId": 4
+            "productId": 4,
+            "shelfPrice":10,
+            "vendorId": 1
         }
     ]
 }
