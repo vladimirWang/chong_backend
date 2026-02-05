@@ -23,7 +23,7 @@ export const multipleStockInBodySchema = z.object({
       cost: z.number(),
       productId: z.number(),
       vendorId: z.number(),
-      shelfPrice: z.number().optional()
+      shelfPrice: z.number()
     }),
   ),
   createdAt: z.string().optional(),
@@ -41,6 +41,17 @@ export const mutilpleProductExistedValidator = async ({
   // 验证所有产品是否存在
   const productIds = body.productJoinStockIn.map((item) => item.productId);
   const uniqueProductIds = [...new Set(productIds)];
+
+  //  如果原数据比去重后的多，则有重复产品
+  if (productIds.length > uniqueProductIds.length) {
+    throw new ZodError([
+      {
+        code: "custom",
+        path: ["productId"],
+        message: `提交的数据存在重复的产品id: ${JSON.stringify(productIds.join(", "))}`,
+      },
+    ]);
+  }
 
   const existingProducts = await prisma.product.findMany({
     where: {
