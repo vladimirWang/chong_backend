@@ -18,7 +18,7 @@ export const sendEmailVerificationCode = async ({body}: {body: SendVerification}
     html: `<b>验证码是： ${verificationCode}</b>`, // HTML version of the message
   });
   await redisClient.setEx(redisKey, 10*60, verificationCode)
-
+  console.log("--------邮箱验证码----------: ",verificationCode);
   return new SuccessResponse(null, "邮件发送成功");
 };
 

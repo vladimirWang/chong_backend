@@ -104,6 +104,10 @@ export const generateCaptcha = async ({ set, request }) => {
     "--------图形验证码----------: ",
     captchaText
   );
+    console.log(
+    "--------图形验证码 captchaId----------: ",
+    captchaId
+  );
   // 将 SVG 转为 base64，方便前端直接用于 img src
   const base64 = Buffer.from(captcha.data, "utf-8").toString("base64");
   const dataUrl = `data:image/svg+xml;base64,${base64}`;
