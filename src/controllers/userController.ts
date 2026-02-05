@@ -76,6 +76,7 @@ export const loginUser = async ({
   const token = await jwt.sign({
     userId: userExisted.id,
     email: userExisted.email,
+    username: userExisted.username
   });
 
   return new SuccessResponse<string>(token, "用户登录成功");
