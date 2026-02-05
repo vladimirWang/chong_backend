@@ -64,15 +64,13 @@ export const getStockIns = async ({ query }: { query: StockInQuery }) => {
   );
   const total = Number(countRows[0]?.cnt ?? 0);
 
-  return JSON.stringify(
-    new SuccessResponse(
+  return new SuccessResponse(
       {
         list,
         total,
       },
       "进货记录列表获取成功"
     )
-  );
 };
 
 // 单个产品进货
@@ -101,7 +99,7 @@ export const createSingleStockIn = async ({
       },
     },
   });
-  return JSON.stringify(new SuccessResponse(null, "进货记录新建成功"));
+  return new SuccessResponse(null, "进货记录新建成功")
 };
 
 // 批量产品进货
@@ -158,7 +156,8 @@ export const createMultipleStockIn = async ({
             return {
               cost: item.cost,
               count: item.count,
-              shelfPrice: item.shelfPrice || 100,
+              // 本次提交的推荐零售价
+              shelfPrice: item.shelfPrice,
               product: {
                 connect: {
                   id: item.productId,
@@ -194,7 +193,7 @@ export const createMultipleStockIn = async ({
       });
     }),
   ]);
-  return JSON.stringify(new SuccessResponse(results, "进货记录批量新建成功"));
+  return new SuccessResponse(results, "进货记录批量新建成功")
 };
 
 // 根据ID获取进货记录
@@ -209,7 +208,7 @@ export const getStockInById = async ({ params }: { params: StockInParams }) => {
       productJoinStockIn: true,
     },
   });
-  return JSON.stringify(new SuccessResponse(result, "进货记录查询成功"));
+  return new SuccessResponse(result, "进货记录查询成功")
 };
 interface StockInInfo {
   count: number;
@@ -404,7 +403,7 @@ export const updateStockIn = async ({
       });
     }),
   ]);
-  return JSON.stringify(new SuccessResponse(null, "进货单更新成功"));
+  return new SuccessResponse(null, "进货单更新成功")
 };
 
 // 确认收货
@@ -461,7 +460,7 @@ export const confirmCompleted = async ({
       });
     }),
   ]);
-  return JSON.stringify(new SuccessResponse(record, "进货单确认成功"));
+  return new SuccessResponse(record, "进货单确认成功");
 };
 
 export const batchDeleteStockIn = async ({
@@ -472,7 +471,7 @@ export const batchDeleteStockIn = async ({
   const ids = query.id;
 
   if (!ids || ids.length === 0) {
-    return JSON.stringify(new SuccessResponse(null, "没有需要删除的进货单"));
+    return new SuccessResponse(null, "没有需要删除的进货单");
   }
 
   // 只处理「未完成、未删除」的进货单，避免把已经完成的单子反向扣 pending
@@ -492,9 +491,7 @@ export const batchDeleteStockIn = async ({
   const validIds = pendingStockIns.map((s) => s.id);
 
   if (validIds.length === 0) {
-    return JSON.stringify(
-      new SuccessResponse(null, "没有符合条件的进货单可删除")
-    );
+    return new SuccessResponse(null, "没有符合条件的进货单可删除")
   }
 
   // 查出所有关联的中间表记录，用于统计每个商品需要扣减的 stockInPending 数量
@@ -558,5 +555,5 @@ export const batchDeleteStockIn = async ({
     ),
   ]);
 
-  return JSON.stringify(new SuccessResponse(txResults, "进货单批量删除成功"));
+  return new SuccessResponse(txResults, "进货单批量删除成功");
 };

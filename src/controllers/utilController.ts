@@ -19,7 +19,7 @@ export const sendEmailVerificationCode = async ({body}: {body: SendVerification}
   });
   await redisClient.setEx(redisKey, 10*60, verificationCode)
 
-  return JSON.stringify(new SuccessResponse(null, "邮件发送成功"));
+  return new SuccessResponse(null, "邮件发送成功");
 };
 
 // 校验邮箱是否有效
@@ -29,11 +29,11 @@ export const checkEmailValidation = async ({body}: {body: CheckEmailValidation})
   const redisKey = `${emailVerificationTag}:${email}`
   const storedVerifyCode = await redisClient.get(redisKey)
   if (storedVerifyCode !== verifyCode) {
-    return JSON.stringify(new ErrorResponse(errorCode.EMAIL_VALIDATION_FAIL, "邮箱验证失败"))
+    return new ErrorResponse(errorCode.EMAIL_VALIDATION_FAIL, "邮箱验证失败")
   }
   await redisClient.del(redisKey)
 
-  return JSON.stringify(new SuccessResponse(null, "邮件验证通过"));
+  return new SuccessResponse(null, "邮件验证通过");
 };
 
 

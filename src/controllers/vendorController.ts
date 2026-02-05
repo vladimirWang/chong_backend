@@ -33,9 +33,7 @@ export const getVendors = async ({
   });
   const total = await prisma.vendor.count({ where: whereValues });
 
-  return JSON.stringify(
-    new SuccessResponse({ total, list: vendors }, "供应商列表获取成功"),
-  );
+  return new SuccessResponse({ total, list: vendors }, "供应商列表获取成功")
 };
 
 // 删除供应商
@@ -72,9 +70,7 @@ export const deleteVendor = async ({
     },
   });
 
-  return JSON.stringify(
-    new SuccessResponse(null, "供应商删除成功")
-  );
+  return new SuccessResponse(null, "供应商删除成功")
 };
 
 // 批量删除供应商

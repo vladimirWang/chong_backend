@@ -33,9 +33,7 @@ export const getProducts = async ({ query }: { query: ProductQuery }) => {
   });
   const total = await prisma.product.count({ where: whereValues });
 
-  return JSON.stringify(
-    new SuccessResponse({ total, list: products }, "产品列表获取成功"),
-  );
+  return new SuccessResponse({ total, list: products }, "产品列表获取成功")
 };
 
 // 根据ID获取产品
@@ -55,7 +53,7 @@ export const getProductById = async ({ params }: { params: UpdateId }) => {
       latestPrice: true,
     },
   });
-  return JSON.stringify(new SuccessResponse(res, "产品信息查询成功"));
+  return new SuccessResponse(res, "产品信息查询成功");
 };
 
 // 创建产品
@@ -73,7 +71,7 @@ export const createProduct = async ({ body }: { body: CreateProductBody }) => {
       shelfPrice,
     },
   });
-  return JSON.stringify(new SuccessResponse(product, "产品创建成功"));
+  return new SuccessResponse(product, "产品创建成功");
 };
 
 // 更新产品
@@ -97,7 +95,7 @@ export const updateProduct = async ({
       price,
     },
   });
-  return JSON.stringify(new SuccessResponse(product, "产品更新成功"));
+  return new SuccessResponse(product, "产品更新成功");
 };
 
 // 根据供应商ID获取产品列表
@@ -117,7 +115,17 @@ export const getProductsByVendorId = async ({
       vendorId,
     },
   });
-  return JSON.stringify(
-    new SuccessResponse({ total, list: products }, "产品列表获取成功"),
-  );
+  return new SuccessResponse({ total, list: products }, "产品列表获取成功")
 };
+
+// 根据产品id查询最近一次的建议零售价
+export const getLatestShelfPriceByProductId = async ({params}: { params: UpdateId }) => {
+    const oldRecordSql = `select pjsi.shelfPrice as shelfPrice, pjsi.productId as productId, pjsi.id as pjsi_id, si.completedAt from StockIn si JOIN ProductJoinStockIn pjsi on si.id = pjsi.stockInId  
+    where si.completedAt is not NULL and pjsi.productId = ? ORDER BY si.completedAt DESC
+  `
+
+  const result = await prisma.$queryRawUnsafe(oldRecordSql, params.id)
+  console.log("result: ", result[0])
+
+  return new SuccessResponse({shelfPrice: result[0]?.shelfPrice ?? null}, "产品最近一次建议零售价获取成功")
+}

@@ -15,15 +15,11 @@ export const loginUser = async ({
   const redisKey = `captcha:login:${body.captchaId}`;
   const storedCaptcha = await redisClient.get(redisKey);
   if (!storedCaptcha) {
-    return JSON.stringify(
-      new ErrorResponse(errorCode.CAPTCHA_EXPIRED, "验证码已过期")
-    );
+    return new ErrorResponse(errorCode.CAPTCHA_EXPIRED, "验证码已过期")
   }
   // redis中存的验证码与用户提交的验证码不一致
   if (storedCaptcha.toLowerCase() !== body.captchaText.toLowerCase()) {
-    return JSON.stringify(
-      new ErrorResponse(errorCode.CAPTCHA_INCORRECT, "验证码不正确")
-    );
+      return new ErrorResponse(errorCode.CAPTCHA_INCORRECT, "验证码不正确")
   }
   // 如果验证码校验通过就在redis中删除
   await redisClient.del(redisKey);
@@ -36,7 +32,7 @@ export const loginUser = async ({
   if (!userExisted) {
     // 记录
     const result = new ErrorResponse(errorCode.USER_NOT_FOUND, "用户不存在");
-    return JSON.stringify(result);
+    return result;
   }
   
   // 当前账号是否冻结
@@ -45,7 +41,7 @@ export const loginUser = async ({
   console.log('lockStatus: ', lockStatus)
   if (lockStatus) {
     const result = new ErrorResponse(errorCode.ACCOUNT_LOCKED, "账号已锁定");
-    return JSON.stringify(result);
+    return result;
   }
   // 密码错误次数的key
   const loginFailedKey = `login:failed:${body.email}`;
@@ -72,7 +68,7 @@ export const loginUser = async ({
       errorCode.PASSWORD_INCORRECT,
       "密码不正确"
     );
-    return JSON.stringify(result);
+    return result;
   }
   // 如果密码正确，就清空密码错误次数
   await redisClient.del(loginFailedKey)
@@ -82,7 +78,7 @@ export const loginUser = async ({
     email: userExisted.email,
   });
 
-  return JSON.stringify(new SuccessResponse<string>(token, "用户登录成功"));
+  return new SuccessResponse<string>(token, "用户登录成功");
 };
 
 export const generateCaptcha = async ({ set, request }) => {
@@ -112,12 +108,10 @@ export const generateCaptcha = async ({ set, request }) => {
   const base64 = Buffer.from(captcha.data, "utf-8").toString("base64");
   const dataUrl = `data:image/svg+xml;base64,${base64}`;
   set.headers["Content-Type"] = "application/json";
-  return JSON.stringify(
-    new SuccessResponse<{ image: string }>(
+   return  new SuccessResponse<{ image: string }>(
       { image: dataUrl, captchaId },
       "验证码生成成功"
     )
-  );
 };
 
 export const registerUser = async ({ body }: { body: RegisterUserBody }) => {
@@ -145,5 +139,5 @@ export const registerUser = async ({ body }: { body: RegisterUserBody }) => {
     createdAt: user.createdAt,
   };
   const result = new SuccessResponse(userCreated, "用户创建成功");
-  return JSON.stringify(result);
+  return result;
 };

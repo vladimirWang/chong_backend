@@ -36,7 +36,7 @@ export const vendorRouter = new Elysia({ prefix: "/vendor" })
         const result = new ErrorResponse(10006, "没有查到供应商信息");
         return status(404, JSON.stringify(result));
       }
-      return JSON.stringify(new SuccessResponse(vendor, "供应商获取成功"));
+      return new SuccessResponse(vendor, "供应商获取成功");
     },
     {
       params: updateIdSchema,
@@ -53,7 +53,7 @@ export const vendorRouter = new Elysia({ prefix: "/vendor" })
           remark,
         },
       });
-      return JSON.stringify(new SuccessResponse(vendor, "供应商创建成功"));
+      return new SuccessResponse(vendor, "供应商创建成功");
     },
     {
       body: z.object({
@@ -94,9 +94,7 @@ export const vendorRouter = new Elysia({ prefix: "/vendor" })
           products: true,
         },
       });
-      return JSON.stringify(
-        new SuccessResponse<string>(vendor, "供应商获取成功"),
-      );
+      return new SuccessResponse<string>(vendor, "供应商获取成功")
       // return {
       //     message: `文章 ${params.id} 更新成功`,
       //     post: { id: params.id, ...(body as Record<string, any>) }

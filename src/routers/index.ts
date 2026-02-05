@@ -15,7 +15,13 @@ const testRouter = new Elysia().get("/ok", () => "Hello Elysia test123");
 
 export const apiRouter = new Elysia().group(
   "/api",
-  { isSignIn: true },
+  { isSignIn: true,
+    afterHandle({ response, set }) {
+          // set.headers['content-type123123'] = 'text/html; charset=utf8123123'
+          console.log("afterhandle response: ", response)
+          return JSON.stringify(response)
+    }
+  },
   (app) => {
     return app
       .use(userRouter)
@@ -25,5 +31,5 @@ export const apiRouter = new Elysia().group(
       .use(stockOutRouter)
       .use(statisticsOutRouter)
       .use(utilRouter);
-  },
+  }
 );

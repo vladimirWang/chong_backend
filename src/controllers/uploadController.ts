@@ -65,9 +65,7 @@ export const uploadFile = async ({
       type: file.type,
     };
 
-    return JSON.stringify(
-      new SuccessResponse(fileInfo, "文件上传成功")
-    );
+    return new SuccessResponse(fileInfo, "文件上传成功")
   } catch (error) {
     throw error;
   }
@@ -223,9 +221,7 @@ export const uploadExcelFile = async ({
       records: records,
     };
 
-    return JSON.stringify(
-      new SuccessResponse(result, "Excel 文件上传并解析成功")
-    );
+    return new SuccessResponse(result, "Excel 文件上传并解析成功")
   } catch (error) {
     throw error;
   }

@@ -56,15 +56,13 @@ export const getStockOuts = async ({ query }: { query: Pagination }) => {
   );
   const total = Number(countRows[0]?.cnt ?? 0);
 
-  return JSON.stringify(
-    new SuccessResponse(
-      {
-        list,
-        total,
-      },
-      "出货记录列表获取成功"
-    )
-  );
+  return new SuccessResponse(
+    {
+      list,
+      total,
+    },
+    "出货记录列表获取成功"
+  )
 };
 
 // 新建出货
@@ -123,7 +121,7 @@ export const createMultipleStockOut = async ({
     }),
   ]);
 
-  return JSON.stringify(new SuccessResponse(null, "出货创建成功"));
+  return new SuccessResponse(null, "出货创建成功");
 };
 
 // 确认出货完成
@@ -141,7 +139,7 @@ export const confirmStockOutCompleted = async ({
     },
   });
   if (!productsInRecord || productsInRecord.length === 0) {
-    return JSON.stringify(new ErrorResponse(null, "出货单对应产品不存在"));
+    return new ErrorResponse(null, "出货单对应产品不存在");
   }
   const productMap = productsInRecord.reduce(
     (a: Record<number, StockOutLineComparable>, c) => {
@@ -175,7 +173,7 @@ export const confirmStockOutCompleted = async ({
       });
     }),
   ]);
-  return JSON.stringify(new SuccessResponse(null, "出货确认成功"));
+  return new SuccessResponse(null, "出货确认成功");
 };
 
 // 通过id更新出货
@@ -219,9 +217,7 @@ export const updateStockOut = async ({
         },
       }),
     ]);
-    return JSON.stringify(
-      new SuccessResponse(null, "出货单已删除（无产品数据）")
-    );
+    return new SuccessResponse(null, "出货单已删除（无产品数据）")
   }
   const totalPrice = productJoinStockOut.reduce(
     (a, c) => a + c.price * c.count,
@@ -359,7 +355,7 @@ export const updateStockOut = async ({
     }),
     // 如果更新后，产品为空，则删除出货记录
   ]);
-  return JSON.stringify(new SuccessResponse(null, "出货单更新成功"));
+  return new SuccessResponse(null, "出货单更新成功");
 };
 
 export const getStockOutDetailById = async ({
@@ -375,5 +371,5 @@ export const getStockOutDetailById = async ({
       productJoinStockOut: true,
     },
   });
-  return JSON.stringify(new SuccessResponse(result, "出货单更新成功"));
+  return new SuccessResponse(result, "出货单更新成功");
 };

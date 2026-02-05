@@ -57,7 +57,6 @@ export const getHotSales = async ({ query }: { query: GetHotSalesQuery }) => {
   //   };
   // });
 
-  return JSON.stringify(
-    new SuccessResponse([], "热销商品获取成功"),
-  );
+  return new SuccessResponse([], "热销商品获取成功")
+  
 };
