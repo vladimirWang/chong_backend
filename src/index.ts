@@ -68,9 +68,10 @@ export const app = new Elysia()
         if (validationError.all && Array.isArray(validationError.all)) {
           const errorMessages = validationError.all
             .map((err: any) => {
+              const currentParam = `path: ${JSON.stringify(err.value)}`
               // 提取错误消息，可能在不同的属性中
-              if (err.message) return err.message;
-              if (typeof err === "string") return err;
+              if (err.message) return err.message + `; currentParam: ${currentParam}`;
+              if (typeof err === "string") return err + `; currentParam: ${currentParam}`;
               if (err.value !== undefined) {
                 // 可能是格式化的错误对象
                 return `${err.path || ""}: ${err.message || "校验失败"}`;
