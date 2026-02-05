@@ -16,6 +16,7 @@ import {
   createProduct,
   updateProduct,
   getProductsByVendorId,
+  getLatestShelfPriceByProductId
 } from "../controllers/productController";
 const { JWT_SECRET } = process.env;
 
@@ -92,4 +93,7 @@ export const productRouter = new Elysia({
   // GET /api/product/getProductsByVendorId/:vendorId - 根据供应商ID获取产品列表
   .get("/getProductsByVendorId/:vendorId", getProductsByVendorId, {
     params: productByVendorParamsSchema,
+  })
+  .get("/getLatestShelfPriceByProductId/:id", getLatestShelfPriceByProductId, {
+    params: updateIdSchema
   });
