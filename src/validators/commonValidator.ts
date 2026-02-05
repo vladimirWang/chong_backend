@@ -45,3 +45,14 @@ export const deletedStartEndSchema = z
   );
 
 export type DeletedStartEnd = z.infer<typeof deletedStartEndSchema>;
+
+export const vendorIdSchema = z.object({
+  vendorId: z.coerce.number()
+})
+export type VendorId = z.infer<typeof vendorIdSchema>;
+
+export const productNameStringSchema = z.object({
+  productName: z.string()
+})
+
+export type ProductNameString = z.infer<typeof productNameStringSchema>;

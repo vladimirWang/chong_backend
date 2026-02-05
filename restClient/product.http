@@ -1,6 +1,5 @@
 @base=http://localhost:3000/api/product
-@token =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImVtYWlsIjoiYWFjaGVuMjAxMkBvdXRsb29rLmNvbSIsImlhdCI6MTc3MDEzMzY1Nn0.Hgphom8mFDkxSkmJ760AiG-DbwIghSDba5K8B3muXpU
-
+@token =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImVtYWlsIjoiYWFjaGVuMjAxMkBvdXRsb29rLmNvbSIsImlhdCI6MTc3MDI5MzQzNH0.CPkt8O6XW5UFN6O6LMTOYPCyy7vWCCoo9f5l05XKZlU
 ### user list
 GET {{base}}
 Authorization: {{token}}
@@ -21,4 +20,8 @@ GET {{base}}/getProductById/3
 
 ### 根据id获取最近建议零售价
 GET {{base}}/getLatestShelfPriceByProductId/1
+Authorization: {{token}}
+
+### 查询商品名是否存在
+GET {{base}}/checkProductNameExistedInVendor/1?productName=nikehat
 Authorization: {{token}}

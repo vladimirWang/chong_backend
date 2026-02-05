@@ -7,7 +7,7 @@ import {
   UpdateProductBody,
   ProductByVendorParams,
 } from "../validators/productValidator";
-import { UpdateId } from "../validators/commonValidator";
+import { UpdateI, VendorId, ProductNameString } from "../validators/commonValidator";
 
 // 获取产品列表
 export const getProducts = async ({ query }: { query: ProductQuery }) => {
@@ -128,4 +128,14 @@ export const getLatestShelfPriceByProductId = async ({params}: { params: UpdateI
   console.log("result: ", result[0])
 
   return new SuccessResponse({shelfPrice: result[0]?.shelfPrice ?? null}, "产品最近一次建议零售价获取成功")
+}
+
+export const checkProductNameExistedInVendor = async({params, query}: {params: VendorId, query: ProductNameString}) => {
+  const existed = await prisma.Product.findFirst({
+    where: {
+      vendorId: params.vendorId,
+      name: query.productName
+    }
+  })
+  return new SuccessResponse(existed, "产品最近一次建议零售价获取成功")
 }
