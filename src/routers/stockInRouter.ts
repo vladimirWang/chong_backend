@@ -67,7 +67,7 @@ export const stockInRouter = new Elysia({
   .put("/:id", updateStockIn, {
     params: updateIdSchema,
     body: multipleStockInBodySchema,
-    // beforeHandle: mutilpleProductExistedValidator,
+    beforeHandle: mutilpleProductExistedValidator,
   })
   .patch("/confirmCompleted/:id", confirmCompleted, {
     params: updateIdSchema,

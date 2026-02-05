@@ -27,14 +27,14 @@ Authorization: {{token}}
         {
             "cost": 100, 
             "count": 200,
-            "productId": 3,
+            "productId": 1,
             "shelfPrice":1,
             "vendorId": 1
         },
         {
             "cost": 10, 
             "count": 20,
-            "productId": 4,
+            "productId": 1,
             "shelfPrice":10,
             "vendorId": 1
         }
@@ -42,8 +42,9 @@ Authorization: {{token}}
 }
 
 ### update stockIn
-PUT {{base}}/2
+PUT {{base}}/13
 Content-Type: application/json
+Authorization: {{token}}
 
 {
     "remark": "importRemark",
@@ -51,12 +52,16 @@ Content-Type: application/json
         {
             "cost": 19, 
             "count": 40,
-            "productId": 1
+            "productId": 1,
+            "vendorId": 1,
+            "shelfPrice": 10
         },
         {
             "cost": 200, 
             "count": 300,
-            "productId": 2
+            "productId": 2,
+            "vendorId": 1,
+            "shelfPrice": 10
         }
     ]
 }
