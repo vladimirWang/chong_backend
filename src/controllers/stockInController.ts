@@ -49,15 +49,11 @@ export const getStockIns = async ({ query }: { query: StockInQuery }) => {
   //   "ProductJoinStockIn",
   //   query
   // );
-    // 校验后已是 string | undefined，只做 trim
+  // 校验后已是 string | undefined，只做 trim
   const productNameStr =
-    productName != null && typeof productName === "string"
-      ? productName.trim()
-      : undefined;
+    typeof productName === "string" ? productName.trim() : undefined;
   const vendorNameStr =
-    vendorName != null && typeof vendorName === "string"
-      ? vendorName.trim()
-      : undefined;
+    typeof vendorName === "string" ? vendorName.trim() : undefined;
 
   const hasVendorFilter = Boolean(vendorNameStr && vendorNameStr.length > 0);
 
@@ -102,44 +98,122 @@ export const getStockIns = async ({ query }: { query: StockInQuery }) => {
     ? " INNER JOIN Vendor v ON v.id = p.vendorId "
     : "";
   const whereSql = "WHERE " + whereClauses.join(" AND ");
-
-  const listSql =
-    `SELECT DISTINCT s.id, s.remark, s.createdAt, s.updatedAt, s.deletedAt, s.totalCost, s.status, s.completedAt ` +
+  const joinFrom =
     `FROM StockIn s ` +
     `INNER JOIN ProductJoinStockIn pjs ON pjs.stockInId = s.id ` +
     `INNER JOIN Product p ON p.id = pjs.productId` +
-    vendorJoinSql +
-    ` ${whereSql} ORDER BY s.updatedAt DESC` +
-    (pagination ? " LIMIT ? OFFSET ?" : "");
+    vendorJoinSql;
 
-  const countSql =
-    `SELECT COUNT(DISTINCT s.id) as cnt FROM StockIn s ` +
-    `INNER JOIN ProductJoinStockIn pjs ON pjs.stockInId = s.id ` +
-    `INNER JOIN Product p ON p.id = pjs.productId` +
-    vendorJoinSql +
-    ` ${whereSql}`;
-  const listParams = pagination ? [...params, take, skip] : params;
-  type StockInListRow = StockOperationListRow & {
-    totalCost: number;
-  };
-  const list = await prisma.$queryRawUnsafe<StockInListRow[]>(
-    listSql,
-    ...listParams
-  );
-
+  const countSql = `SELECT COUNT(DISTINCT s.id) as cnt ${joinFrom} ${whereSql}`;
   const countRows = await prisma.$queryRawUnsafe<{ cnt: bigint }[]>(
     countSql,
-    ...params
+    ...params,
   );
   const total = Number(countRows[0]?.cnt ?? 0);
 
+  type StockInListRow = StockOperationListRow & {
+    totalCost: number;
+    productId: number;
+    productName: string;
+    cost: number;
+    count: number;
+  };
+
+  let list: Array<
+    StockOperationListRow & {
+      totalCost: number;
+      products: Array<{
+        productId: number;
+        productName: string;
+        cost: number;
+        count: number;
+      }>;
+    }
+  >;
+
+  if (total === 0) {
+    list = [];
+  } else {
+    // 先按「进货单」分页拿到当前页的 stockInId 列表
+    const idSql =
+      `SELECT s.id ${joinFrom} ${whereSql} GROUP BY s.id ORDER BY s.updatedAt DESC` +
+      (pagination ? " LIMIT ? OFFSET ?" : "");
+    const idParams = pagination ? [...params, take, skip] : params;
+    const idRows = await prisma.$queryRawUnsafe<{ id: number }[]>(
+      idSql,
+      ...idParams,
+    );
+    const stockInIds = idRows.map((r) => r.id);
+    if (stockInIds.length === 0) {
+      list = [];
+    } else {
+      const placeholders = stockInIds.map(() => "?").join(",");
+      const rowsSql =
+        `SELECT s.id, s.remark, s.createdAt, s.updatedAt, s.deletedAt, s.totalCost, s.status, s.completedAt, pjs.productId, p.name as productName, pjs.cost, pjs.count ` +
+        `FROM StockIn s ` +
+        `INNER JOIN ProductJoinStockIn pjs ON pjs.stockInId = s.id ` +
+        `INNER JOIN Product p ON p.id = pjs.productId ` +
+        `WHERE s.id IN (${placeholders}) ORDER BY s.updatedAt DESC, pjs.productId`;
+      const rows = await prisma.$queryRawUnsafe<StockInListRow[]>(
+        rowsSql,
+        ...stockInIds,
+      );
+      // 按进货单 id 聚合成「一单多商品」
+      const byId = new Map<
+        number,
+        StockOperationListRow & {
+          totalCost: number;
+          products: Array<{
+            productId: number;
+            productName: string;
+            cost: number;
+            count: number;
+          }>;
+        }
+      >();
+      for (const row of rows) {
+        const existing = byId.get(row.id);
+        if (!existing) {
+          byId.set(row.id, {
+            id: row.id,
+            remark: row.remark,
+            createdAt: row.createdAt,
+            updatedAt: row.updatedAt,
+            deletedAt: row.deletedAt,
+            status: row.status,
+            completedAt: row.completedAt,
+            totalCost: row.totalCost,
+            products: [
+              {
+                productId: row.productId,
+                productName: row.productName,
+                cost: row.cost,
+                count: row.count,
+              },
+            ],
+          });
+        } else {
+          existing.products.push({
+            productId: row.productId,
+            productName: row.productName,
+            cost: row.cost,
+            count: row.count,
+          });
+        }
+      }
+      list = Array.from(byId.values()).sort(
+        (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime(),
+      );
+    }
+  }
+
   return new SuccessResponse(
-      {
-        list,
-        total,
-      },
-      "进货记录列表获取成功"
-    )
+    {
+      list,
+      total,
+    },
+    "进货记录列表获取成功",
+  );
 };
 
 // 单个产品进货
@@ -168,7 +242,7 @@ export const createSingleStockIn = async ({
       },
     },
   });
-  return new SuccessResponse(null, "进货记录新建成功")
+  return new SuccessResponse(null, "进货记录新建成功");
 };
 
 // 批量产品进货
@@ -204,15 +278,13 @@ export const createMultipleStockIn = async ({
 
   // 转换为数组
   // const mergedProductJoinStockIn = Array.from(mergedMap.values());
-  const {productJoinStockIn, createdAt, remark} = body
+  const { productJoinStockIn, createdAt, remark } = body;
 
   const totalCost = productJoinStockIn.reduce((a, c) => {
     return a + c.cost * c.count;
   }, 0);
 
-  const createdAtVal = createdAt
-    ? dayjs(createdAt).toDate()
-    : new Date();
+  const createdAtVal = createdAt ? dayjs(createdAt).toDate() : new Date();
   const results = await prisma.$transaction([
     // 创建进库记录
     prisma.stockIn.create({
@@ -262,7 +334,7 @@ export const createMultipleStockIn = async ({
       });
     }),
   ]);
-  return new SuccessResponse(results, "进货记录批量新建成功")
+  return new SuccessResponse(results, "进货记录批量新建成功");
 };
 
 // 根据ID获取进货记录
@@ -277,7 +349,7 @@ export const getStockInById = async ({ params }: { params: StockInParams }) => {
       productJoinStockIn: true,
     },
   });
-  return new SuccessResponse(result, "进货记录查询成功")
+  return new SuccessResponse(result, "进货记录查询成功");
 };
 interface StockInInfo {
   count: number;
@@ -310,7 +382,7 @@ export const updateStockIn = async ({
   const { productJoinStockIn } = body;
   const totalCost = productJoinStockIn.reduce(
     (a, c) => a + c.cost * c.count,
-    0
+    0,
   );
   const existedComparable: StockInLineComparable[] = existedRecord.map((r) => ({
     id: r.id,
@@ -324,14 +396,14 @@ export const updateStockIn = async ({
       productId: r.productId,
       cost: r.cost,
       count: r.count,
-    })
+    }),
   );
   const { added, modified, deleted, unchanged } =
     compareArrayMinLoop<StockInLineComparable>(
       existedComparable,
       newComparable,
       "productId",
-      ["id", "stockInId"]
+      ["id", "stockInId"],
     );
   console.log("modified: ", modified);
 
@@ -343,7 +415,7 @@ export const updateStockIn = async ({
       };
       return a;
     },
-    {}
+    {},
   );
   const deletedJoinIds = deleted
     .map((item) => item.id)
@@ -443,7 +515,7 @@ export const updateStockIn = async ({
       console.log(
         "updated balance: ",
         item.count,
-        existedInfoMap[item.productId].count
+        existedInfoMap[item.productId].count,
       );
       return prisma.product.update({
         where: {
@@ -472,7 +544,7 @@ export const updateStockIn = async ({
       });
     }),
   ]);
-  return new SuccessResponse(null, "进货单更新成功")
+  return new SuccessResponse(null, "进货单更新成功");
 };
 
 // 确认收货
@@ -493,7 +565,7 @@ export const confirmCompleted = async ({
       a[c.productId] = c;
       return a;
     },
-    {}
+    {},
   );
 
   const { completedAt = new Date() } = body || {};
@@ -560,7 +632,7 @@ export const batchDeleteStockIn = async ({
   const validIds = pendingStockIns.map((s) => s.id);
 
   if (validIds.length === 0) {
-    return new SuccessResponse(null, "没有符合条件的进货单可删除")
+    return new SuccessResponse(null, "没有符合条件的进货单可删除");
   }
 
   // 查出所有关联的中间表记录，用于统计每个商品需要扣减的 stockInPending 数量
@@ -620,7 +692,7 @@ export const batchDeleteStockIn = async ({
             decrement: totalCount,
           },
         },
-      })
+      }),
     ),
   ]);
 
