@@ -1,4 +1,4 @@
-@base=http://localhost:3000/api/stockin
+@base=http://localhost:3000/nodejs_api/stockin
 @token =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImVtYWlsIjoiYWFjaGVuMjAxMkBvdXRsb29rLmNvbSIsImlhdCI6MTc3MDAyNjUzOH0.vX_3XViZeOJQGRXpDdEinzeWe9AVTZJHuyEGp-CNW1I
 
 ### stockIn list

@@ -18,7 +18,10 @@ function envNum(name: string, fallback: number) {
 
 function percentile(sorted: number[], p: number) {
   if (sorted.length === 0) return NaN;
-  const idx = Math.min(sorted.length - 1, Math.max(0, Math.ceil((p / 100) * sorted.length) - 1));
+  const idx = Math.min(
+    sorted.length - 1,
+    Math.max(0, Math.ceil((p / 100) * sorted.length) - 1),
+  );
   return sorted[idx];
 }
 
@@ -40,9 +43,12 @@ async function timedFetch(url: string, init: RequestInit, timeoutMs: number) {
 
 async function main() {
   const opts: Options = {
-    url: process.env.URL ?? "http://localhost:3000/api/stockin",
+    url: process.env.URL ?? "http://localhost:3000/nodejs_api/stockin",
     method: process.env.METHOD ?? "GET",
-    headers: { "content-type": "application/json", ...(process.env.HEADERS ? JSON.parse(process.env.HEADERS) : {}) },
+    headers: {
+      "content-type": "application/json",
+      ...(process.env.HEADERS ? JSON.parse(process.env.HEADERS) : {}),
+    },
     body: process.env.BODY,
     concurrency: envNum("CONCURRENCY", 20),
     requests: envNum("REQUESTS", 500),
@@ -93,24 +99,29 @@ async function main() {
   const min = latenciesMs[0] ?? NaN;
   const max = latenciesMs[latenciesMs.length - 1] ?? NaN;
 
-  console.log(JSON.stringify({
-    url: opts.url,
-    method: opts.method,
-    concurrency: opts.concurrency,
-    requests: opts.requests,
-    warmup: opts.warmup,
-    timeoutMs: opts.timeoutMs,
-    ok,
-    fail,
-    errorRate: opts.requests === 0 ? 0 : fail / opts.requests,
-    totalSec,
-    rps,
-    latencyMs: { min, p50, p90, p95, p99, max },
-  }, null, 2));
+  console.log(
+    JSON.stringify(
+      {
+        url: opts.url,
+        method: opts.method,
+        concurrency: opts.concurrency,
+        requests: opts.requests,
+        warmup: opts.warmup,
+        timeoutMs: opts.timeoutMs,
+        ok,
+        fail,
+        errorRate: opts.requests === 0 ? 0 : fail / opts.requests,
+        totalSec,
+        rps,
+        latencyMs: { min, p50, p90, p95, p99, max },
+      },
+      null,
+      2,
+    ),
+  );
 }
 
 main().catch((e) => {
   console.error("性能测试失败:", e);
   process.exit(1);
 });
-

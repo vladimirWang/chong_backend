@@ -1,6 +1,6 @@
-@authUrl=http://localhost:3000/api/user/login
-@postBase=http://localhost:3000/api/post
-@base=http://localhost:3000/api
+@authUrl=http://localhost:3000/nodejs_api/user/login
+@postBase=http://localhost:3000/nodejs_api/post
+@base=http://localhost:3000/nodejs_api
 
 # @name loginAPI
 ## 登录拿token

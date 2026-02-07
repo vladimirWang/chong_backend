@@ -1,4 +1,4 @@
-@base=http://localhost:3000/api
+@base=http://localhost:3000/nodejs_api
 @token =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImVtYWlsIjoiMTIzNDU2QHFxLmNvbSIsImlhdCI6MTc2OTA1MTk4N30.Ed6boqUBb5sDyhM5foKQfSH107oy-YNZ5Blu8Funfws
 ### user list
 GET {{base}}/user

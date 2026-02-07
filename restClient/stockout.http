@@ -1,4 +1,4 @@
-@base=http://localhost:3000/api/stockout
+@base=http://localhost:3000/nodejs_api/stockout
 @token =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiI0MTMxMTQ0QHFxLmNvbSIsInVzZXJuYW1lIjoibWlrMTEyIiwiYXZhdGFyIjoiMTIzMTIiLCJjcmVhdGVBdCI6IjIwMjUtMDEtMjVUMDU6MjM6NDcuNDU4WiIsInVwZGF0ZUF0IjoiMjAyNS0wMi0wMlQyMzowOTo1Ny4wMjVaIiwiaWF0IjoxNzM4NTUwOTAyLCJleHAiOjE3Mzg2MzczMDJ9.jPCKGmaEOLe-JrITR8-whbYfoS3r-Xf1y8JOVVrCOK4
 
 ### user list

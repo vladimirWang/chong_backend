@@ -25,7 +25,7 @@ export const userRouter = new Elysia({ prefix: "/user" })
       ],
     };
   })
-  // POST /api/users/register - 注册用户（需要 email 和 password）
+  // POST /nodejs_api/users/register - 注册用户（需要 email 和 password）
   .post("/register", registerUser, {
     body: registerUserBodySchema,
     beforeHandle: async ({ body }) => {
@@ -57,14 +57,14 @@ export const userRouter = new Elysia({ prefix: "/user" })
   .post("/login", loginUser, {
     body: loginUserBodySchema,
   })
-  // PUT /api/users/:id - 更新用户
+  // PUT /nodejs_api/users/:id - 更新用户
   .put("/:id", async ({ params, body }) => {
     return {
       message: `用户 ${params.id} 更新成功`,
       user: { id: params.id, ...(body as Record<string, any>) },
     };
   })
-  // DELETE /api/users/:id - 删除用户
+  // DELETE /nodejs_api/users/:id - 删除用户
   .delete("/:id", ({ params }) => {
     return {
       message: `用户 ${params.id} 删除成功`,

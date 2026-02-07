@@ -5,13 +5,13 @@ const { JWT_SECRET } = process.env;
 export const authService = new Elysia({ name: "Auth.Service" }).macro({
   isSignIn: {
     async resolve(ctx: Context) {
-      const apiUrl = "/api";
+      const apiUrl = "/nodejs_api";
       const publicRoutes = [
-        "/api/user/login",
-        "/api/user/register",
-        "/api/user/captcha",
-        "/api/util/sendEmailVerificationCode",
-        '/api/util/checkEmailValidation'
+        "/nodejs_api/user/login",
+        "/nodejs_api/user/register",
+        "/nodejs_api/user/captcha",
+        "/nodejs_api/util/sendEmailVerificationCode",
+        "/nodejs_api/util/checkEmailValidation",
       ];
       // 对于公共路由，不进行鉴权
       if (publicRoutes.includes(ctx.route) || ctx.route.startsWith("/public")) {

@@ -33,7 +33,7 @@ export const stockInRouter = new Elysia({
   .get("/", getStockIns, {
     query: stockInQuerySchema,
   })
-  // POST /api/stockin/single - 单个产品进货
+  // POST /nodejs_api/stockin/single - 单个产品进货
   .post("/single", createSingleStockIn, {
     body: singleStockInBodySchema,
     beforeHandle: async ({ body }) => {
@@ -55,12 +55,12 @@ export const stockInRouter = new Elysia({
       }
     },
   })
-  // POST /api/stockin/multiple - 批量产品进货
+  // POST /nodejs_api/stockin/multiple - 批量产品进货
   .post("/multiple", createMultipleStockIn, {
     body: multipleStockInBodySchema,
     beforeHandle: mutilpleProductExistedValidator,
   })
-  // GET /api/stockin/:id - 根据ID获取进货记录
+  // GET /nodejs_api/stockin/:id - 根据ID获取进货记录
   .get("/:id", getStockInById, {
     params: updateIdSchema,
   })

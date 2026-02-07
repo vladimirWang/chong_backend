@@ -1,5 +1,5 @@
-@authUrl=http://localhost:3000/api/user/login
-@base=http://localhost:3000/api/vendor
+@authUrl=http://localhost:3000/nodejs_api/user/login
+@base=http://localhost:3000/nodejs_api/vendor
 @token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsInVzZXJuYW1lIjpudWxsLCJpYXQiOjE3Njg1NDkwNDV9.SOW5HNamDsp433xB3zq_L9DcjoCfb8gcmNElSa8Dd5Q
 
 ### brand list
@@ -25,11 +25,11 @@ GET http://localhost:3000/hi
 Authorization: {{token}}
 
 ### token test
-DELETE http://localhost:3000/api/vendor/1
+DELETE http://localhost:3000/nodejs_api/vendor/1
 Authorization: {{token}}
 
 ### 批量删除供应商
-DELETE http://localhost:3000/api/vendor/batch
+DELETE http://localhost:3000/nodejs_api/vendor/batch
 Authorization: {{token}}
 Content-Type: application/json
 

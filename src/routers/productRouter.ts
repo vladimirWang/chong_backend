@@ -9,7 +9,11 @@ import {
   updateProductBodySchema,
   productByVendorParamsSchema,
 } from "../validators/productValidator";
-import { updateIdSchema, vendorIdSchema, productNameStringSchema } from "../validators/commonValidator";
+import {
+  updateIdSchema,
+  vendorIdSchema,
+  productNameStringSchema,
+} from "../validators/commonValidator";
 import {
   getProducts,
   getProductById,
@@ -17,7 +21,7 @@ import {
   updateProduct,
   getProductsByVendorId,
   getLatestShelfPriceByProductId,
-  checkProductNameExistedInVendor
+  checkProductNameExistedInVendor,
 } from "../controllers/productController";
 const { JWT_SECRET } = process.env;
 
@@ -28,11 +32,11 @@ export const productRouter = new Elysia({
   .get("/", getProducts, {
     query: productQuerySchema,
   })
-  // GET /api/product/:id - 根据ID获取产品
+  // GET /nodejs_api/product/:id - 根据ID获取产品
   .get("/:id", getProductById, {
     params: updateIdSchema,
   })
-  // POST /api/product - 创建产品
+  // POST /nodejs_api/product - 创建产品
   .post("/", createProduct, {
     body: createProductBodySchema,
     beforeHandle: async ({ body }) => {
@@ -56,7 +60,7 @@ export const productRouter = new Elysia({
       }
     },
   })
-  // PATCH /api/product/:id - 更新产品
+  // PATCH /nodejs_api/product/:id - 更新产品
   .patch("/:id", updateProduct, {
     params: updateIdSchema,
     body: updateProductBodySchema,
@@ -79,7 +83,7 @@ export const productRouter = new Elysia({
       }
     },
   })
-  // DELETE /api/product/:id - 删除产品
+  // DELETE /nodejs_api/product/:id - 删除产品
   .delete(
     "/:id",
     ({ params }) => {
@@ -91,14 +95,18 @@ export const productRouter = new Elysia({
       params: updateIdSchema,
     },
   )
-  // GET /api/product/getProductsByVendorId/:vendorId - 根据供应商ID获取产品列表
+  // GET /nodejs_api/product/getProductsByVendorId/:vendorId - 根据供应商ID获取产品列表
   .get("/getProductsByVendorId/:vendorId", getProductsByVendorId, {
     params: productByVendorParamsSchema,
   })
   .get("/getLatestShelfPriceByProductId/:id", getLatestShelfPriceByProductId, {
-    params: updateIdSchema
+    params: updateIdSchema,
   })
-  .get("/checkProductNameExistedInVendor/:vendorId", checkProductNameExistedInVendor, {
-    params: vendorIdSchema,
-    query: productNameStringSchema
-  })
+  .get(
+    "/checkProductNameExistedInVendor/:vendorId",
+    checkProductNameExistedInVendor,
+    {
+      params: vendorIdSchema,
+      query: productNameStringSchema,
+    },
+  );

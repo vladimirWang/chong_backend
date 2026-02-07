@@ -23,7 +23,7 @@ export const vendorRouter = new Elysia({ prefix: "/vendor" })
   .get("/", getVendors, {
     query: vendorQuerySchema,
   })
-  // GET /api/posts/:id - 获取单个文章
+  // GET /nodejs_api/posts/:id - 获取单个文章
   .get(
     "/:id",
     async ({ params, status, cookie: { auth } }) => {
@@ -42,7 +42,7 @@ export const vendorRouter = new Elysia({ prefix: "/vendor" })
       params: updateIdSchema,
     },
   )
-  // POST /api/posts - 创建供应商
+  // POST /nodejs_api/posts - 创建供应商
   .post(
     "/",
     async ({ body }) => {
@@ -82,7 +82,7 @@ export const vendorRouter = new Elysia({ prefix: "/vendor" })
       },
     },
   )
-  // PUT /api/posts/:id - 更新文章
+  // PUT /nodejs_api/posts/:id - 更新文章
   .get(
     "/byId/:id",
     async ({ params, body }) => {
@@ -94,7 +94,7 @@ export const vendorRouter = new Elysia({ prefix: "/vendor" })
           products: true,
         },
       });
-      return new SuccessResponse<string>(vendor, "供应商获取成功")
+      return new SuccessResponse<string>(vendor, "供应商获取成功");
       // return {
       //     message: `文章 ${params.id} 更新成功`,
       //     post: { id: params.id, ...(body as Record<string, any>) }
@@ -104,7 +104,7 @@ export const vendorRouter = new Elysia({ prefix: "/vendor" })
       params: updateIdSchema,
     },
   )
-  // DELETE /api/vendor/:id - 删除供应商
+  // DELETE /nodejs_api/vendor/:id - 删除供应商
   .delete("/:id", deleteVendor, {
     params: updateIdSchema,
     beforeHandle: async ({ params }) => {

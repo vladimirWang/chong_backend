@@ -1,4 +1,4 @@
-@base=http://localhost:3000/api/statistics
+@base=http://localhost:3000/nodejs_api/statistics
 
 ### 热销商品
 GET {{base}}/hot-sales?startDate=2025-06-01&endDate=2026-01-26
