@@ -9,6 +9,7 @@ import {
   loginUser,
   registerUser,
   generateCaptcha,
+  logoutUser,
 } from "../controllers/userController";
 import {
   registerUserBodySchema,
@@ -70,4 +71,5 @@ export const userRouter = new Elysia({ prefix: "/user" })
       message: `用户 ${params.id} 删除成功`,
     };
   })
-  .get("/captcha", generateCaptcha);
+  .get("/captcha", generateCaptcha)
+  .post("/logout", logoutUser);

@@ -7,7 +7,13 @@ import {
   UpdateProductBody,
   ProductByVendorParams,
 } from "../validators/productValidator";
-import { UpdateI, VendorId, ProductNameString } from "../validators/commonValidator";
+import {
+  UpdateI,
+  VendorId,
+  ProductNameString,
+} from "../validators/commonValidator";
+
+const { GO_SERVER_ADDRESS } = process.env;
 
 // 获取产品列表
 export const getProducts = async ({ query }: { query: ProductQuery }) => {
@@ -33,7 +39,7 @@ export const getProducts = async ({ query }: { query: ProductQuery }) => {
   });
   const total = await prisma.product.count({ where: whereValues });
 
-  return new SuccessResponse({ total, list: products }, "产品列表获取成功")
+  return new SuccessResponse({ total, list: products }, "产品列表获取成功");
 };
 
 // 根据ID获取产品
@@ -53,6 +59,9 @@ export const getProductById = async ({ params }: { params: UpdateId }) => {
       latestPrice: true,
     },
   });
+  if (res) {
+    res.img = `${GO_SERVER_ADDRESS}/${res.img}`;
+  }
   return new SuccessResponse(res, "产品信息查询成功");
 };
 
@@ -65,8 +74,8 @@ export const createProduct = async ({ body }: { body: CreateProductBody }) => {
       remark,
       vendor: {
         connect: {
-          id: vendorId
-        }
+          id: vendorId,
+        },
       },
       shelfPrice,
     },
@@ -115,27 +124,40 @@ export const getProductsByVendorId = async ({
       vendorId,
     },
   });
-  return new SuccessResponse({ total, list: products }, "产品列表获取成功")
+  return new SuccessResponse({ total, list: products }, "产品列表获取成功");
 };
 
 // 根据产品id查询最近一次的建议零售价
-export const getLatestShelfPriceByProductId = async ({params}: { params: UpdateId }) => {
-    const oldRecordSql = `select pjsi.shelfPrice as shelfPrice, pjsi.productId as productId, pjsi.id as pjsi_id, si.completedAt from StockIn si JOIN ProductJoinStockIn pjsi on si.id = pjsi.stockInId  
+export const getLatestShelfPriceByProductId = async ({
+  params,
+}: {
+  params: UpdateId;
+}) => {
+  const oldRecordSql = `select pjsi.shelfPrice as shelfPrice, pjsi.productId as productId, pjsi.id as pjsi_id, si.completedAt from StockIn si JOIN ProductJoinStockIn pjsi on si.id = pjsi.stockInId  
     where si.completedAt is not NULL and pjsi.productId = ? ORDER BY si.completedAt DESC
-  `
+  `;
 
-  const result = await prisma.$queryRawUnsafe(oldRecordSql, params.id)
-  console.log("result: ", result[0])
+  const result = await prisma.$queryRawUnsafe(oldRecordSql, params.id);
+  console.log("result: ", result[0]);
 
-  return new SuccessResponse({shelfPrice: result[0]?.shelfPrice ?? null}, "产品最近一次建议零售价获取成功")
-}
+  return new SuccessResponse(
+    { shelfPrice: result[0]?.shelfPrice ?? null },
+    "产品最近一次建议零售价获取成功",
+  );
+};
 
-export const checkProductNameExistedInVendor = async({params, query}: {params: VendorId, query: ProductNameString}) => {
+export const checkProductNameExistedInVendor = async ({
+  params,
+  query,
+}: {
+  params: VendorId;
+  query: ProductNameString;
+}) => {
   const existed = await prisma.Product.findFirst({
     where: {
       vendorId: params.vendorId,
-      name: query.productName
-    }
-  })
-  return new SuccessResponse(existed, "产品最近一次建议零售价获取成功")
-}
+      name: query.productName,
+    },
+  });
+  return new SuccessResponse(existed, "产品最近一次建议零售价获取成功");
+};

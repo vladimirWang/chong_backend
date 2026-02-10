@@ -1,6 +1,8 @@
 import { Elysia } from "elysia";
 import { jwt } from "@elysiajs/jwt";
 const { JWT_SECRET } = process.env;
+import dayjs from "dayjs";
+import { redisClient } from "../utils/redis";
 
 export const authService = new Elysia({ name: "Auth.Service" }).macro({
   isSignIn: {
@@ -28,14 +30,26 @@ export const authService = new Elysia({ name: "Auth.Service" }).macro({
       } = ctx;
       console.log("inside auth macro: authorization: ", authorization);
       if (!authorization) return status(401);
-      const user = await jwt.verify(authorization);
-      console.log("jwt verify result: ", user);
 
-      if (!user) return status(401);
+      const userInfoStr = await redisClient.get(`token:${authorization}`);
+      console.log("----userInfoStr----: ", userInfoStr);
+      if (!userInfoStr) {
+        return status(401);
+      }
+      try {
+        // token认证，返回用户信息
+        // const user = await jwt.verify(authorization);
 
-      return {
-        user,
-      };
+        // const res = start.
+        const user = JSON.parse(userInfoStr!);
+        if (!user) return status(401);
+
+        return {
+          user,
+        };
+      } catch (error) {
+        return status(401);
+      }
     },
   },
 });
