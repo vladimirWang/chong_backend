@@ -59,7 +59,7 @@ export const getProductById = async ({ params }: { params: UpdateId }) => {
       latestPrice: true,
     },
   });
-  if (res) {
+  if (res && res.img) {
     res.img = `${GO_SERVER_ADDRESS}/${res.img}`;
   }
   return new SuccessResponse(res, "产品信息查询成功");
