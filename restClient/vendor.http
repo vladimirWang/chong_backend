@@ -1,10 +1,10 @@
 @authUrl=http://localhost:3000/nodejs_api/user/login
 @base=http://localhost:3000/nodejs_api/vendor
-@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsInVzZXJuYW1lIjpudWxsLCJpYXQiOjE3Njg1NDkwNDV9.SOW5HNamDsp433xB3zq_L9DcjoCfb8gcmNElSa8Dd5Q
+@token =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImVtYWlsIjoiYWFjaGVuMjAxMkBvdXRsb29rLmNvbSIsInVzZXJuYW1lIjoibWlrZSIsImV4cCI6MTc3MTQ4NDI5NywiaWF0IjoxNzcxMzk3ODk3fQ.JRvm5-qU0dHxa0IzYceaxxhhYqJk_JfDvpLjcd-36_8
 
 ### brand list
-GET {{base}}?deleteAt=2026-01-19T16:00:00.000Z
-Authorization: Bearer {{token}}
+GET {{base}}?name=puma
+Authorization: {{token}}
 
 ### create brand
 POST {{base}}
