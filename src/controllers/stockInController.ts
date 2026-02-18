@@ -95,13 +95,13 @@ export const getStockIns = async ({ query }: { query: StockInQuery }) => {
   }
 
   const vendorJoinSql = hasVendorFilter
-    ? " INNER JOIN Vendor v ON v.id = p.vendorId "
+    ? " LEFT JOIN Vendor v ON v.id = p.vendorId "
     : "";
   const whereSql = "WHERE " + whereClauses.join(" AND ");
   const joinFrom =
     `FROM StockIn s ` +
-    `INNER JOIN ProductJoinStockIn pjs ON pjs.stockInId = s.id ` +
-    `INNER JOIN Product p ON p.id = pjs.productId` +
+    `LEFT JOIN ProductJoinStockIn pjs ON pjs.stockInId = s.id ` +
+    `LEFT JOIN Product p ON p.id = pjs.productId` +
     vendorJoinSql;
 
   const countSql = `SELECT COUNT(DISTINCT s.id) as cnt ${joinFrom} ${whereSql}`;
@@ -151,9 +151,9 @@ export const getStockIns = async ({ query }: { query: StockInQuery }) => {
       const rowsSql =
         `SELECT s.id, s.remark, s.createdAt, s.updatedAt, s.deletedAt, s.totalCost, s.status, s.completedAt, pjs.productId, p.name as productName, pjs.cost, pjs.count ` +
         `FROM StockIn s ` +
-        `INNER JOIN ProductJoinStockIn pjs ON pjs.stockInId = s.id ` +
-        `INNER JOIN Product p ON p.id = pjs.productId ` +
-        `WHERE s.id IN (${placeholders}) ORDER BY s.updatedAt DESC, pjs.productId`;
+        `LEFT JOIN ProductJoinStockIn pjs ON pjs.stockInId = s.id ` +
+        `LEFT JOIN Product p ON p.id = pjs.productId ` +
+        `WHERE s.id IN (${placeholders}) ORDER BY s.updatedAt DESC`;
       const rows = await prisma.$queryRawUnsafe<StockInListRow[]>(
         rowsSql,
         ...stockInIds,
@@ -344,8 +344,7 @@ export const getStockInById = async ({ params }: { params: StockInParams }) => {
     where: {
       id,
     },
-    select: {
-      remark: true,
+    include: {
       productJoinStockIn: true,
     },
   });

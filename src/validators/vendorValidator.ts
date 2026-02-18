@@ -19,17 +19,18 @@ const deletedAtQuerySchema = z.preprocess((val) => {
 }, z.coerce.date().optional());
 
 // 定义 getVendors 查询参数的 Schema
-export const vendorQuerySchema = z.object({
-  name: z.string().optional(),
-  deletedAt: z.union([deletedAtQuerySchema, z.boolean().optional()])
-}).merge(paginationSchema);
+export const vendorQuerySchema = z
+  .object({
+    name: z.string().optional(),
+    deletedAt: z.union([deletedAtQuerySchema, z.boolean().optional()]),
+  })
+  .merge(paginationSchema);
 
 // 从 Schema 推断 TypeScript 类型
 export type VendorQuery = z.infer<typeof vendorQuerySchema>;
 
-
 export const vendorBatchDeleteSchema = z.object({
-    id: z.array(z.number())
-  })
+  id: z.array(z.number()),
+});
 
 export type VendorBatchDelete = z.infer<typeof vendorBatchDeleteSchema>;

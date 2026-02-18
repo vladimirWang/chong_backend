@@ -1,18 +1,20 @@
 import prisma from "../utils/prisma";
 import { errorCode, ErrorResponse, SuccessResponse } from "../models/Response";
 import { getPaginationValues, getWhereValues } from "../utils/db";
-import { VendorQuery, vendorBatchDeleteSchema, VendorBatchDelete } from "../validators/vendorValidator";
-import {getBeijingStartOfDay, getBeijingEndOfDay} from '../utils/date'
-import {UpdateId} from '../validators/commonValidator'
+import {
+  VendorQuery,
+  vendorBatchDeleteSchema,
+  VendorBatchDelete,
+} from "../validators/vendorValidator";
+import { getBeijingStartOfDay, getBeijingEndOfDay } from "../utils/date";
+import { UpdateId } from "../validators/commonValidator";
 
 export const getVendors = async ({
   query,
   status,
-  headers: { authorization },
 }: {
   query: VendorQuery;
   status?: any;
-  headers: { authorization?: string };
 }) => {
   const { limit = 10, page = 1, name, pagination = true, deletedAt } = query;
   const { skip, take } = getPaginationValues({ limit, page });
@@ -22,18 +24,18 @@ export const getVendors = async ({
     skip: pagination ? skip : undefined,
     take: pagination ? take : undefined,
     where: {
-        ...whereValues,
-        // deletedAt: deletedAt instanceof Date? {
-        //     lte: getBeijingEndOfDay(deletedAt),
-        //     gte: getBeijingStartOfDay(deletedAt)
-        // }: (typeof deletedAt === 'boolean' ?  {
-        //     not: null
-        // }: undefined)
+      ...whereValues,
+      // deletedAt: deletedAt instanceof Date? {
+      //     lte: getBeijingEndOfDay(deletedAt),
+      //     gte: getBeijingStartOfDay(deletedAt)
+      // }: (typeof deletedAt === 'boolean' ?  {
+      //     not: null
+      // }: undefined)
     },
   });
   const total = await prisma.vendor.count({ where: whereValues });
 
-  return new SuccessResponse({ total, list: vendors }, "供应商列表获取成功")
+  return new SuccessResponse({ total, list: vendors }, "供应商列表获取成功");
 };
 
 // 删除供应商
@@ -58,7 +60,7 @@ export const deleteVendor = async ({
     // 如果有关联产品，返回409状态码
     const result = new ErrorResponse(
       errorCode.VENDOR_HAS_PRODUCTS,
-      "该供应商有关联产品，无法删除"
+      "该供应商有关联产品，无法删除",
     );
     return status(409, JSON.stringify(result));
   }
@@ -70,7 +72,7 @@ export const deleteVendor = async ({
     },
   });
 
-  return new SuccessResponse(null, "供应商删除成功")
+  return new SuccessResponse(null, "供应商删除成功");
 };
 
 // 批量删除供应商
@@ -87,7 +89,7 @@ export const batchDeleteVendor = async ({
   if (vendorIds.length === 0) {
     const result = new ErrorResponse(
       errorCode.VALIDATION_ERROR,
-      "请至少选择一个供应商"
+      "请至少选择一个供应商",
     );
     return status(400, JSON.stringify(result));
   }
@@ -122,14 +124,14 @@ export const batchDeleteVendor = async ({
 
   const vendorIdsWithProducts = vendorsWithProducts.map((p) => p.vendorId);
   const vendorIdsCanDelete = existingVendorIds.filter(
-    (id) => !vendorIdsWithProducts.includes(id)
+    (id) => !vendorIdsWithProducts.includes(id),
   );
 
   // 如果所有供应商都有关联产品，返回409错误
   if (vendorIdsCanDelete.length === 0 && vendorIdsWithProducts.length > 0) {
     const result = new ErrorResponse(
       errorCode.VENDOR_HAS_PRODUCTS,
-      "所有选中的供应商都有关联产品，无法删除"
+      "所有选中的供应商都有关联产品，无法删除",
     );
     return status(409, JSON.stringify(result));
   }
@@ -175,7 +177,7 @@ export const batchDeleteVendor = async ({
   // 如果所有供应商都不存在
   const result = new ErrorResponse(
     errorCode.NOT_FOUND,
-    "所有选中的供应商都不存在"
+    "所有选中的供应商都不存在",
   );
   return status(404, JSON.stringify(result));
 };
