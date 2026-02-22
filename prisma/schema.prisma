@@ -54,7 +54,8 @@ model ProductJoinStockIn {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   deletedAt   DateTime?
-  shelfPrice  Int 
+  shelfPrice  Int
+  productCode String?      @db.VarChar(20) // 只有进库后才有
 
   @@unique([stockInId, productId, cost])
 }
@@ -75,7 +76,6 @@ model Product {
   // StockIn   StockIn[]
   latestPrice         Int? // 售价,只有进库后才有
   latestCost          Int? // 成本价,只有进库后才有
-  productCode         String?               @unique @db.VarChar(20) // 只有进库后才有
   productJoinStockIn  ProductJoinStockIn[] // 进货中间表
   historyCost         HistoryCost[]         @relation("HistoryCostProduct")
   productJoinStockOut ProductJoinStockOut[] // 出货中间表

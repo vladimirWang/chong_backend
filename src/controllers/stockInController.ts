@@ -582,13 +582,13 @@ export const confirmCompleted = async ({
     // 改产品表，把待进货加到库存数中
     ...relatedProducts.map((item) => {
       // // TODO 正确处理判空
-      const productCode = luhn(item!);
+      // const productCode = luhn(item!);
       return prisma.product.update({
         where: {
           id: item.productId,
         },
         data: {
-          productCode,
+          // productCode,
           balance: {
             increment: item.count,
           },
