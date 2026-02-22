@@ -1,5 +1,13 @@
 import { Elysia, t } from "elysia";
-import "dotenv/config";
+import { config } from "dotenv";
+
+// 开发环境使用 .env.development，否则使用 .env
+config({
+  path:
+    process.env.NODE_ENV === "development"
+      ? ".env.development"
+      : ".env.production",
+});
 // 从 routers/index.ts 统一导入所有路由模块
 import { apiRouter } from "./routers";
 import { uploadFile, uploadExcelFile } from "./controllers/uploadController";
@@ -68,10 +76,12 @@ export const app = new Elysia()
         if (validationError.all && Array.isArray(validationError.all)) {
           const errorMessages = validationError.all
             .map((err: any) => {
-              const currentParam = `path: ${JSON.stringify(err.value)}`
+              const currentParam = `path: ${JSON.stringify(err.value)}`;
               // 提取错误消息，可能在不同的属性中
-              if (err.message) return err.message + `; currentParam: ${currentParam}`;
-              if (typeof err === "string") return err + `; currentParam: ${currentParam}`;
+              if (err.message)
+                return err.message + `; currentParam: ${currentParam}`;
+              if (typeof err === "string")
+                return err + `; currentParam: ${currentParam}`;
               if (err.value !== undefined) {
                 // 可能是格式化的错误对象
                 return `${err.path || ""}: ${err.message || "校验失败"}`;
