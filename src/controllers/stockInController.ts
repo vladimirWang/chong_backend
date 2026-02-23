@@ -364,6 +364,8 @@ type StockInLineComparable = CommonStockLineComparable & {
   stockInId?: number;
   cost: number;
 };
+
+// 更新进货单
 export const updateStockIn = async ({
   params,
   body,
@@ -395,6 +397,7 @@ export const updateStockIn = async ({
       productId: r.productId,
       cost: r.cost,
       count: r.count,
+      vendorId: r.vendorId,
     }),
   );
   const { added, modified, deleted, unchanged } =
@@ -404,7 +407,8 @@ export const updateStockIn = async ({
       "productId",
       ["id", "stockInId"],
     );
-  console.log("modified: ", modified);
+  console.log("--------modified--------: ", modified);
+  console.log("--------deleted--------: ", deleted);
 
   const existedInfoMap: Record<number, StockInInfo> = existedRecord.reduce(
     (a: Record<number, StockInInfo>, c) => {
@@ -422,13 +426,13 @@ export const updateStockIn = async ({
 
   await prisma.$transaction([
     // 删除被移除商品对应的历史成本（即使有级联，也做显式兜底）
-    prisma.historyCost.deleteMany({
-      where: {
-        productJoinStockInId: {
-          in: deletedJoinIds,
-        },
-      },
-    }),
+    // prisma.historyCost.deleteMany({
+    //   where: {
+    //     productJoinStockInId: {
+    //       in: deletedJoinIds,
+    //     },
+    //   },
+    // }),
     // 更新进货记录
     prisma.stockIn.update({
       where: {
@@ -436,24 +440,33 @@ export const updateStockIn = async ({
       },
       data: {
         totalCost,
+        remark: "123123",
         // 更新中间表
         productJoinStockIn: {
           // 新增原本没有的记录
           create: added.map((item) => {
+            console.log("------item--------: ", item);
             return {
               cost: item.cost,
               count: item.count,
+              // shelfPrice: item.shelfPrice,
+              shelfPrice: 100,
+              vendor: {
+                connect: {
+                  id: item.vendorId,
+                },
+              },
               product: {
                 connect: {
                   id: item.productId,
                 },
               },
-              historyCost: {
-                create: {
-                  value: item.cost,
-                  productId: item.productId,
-                },
-              },
+              // historyCost: {
+              //   create: {
+              //     value: item.cost,
+              //     productId: item.productId,
+              //   },
+              // },
             };
           }),
           // 更新原本已有的数据
@@ -468,18 +481,18 @@ export const updateStockIn = async ({
               data: {
                 cost: item.cost,
                 count: item.count,
-                historyCost: {
-                  upsert: {
-                    create: {
-                      value: item.cost,
-                      productId: item.productId,
-                    },
-                    update: {
-                      value: item.cost,
-                      productId: item.productId,
-                    },
-                  },
-                },
+                // historyCost: {
+                //   upsert: {
+                //     create: {
+                //       value: item.cost,
+                //       productId: item.productId,
+                //     },
+                //     update: {
+                //       value: item.cost,
+                //       productId: item.productId,
+                //     },
+                //   },
+                // },
               },
             };
           }),

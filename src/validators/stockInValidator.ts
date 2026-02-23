@@ -23,11 +23,11 @@ export const multipleStockInBodySchema = z.object({
       cost: z.number(),
       productId: z.number(),
       vendorId: z.number(),
-      shelfPrice: z.number()
+      shelfPrice: z.number(),
     }),
   ),
   createdAt: z.string().optional(),
-  remark: z.string().max(190).optional(),
+  remark: z.string().optional(),
 });
 
 export type MultipleStockInBody = z.infer<typeof multipleStockInBodySchema>;

@@ -41,23 +41,23 @@ model StockIn {
 
 // 产品进货单中间表
 model ProductJoinStockIn {
-  id          Int          @id @default(autoincrement())
+  id          Int       @id @default(autoincrement())
   stockInId   Int
-  stockIn     StockIn      @relation(fields: [stockInId], references: [id])
+  stockIn     StockIn   @relation(fields: [stockInId], references: [id])
   productId   Int
-  product     Product      @relation(fields: [productId], references: [id])
+  product     Product   @relation(fields: [productId], references: [id])
   cost        Int // 售价
   count       Int // 数量
-  historyCost HistoryCost?
+  // historyCost HistoryCost?
   vendorId    Int
-  vendor      Vendor?      @relation(fields: [vendorId], references: [id])
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  vendor      Vendor?   @relation(fields: [vendorId], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?
   shelfPrice  Int
-  productCode String?      @db.VarChar(20) // 只有进库后才有
+  productCode String?   @db.VarChar(20) // 只有进库后才有
 
-  @@unique([stockInId, productId, cost])
+  @@unique([stockInId, productId])
 }
 
 // 商品
@@ -100,14 +100,14 @@ model User {
 
 // 历史成本
 model HistoryCost {
-  id                   Int                @id @default(autoincrement())
-  productJoinStockInId Int                @unique
-  productJoinStockIn   ProductJoinStockIn @relation(fields: [productJoinStockInId], references: [id], onDelete: Cascade)
+  id                   Int       @id @default(autoincrement())
+  productJoinStockInId Int       @unique
+  // productJoinStockIn   ProductJoinStockIn @relation(fields: [productJoinStockInId], references: [id], onDelete: Cascade)
   productId            Int
-  Product              Product            @relation("HistoryCostProduct", fields: [productId], references: [id])
-  value                Int                @db.UnsignedMediumInt
-  createdAt            DateTime           @default(now())
-  updatedAt            DateTime           @updatedAt
+  Product              Product   @relation("HistoryCostProduct", fields: [productId], references: [id])
+  value                Int       @db.UnsignedMediumInt
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
   deletedAt            DateTime?
 }
 
