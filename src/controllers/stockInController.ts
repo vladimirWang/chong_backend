@@ -380,7 +380,7 @@ export const updateStockIn = async ({
     },
   });
   // return 'hhehh  '+params.id + '; length: ' +body.productJoinStockIn.length
-  const { productJoinStockIn } = body;
+  const { productJoinStockIn, createdAt, remark } = body;
   const totalCost = productJoinStockIn.reduce(
     (a, c) => a + c.cost * c.count,
     0,
@@ -398,6 +398,7 @@ export const updateStockIn = async ({
       cost: r.cost,
       count: r.count,
       vendorId: r.vendorId,
+      shelfPrice: r.shelfPrice,
     }),
   );
   const { added, modified, deleted, unchanged } =
@@ -407,8 +408,6 @@ export const updateStockIn = async ({
       "productId",
       ["id", "stockInId"],
     );
-  console.log("--------modified--------: ", modified);
-  console.log("--------deleted--------: ", deleted);
 
   const existedInfoMap: Record<number, StockInInfo> = existedRecord.reduce(
     (a: Record<number, StockInInfo>, c) => {
@@ -440,17 +439,16 @@ export const updateStockIn = async ({
       },
       data: {
         totalCost,
-        remark: "123123",
+        createdAt,
+        remark,
         // 更新中间表
         productJoinStockIn: {
           // 新增原本没有的记录
           create: added.map((item) => {
-            console.log("------item--------: ", item);
             return {
               cost: item.cost,
               count: item.count,
-              // shelfPrice: item.shelfPrice,
-              shelfPrice: 100,
+              shelfPrice: item.shelfPrice,
               vendor: {
                 connect: {
                   id: item.vendorId,
@@ -469,33 +467,22 @@ export const updateStockIn = async ({
               // },
             };
           }),
-          // 更新原本已有的数据
-          update: modified.map((item) => {
-            return {
-              where: {
-                stockInId_productId: {
-                  stockInId: params.id,
-                  productId: item.productId,
+          // 更新原本已有的数据（Prisma 嵌套更新必须用主键 id，不支持复合 unique）
+          update: modified
+            .map((item) => {
+              const existedId = existedRecord.find(
+                (r) => r.productId === item.productId,
+              )?.id;
+              if (!existedId) return null;
+              return {
+                where: { id: existedId },
+                data: {
+                  cost: item.cost,
+                  count: item.count,
                 },
-              },
-              data: {
-                cost: item.cost,
-                count: item.count,
-                // historyCost: {
-                //   upsert: {
-                //     create: {
-                //       value: item.cost,
-                //       productId: item.productId,
-                //     },
-                //     update: {
-                //       value: item.cost,
-                //       productId: item.productId,
-                //     },
-                //   },
-                // },
-              },
-            };
-          }),
+              };
+            })
+            .filter((u): u is NonNullable<typeof u> => u !== null),
           deleteMany: deleted.map((item) => {
             return {
               // TODO 解决没有属性id的问题
