@@ -32,7 +32,6 @@ export const authService = new Elysia({ name: "Auth.Service" }).macro({
       if (!authorization) return status(401);
 
       const userInfoStr = await redisClient.get(`token:${authorization}`);
-      console.log("----userInfoStr----: ", userInfoStr);
       if (!userInfoStr) {
         return status(401);
       }

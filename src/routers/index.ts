@@ -19,7 +19,6 @@ export const apiRouter = new Elysia().group(
     isSignIn: true,
     afterHandle({ response, set }) {
       // set.headers['content-type123123'] = 'text/html; charset=utf8123123'
-      console.log("afterhandle response: ", response);
       return JSON.stringify(response);
     },
   },
