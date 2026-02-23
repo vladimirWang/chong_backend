@@ -424,14 +424,6 @@ export const updateStockIn = async ({
     .filter((id): id is number => typeof id === "number");
 
   await prisma.$transaction([
-    // 删除被移除商品对应的历史成本（即使有级联，也做显式兜底）
-    // prisma.historyCost.deleteMany({
-    //   where: {
-    //     productJoinStockInId: {
-    //       in: deletedJoinIds,
-    //     },
-    //   },
-    // }),
     // 更新进货记录
     prisma.stockIn.update({
       where: {
@@ -441,58 +433,59 @@ export const updateStockIn = async ({
         totalCost,
         createdAt,
         remark,
-        // 更新中间表
-        productJoinStockIn: {
-          // 新增原本没有的记录
-          create: added.map((item) => {
-            return {
-              cost: item.cost,
-              count: item.count,
-              shelfPrice: item.shelfPrice,
-              vendor: {
-                connect: {
-                  id: item.vendorId,
-                },
-              },
-              product: {
-                connect: {
-                  id: item.productId,
-                },
-              },
-              // historyCost: {
-              //   create: {
-              //     value: item.cost,
-              //     productId: item.productId,
-              //   },
-              // },
-            };
-          }),
-          // 更新原本已有的数据（Prisma 嵌套更新必须用主键 id，不支持复合 unique）
-          update: modified
-            .map((item) => {
-              const existedId = existedRecord.find(
-                (r) => r.productId === item.productId,
-              )?.id;
-              if (!existedId) return null;
-              return {
-                where: { id: existedId },
-                data: {
-                  cost: item.cost,
-                  count: item.count,
-                },
-              };
-            })
-            .filter((u): u is NonNullable<typeof u> => u !== null),
-          deleteMany: deleted.map((item) => {
-            return {
-              // TODO 解决没有属性id的问题
-              // id: item.id!
-              stockInId: params.id,
-              productId: item.productId,
-            };
-          }),
-        },
       },
+    }),
+    // 新增中间表记录
+    ...added.map((item) => {
+      return prisma.productJoinStockIn.create({
+        data: {
+          cost: item.cost,
+          count: item.count,
+          shelfPrice: item.shelfPrice,
+          vendor: {
+            connect: {
+              id: item.vendorId,
+            },
+          },
+          product: {
+            connect: {
+              id: item.productId,
+            },
+          },
+          stockIn: {
+            connect: {
+              id: params.id,
+            },
+          },
+        },
+      });
+    }),
+    // 更新中间表记录
+    ...modified.map((item) => {
+      return prisma.productJoinStockIn.update({
+        where: {
+          stockInId_productId: {
+            stockInId: params.id,
+            productId: item.productId,
+          },
+        },
+        data: {
+          cost: item.cost,
+          count: item.count,
+          shelfPrice: item.shelfPrice,
+        },
+      });
+    }),
+    // 删除中间表记录
+    ...deleted.map((item) => {
+      return prisma.productJoinStockIn.delete({
+        where: {
+          stockInId_productId: {
+            stockInId: params.id,
+            productId: item.productId,
+          },
+        },
+      });
     }),
     // 更新产品待进库-对新增的商品
     // 不管新增还是编辑已有商品
@@ -511,11 +504,6 @@ export const updateStockIn = async ({
     }),
     // 更新产品库存-对修改的商品
     ...modified.map((item) => {
-      console.log(
-        "updated balance: ",
-        item.count,
-        existedInfoMap[item.productId].count,
-      );
       return prisma.product.update({
         where: {
           id: item.productId,
@@ -524,7 +512,6 @@ export const updateStockIn = async ({
           stockInPending: {
             increment: item.count - existedInfoMap[item.productId].count,
           },
-          latestCost: item.cost,
         },
       });
     }),
@@ -538,7 +525,6 @@ export const updateStockIn = async ({
           stockInPending: {
             increment: -1 * existedInfoMap[item.productId].count,
           },
-          latestCost: item.cost,
         },
       });
     }),
