@@ -387,3 +387,98 @@ export const getStockOutDetailById = async ({
   });
   return new SuccessResponse(result, "出货单更新成功");
 };
+
+export const batchDeleteStockOut = async ({
+  query,
+}: {
+  query: BatchDeleteStockInQuery;
+}) => {
+  const ids = query.id;
+
+  if (!ids || ids.length === 0) {
+    return new SuccessResponse(null, "没有需要删除的进货单");
+  }
+
+  // 只处理「未完成、未删除」的进货单，避免把已经完成的单子反向扣 pending
+  const pendingStockOuts = await prisma.stockOut.findMany({
+    where: {
+      id: {
+        in: ids,
+      },
+      status: "PENDING",
+      deletedAt: null,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  const validIds = pendingStockOuts.map((s) => s.id);
+
+  if (validIds.length === 0) {
+    return new SuccessResponse(null, "没有符合条件的出货单可删除");
+  }
+
+  // 查出所有关联的中间表记录，用于统计每个商品需要扣减的 stockInPending 数量
+  const joinRows = await prisma.productJoinStockOut.findMany({
+    where: {
+      stockOutId: {
+        in: validIds,
+      },
+      deletedAt: null,
+    },
+    select: {
+      productId: true,
+      count: true,
+    },
+  });
+
+  const pendingDeltaByProduct: Record<number, number> = {};
+  joinRows.forEach((row) => {
+    pendingDeltaByProduct[row.productId] =
+      (pendingDeltaByProduct[row.productId] ?? 0) + row.count;
+  });
+
+  const now = new Date();
+
+  const txResults = await prisma.$transaction([
+    // 软删除进货单
+    prisma.stockOut.updateMany({
+      where: {
+        id: {
+          in: validIds,
+        },
+      },
+      data: {
+        deletedAt: now,
+      },
+    }),
+    // 软删除中间表记录
+    prisma.productJoinStockOut.updateMany({
+      where: {
+        stockOutId: {
+          in: validIds,
+        },
+        deletedAt: null,
+      },
+      data: {
+        deletedAt: now,
+      },
+    }),
+    // 扣减对应商品的 stockInPending
+    ...Object.entries(pendingDeltaByProduct).map(([productId, totalCount]) =>
+      prisma.product.update({
+        where: {
+          id: Number(productId),
+        },
+        data: {
+          stockOutPending: {
+            decrement: totalCount,
+          },
+        },
+      }),
+    ),
+  ]);
+
+  return new SuccessResponse(txResults, "进货单批量删除成功");
+};

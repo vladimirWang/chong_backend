@@ -5,6 +5,7 @@ import {
   confirmStockOutCompleted,
   updateStockOut,
   getStockOutDetailById,
+  batchDeleteStockOut,
 } from "../controllers/stockOutController";
 import {
   multipleStockOutBodySchema,
@@ -16,6 +17,7 @@ import {
   completedAtSchema,
 } from "../validators/commonValidator";
 import { ZodError } from "zod";
+import { batchDeleteStockInQuerySchema } from "../validators/stockInValidator";
 
 export const stockOutRouter = new Elysia({ prefix: "/stockout" })
   .get("/", getStockOuts, {
@@ -67,4 +69,7 @@ export const stockOutRouter = new Elysia({ prefix: "/stockout" })
   })
   .get("/:id", getStockOutDetailById, {
     params: updateIdSchema,
+  })
+  .delete("/batchDelete", batchDeleteStockOut, {
+    query: batchDeleteStockInQuerySchema,
   });
