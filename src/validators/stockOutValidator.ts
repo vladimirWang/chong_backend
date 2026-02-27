@@ -7,7 +7,7 @@ export const createMultipleStockOutSchema = z.object({
       count: z.number(),
       productId: z.number(),
       vendorId: z.number(),
-    })
+    }),
   ),
   remark: z.string().optional(),
   createdAt: z.string().optional(),
@@ -17,13 +17,13 @@ export type CreateMultipleStockOut = z.infer<createMultipleStockOutSchema>;
 
 // 批量出货 Body Schema
 export const multipleStockOutBodySchema = z.object({
-  // remark: z.string().optional(),
+  remark: z.string().optional(),
   productJoinStockOut: z.array(
     z.object({
       count: z.number(),
       price: z.number(),
       productId: z.number(),
-    })
+    }),
   ),
 });
 

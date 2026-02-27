@@ -138,5 +138,5 @@ model ProductJoinStockOut {
   updatedAt  DateTime  @updatedAt
   deletedAt  DateTime?
 
-  @@unique([stockOutId, productId, count])
+  @@unique([stockOutId, productId])
 }
