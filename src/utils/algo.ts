@@ -133,6 +133,6 @@ export function sum2<T extends Record<K, number>, K extends keyof T>(
 ): number {
   return data.reduce((a, c) => {
     const currentValue = c[key] ?? 0;
-    return a + currentValue;
+    return a + currentValue * c.count;
   }, 0);
 }

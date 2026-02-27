@@ -17,6 +17,7 @@ import {
 import dayjs from "dayjs";
 import { getPaginationValues } from "../utils/db";
 import { generateStockOperationSql } from "../sqlMap/stockOperation";
+import { sum2 } from "../utils/algo";
 
 export type StockOperationListRow = {
   id: number;
@@ -280,9 +281,10 @@ export const createMultipleStockIn = async ({
   // const mergedProductJoinStockIn = Array.from(mergedMap.values());
   const { productJoinStockIn, createdAt, remark } = body;
 
-  const totalCost = productJoinStockIn.reduce((a, c) => {
-    return a + c.cost * c.count;
-  }, 0);
+  // const totalCost = productJoinStockIn.reduce((a, c) => {
+  //   return a + c.cost * c.count;
+  // }, 0);
+  const totalCost = sum2(productJoinStockIn, "cost");
 
   const createdAtVal = createdAt ? dayjs(createdAt).toDate() : new Date();
   const results = await prisma.$transaction([
