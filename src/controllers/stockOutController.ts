@@ -259,7 +259,6 @@ export const updateStockOut = async ({
     },
     {},
   );
-  console.log("existedInfoMap: ", JSON.stringify(existedInfoMap));
   const result = await prisma.$transaction([
     // 更新出货中间表
     prisma.stockOut.update({
@@ -270,39 +269,6 @@ export const updateStockOut = async ({
         remark,
         createdAt,
         totalPrice,
-        // productJoinStockOut: {
-        //   create: added.map((item) => {
-        //     return {
-        //       price: item.price,
-        //       count: item.count,
-        //       product: {
-        //         connect: {
-        //           id: item.productId,
-        //         },
-        //       },
-        //     };
-        //   }),
-        //   update: modified.map((item) => {
-        //     return {
-        //       where: {
-        //         stockOutId_productId: {
-        //           stockOutId: params.id,
-        //           productId: item.productId,
-        //         },
-        //       },
-        //       data: {
-        //         count: item.count,
-        //         price: item.price,
-        //       },
-        //     };
-        //   }),
-        //   deleteMany: deleted.map((item) => {
-        //     return {
-        //       stockOutId: params.id,
-        //       productId: item.productId,
-        //     };
-        //   }),
-        // },
       },
     }),
     // 更新出货中间表记录
@@ -330,83 +296,83 @@ export const updateStockOut = async ({
         },
       });
     }),
-    // // 更新出货中间表记录--对于修改的产品
-    // ...modified.map((item) => {
-    //   return prisma.productJoinStockOut.update({
-    //     where: {
-    //       stockOutId_productId: {
-    //         stockOutId: params.id,
-    //         productId: item.productId,
-    //       },
-    //     },
-    //     data: {
-    //       price: item.price,
-    //       count: item.count,
-    //     },
-    //   });
-    // }),
+    // 更新出货中间表记录--对于修改的产品
+    ...modified.map((item) => {
+      return prisma.productJoinStockOut.update({
+        where: {
+          stockOutId_productId: {
+            stockOutId: params.id,
+            productId: item.productId,
+          },
+        },
+        data: {
+          price: item.price,
+          count: item.count,
+        },
+      });
+    }),
     // 删除出货中间表记录--对于删除的产品
-    // ...deleted.map((item) => {
-    //   return prisma.productJoinStockOut.delete({
-    //     where: {
-    //       stockOutId_productId: {
-    //         stockOutId: params.id,
-    //         productId: item.productId,
-    //       },
-    //     },
-    //   });
-    // }),
-    // // 更新产品表库存数和出货中数量--对于新增的产品
-    // ...added.map((item) => {
-    //   return prisma.product.update({
-    //     where: {
-    //       id: item.productId,
-    //     },
-    //     data: {
-    //       balance: {
-    //         increment: -1 * item.count,
-    //       },
-    //       stockOutPending: {
-    //         increment: item.count,
-    //       },
-    //     },
-    //   });
-    // }),
-    // // 更新产品表库存数和出货中数量--对于修改的产品
-    // ...modified.map((item) => {
-    //   const existedCount = existedInfoMap[item.productId].count ?? 0;
-    //   // 新可用库存 = 把老的商品数量加回 - 本次的数量
-    //   const balanceDelta = existedCount - item.count;
-    //   return prisma.product.update({
-    //     where: {
-    //       id: item.productId,
-    //     },
-    //     data: {
-    //       balance: {
-    //         increment: balanceDelta,
-    //       },
-    //       stockOutPending: {
-    //         increment: -1 * balanceDelta,
-    //       },
-    //     },
-    //   });
-    // }),
-    // // 更新产品表库存数和出货中数量--对于删除的产品
-    // ...deleted.map((item) => {
-    //   return prisma.product.update({
-    //     where: {
-    //       id: item.productId,
-    //     },
-    //     data: {
-    //       balance: {
-    //         increment: item.count,
-    //       },
-    //       stockOutPending: {
-    //         increment: -1 * item.count,
-    //       },
-    //     },
-    //   });
-    // }),
+    ...deleted.map((item) => {
+      return prisma.productJoinStockOut.delete({
+        where: {
+          stockOutId_productId: {
+            stockOutId: params.id,
+            productId: item.productId,
+          },
+        },
+      });
+    }),
+    // 更新产品表库存数和出货中数量--对于新增的产品
+    ...added.map((item) => {
+      return prisma.product.update({
+        where: {
+          id: item.productId,
+        },
+        data: {
+          balance: {
+            increment: -1 * item.count,
+          },
+          stockOutPending: {
+            increment: item.count,
+          },
+        },
+      });
+    }),
+    // 更新产品表库存数和出货中数量--对于修改的产品
+    ...modified.map((item) => {
+      const existedCount = existedInfoMap[item.productId].count ?? 0;
+      // 新可用库存 = 把老的商品数量加回 - 本次的数量
+      const balanceDelta = existedCount - item.count;
+      return prisma.product.update({
+        where: {
+          id: item.productId,
+        },
+        data: {
+          balance: {
+            increment: balanceDelta,
+          },
+          stockOutPending: {
+            increment: -1 * balanceDelta,
+          },
+        },
+      });
+    }),
+    // 更新产品表库存数和出货中数量--对于删除的产品
+    ...deleted.map((item) => {
+      return prisma.product.update({
+        where: {
+          id: item.productId,
+        },
+        data: {
+          balance: {
+            increment: item.count,
+          },
+          stockOutPending: {
+            increment: -1 * item.count,
+          },
+        },
+      });
+    }),
     // 如果更新后，产品为空，则删除出货记录
   ]);
   return new SuccessResponse(null, "出货单更新成功");
@@ -421,7 +387,7 @@ export const getStockOutDetailById = async ({
     where: {
       id: params.id,
     },
-    select: {
+    include: {
       productJoinStockOut: true,
     },
   });

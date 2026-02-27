@@ -15,14 +15,16 @@ export const createMultipleStockOutSchema = z.object({
 
 export type CreateMultipleStockOut = z.infer<createMultipleStockOutSchema>;
 
-// 批量出货 Body Schema
+// 批量出货 Body Schema（更新用）
 export const multipleStockOutBodySchema = z.object({
   remark: z.string().optional(),
+  createdAt: z.string().optional(),
   productJoinStockOut: z.array(
     z.object({
       count: z.number(),
       price: z.number(),
       productId: z.number(),
+      vendorId: z.number(),
     }),
   ),
 });
