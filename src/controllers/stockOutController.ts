@@ -141,13 +141,7 @@ export const confirmStockOutCompleted = async ({
   if (!productsInRecord || productsInRecord.length === 0) {
     return new ErrorResponse(null, "出货单对应产品不存在");
   }
-  const productMap = productsInRecord.reduce(
-    (a: Record<number, StockOutLineComparable>, c) => {
-      a[c.productId] = c;
-      return a;
-    },
-    {},
-  );
+
   const { completedAt = new Date() } = body || {};
   await prisma.$transaction([
     prisma.stockOut.update({

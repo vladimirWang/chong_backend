@@ -547,13 +547,6 @@ export const confirmCompleted = async ({
       stockInId: params.id,
     },
   });
-  const relatedProductMap = relatedProducts.reduce(
-    (a: Record<number, StockOutLineComparable>, c) => {
-      a[c.productId] = c;
-      return a;
-    },
-    {},
-  );
 
   const { completedAt = new Date() } = body || {};
   const record = await prisma.$transaction([
