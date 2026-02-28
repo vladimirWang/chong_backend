@@ -336,7 +336,10 @@ export const createMultipleStockIn = async ({
       });
     }),
   ]);
-  return new SuccessResponse(results, "进货记录批量新建成功");
+  if (!results[0]) {
+    return new ErrorResponse(null, "进货记录批量新建失败");
+  }
+  return new SuccessResponse(results[0], "进货记录批量新建成功");
 };
 
 // 根据ID获取进货记录

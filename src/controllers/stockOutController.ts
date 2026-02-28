@@ -76,7 +76,7 @@ export const createMultipleStockOut = async ({
   const createdAt = body.createdAt
     ? dayjs(body.createdAt).toDate()
     : new Date();
-  const result = await prisma.$transaction([
+  const results = await prisma.$transaction([
     // 创建出货记录
     prisma.stockOut.create({
       data: {
@@ -120,8 +120,10 @@ export const createMultipleStockOut = async ({
       });
     }),
   ]);
-
-  return new SuccessResponse(null, "出货创建成功");
+  if (!results[0]) {
+    return new ErrorResponse(null, "出货记录批量新建失败");
+  }
+  return new SuccessResponse(results[0], "出货记录批量新建成功");
 };
 
 // 确认出货完成
