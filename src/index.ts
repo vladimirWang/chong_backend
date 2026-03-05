@@ -1,5 +1,6 @@
 import { Elysia, t } from "elysia";
 import { config } from "dotenv";
+import { logger } from "./utils/logger";
 
 // 开发环境使用 .env.development，否则使用 .env
 config({
@@ -10,6 +11,7 @@ config({
 });
 // 从 routers/index.ts 统一导入所有路由模块
 import { apiRouter } from "./routers";
+import { loggerPlugin } from "./plugins/loggerPlugin";
 import { uploadFile, uploadExcelFile } from "./controllers/uploadController";
 import { ErrorResponse, errorCode } from "./models/Response";
 import { ValidationError } from "elysia";
@@ -36,6 +38,7 @@ await connectRedis();
 
 // 创建主应用并注册所有路由模块
 export const app = new Elysia()
+  .use(loggerPlugin)
   .use(
     jwt({
       name: "jwt",
@@ -135,12 +138,22 @@ export const app = new Elysia()
       });
     }
 
-    // 其他错误继续抛出
+    // 未捕获错误记录后继续抛出
+    logger.error(
+      { error: error?.message, stack: error?.stack, url },
+      "未捕获异常",
+    );
     throw error;
   })
   .use(apiRouter)
   .listen(3000);
 
-console.log(
-  `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`,
+logger.info(
+  {
+    msg: "服务启动",
+    host: app.server?.hostname,
+    port: app.server?.port,
+    env: process.env.NODE_ENV,
+  },
+  `Elysia 已启动 http://${app.server?.hostname}:${app.server?.port}`,
 );

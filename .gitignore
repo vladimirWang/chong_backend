@@ -43,3 +43,6 @@ package-lock.json
 
 # uploads
 /uploads
+
+# logs (production 日志目录)
+/logs/

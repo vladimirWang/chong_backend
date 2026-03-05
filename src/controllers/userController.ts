@@ -4,6 +4,7 @@ import prisma from "../utils/prisma";
 import svgCaptcha from "svg-captcha";
 import { redisClient } from "../utils/redis";
 import { v4 as uuidv4 } from "uuid";
+import { logger } from "../utils/logger";
 
 export const loginUser = async ({
   body,
@@ -110,8 +111,7 @@ export const generateCaptcha = async ({ set, request }) => {
   );
   // const clientIp = request.headers.get("x-forwarded-for") || request.ip;
   // const freqKey = `captcha:freq:${clientIp}`;
-  console.log("--------图形验证码----------: ", captchaText);
-  console.log("--------图形验证码 captchaId----------: ", captchaId);
+  logger.info({ msg: "图形验证码", captchaText, captchaId });
   // 将 SVG 转为 base64，方便前端直接用于 img src
   const base64 = Buffer.from(captcha.data, "utf-8").toString("base64");
   const dataUrl = `data:image/svg+xml;base64,${base64}`;

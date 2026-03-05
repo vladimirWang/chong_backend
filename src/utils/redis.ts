@@ -1,22 +1,22 @@
 import { createClient, type RedisClientType } from "@redis/client";
+import { logger } from "./logger";
 
 const redisClient: RedisClientType = createClient({
   url: process.env.REDIS_URL,
-  // 未设置用户名密码，使用默认无认证连接
 });
 
 function connectRedis() {
   return redisClient
     .on("error", (err) => {
-      console.error("Redis error: ", err);
+      logger.error({ err: err?.message }, "Redis error");
     })
     .connect()
     .then((res) => {
-      console.log("redis connect success: ");
+      logger.info({ msg: "Redis 连接成功" });
       return res;
     })
     .catch((err) => {
-      console.error("redis connect fail: ", err);
+      logger.error({ err: err?.message }, "Redis 连接失败");
       return Promise.reject(err);
     });
 }
