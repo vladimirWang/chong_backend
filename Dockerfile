@@ -18,6 +18,7 @@ COPY . .
 
 # 启动脚本：先同步数据库 schema，再启动服务
 RUN echo '#!/bin/sh' > /app/docker-entrypoint.sh && \
+    echo 'set -e' >> /app/docker-entrypoint.sh && \
     echo 'bunx prisma db push' >> /app/docker-entrypoint.sh && \
     echo 'exec bun run src/index.ts' >> /app/docker-entrypoint.sh && \
     chmod +x /app/docker-entrypoint.sh
