@@ -12,7 +12,7 @@
 # 环境变量（可选，在运行前 export 覆盖默认值）:
 #   LOG_DIR         - 容器内日志目录，默认 /var/log/galleryrepo
 #   HOST_LOG_DIR    - 宿主机日志目录（挂载卷），默认 ./logs/galleryrepo
-#   FRONTEND_DIST   - 前端打包产物目录（手动 pnpm run build 后上传 dist 内容），默认 ./frontend-dist
+#   FRONTEND_DIST   - 前端打包产物目录（手动 pnpm run build 后上传 dist 内容），默认 ../frontend-dist（后端目录外，避免 git 操作误删）
 
 set -e
 
@@ -23,14 +23,14 @@ cd "$SCRIPT_DIR"
 export LOG_DIR="${LOG_DIR:-/var/log/galleryrepo}"
 export HOST_LOG_DIR="${HOST_LOG_DIR:-${SCRIPT_DIR}/logs/galleryrepo}"
 
-# 前端静态文件目录：挂载到 Nginx，需手动打包并上传（见下方说明）
-export FRONTEND_DIST="${FRONTEND_DIST:-${SCRIPT_DIR}/frontend-dist}"
+# 前端静态文件目录：默认置于后端目录外（../frontend-dist），避免 git reset 等操作误删
+export FRONTEND_DIST="${FRONTEND_DIST:-$(cd "$SCRIPT_DIR/.." && pwd)/frontend-dist}"
 if [ ! -f "${FRONTEND_DIST}/index.html" ]; then
   echo "⚠️  前端目录无 index.html: $FRONTEND_DIST"
-  echo "   请本地执行 pnpm run build 后，将 dist/ 内容上传到该目录"
+  echo "   请本地执行 pnpm run build 后，将 dist/ 内容上传到该目录（置于后端目录外，不受 git 影响）"
   mkdir -p "${FRONTEND_DIST}"
   echo '<!DOCTYPE html><html><body><h1>前端未部署</h1><p>请本地 pnpm run build，将 dist/ 内容上传到 frontend-dist/ 后重启</p></body></html>' > "${FRONTEND_DIST}/index.html"
-  echo "   已创建占位页，可先启动服务"
+  echo "   已创建占位页，可先启动服务（目录在后端外，git 操作不影响）"
 fi
 
 case "${1:-}" in

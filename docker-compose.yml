@@ -64,7 +64,7 @@ services:
       redis:
         condition: service_healthy
 
-  # Nginx：前端静态文件通过 FRONTEND_DIST 数据卷挂载（需本地 pnpm run build 后上传 dist 到该目录）
+  # Nginx：前端静态文件通过 FRONTEND_DIST 数据卷挂载（默认 ../frontend-dist，在后端目录外避免 git 误删）
   nginx:
     build:
       context: .
@@ -75,7 +75,7 @@ services:
       - "80:80"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - "${FRONTEND_DIST:-./frontend-dist}:/usr/share/nginx/html:ro"
+      - "${FRONTEND_DIST:-../frontend-dist}:/usr/share/nginx/html:ro"
     depends_on:
       - bun-backend
 

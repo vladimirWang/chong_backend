@@ -44,8 +44,5 @@ package-lock.json
 # uploads
 /public/uploads
 
-# 前端打包产物（手动上传到此目录供 Nginx 挂载）
-/frontend-dist
-
 # logs (production 日志目录)
 /logs/
