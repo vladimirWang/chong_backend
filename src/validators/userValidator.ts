@@ -18,3 +18,11 @@ export const loginUserBodySchema = z.object({
 });
 
 export type LoginUserBody = z.infer<typeof loginUserBodySchema>;
+
+// 上传文件 Body Schema（multipart/form-data）
+export const uploadFileBodySchema = z.object({
+  hash: z.string().min(1, "hash 不能为空"),
+  file: z.instanceof(File, { message: "请上传文件" }),
+});
+
+export type UploadFileBody = z.infer<typeof uploadFileBodySchema>;

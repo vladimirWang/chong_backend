@@ -140,3 +140,12 @@ model ProductJoinStockOut {
 
   @@unique([stockOutId, productId])
 }
+
+model FileHash {
+  id        Int       @id @default(autoincrement())
+  hash      String    @unique
+  filePath  String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}

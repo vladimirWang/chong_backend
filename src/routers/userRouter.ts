@@ -10,10 +10,13 @@ import {
   registerUser,
   generateCaptcha,
   logoutUser,
+  uploadFile,
+  checkFileExistedByHash,
 } from "../controllers/userController";
 import {
   registerUserBodySchema,
   loginUserBodySchema,
+  uploadFileBodySchema,
 } from "../validators/userValidator";
 
 // 使用 group 创建用户相关的路由组
@@ -72,4 +75,13 @@ export const userRouter = new Elysia({ prefix: "/user" })
     };
   })
   .get("/captcha", generateCaptcha)
-  .post("/logout", logoutUser);
+  .post("/logout", logoutUser)
+  .post("/upload", uploadFile, {
+    type: "multipart/form-data",
+    body: uploadFileBodySchema,
+  })
+  .get("/checkFileExisted/:hash", checkFileExistedByHash, {
+    params: t.Object({
+      hash: t.String(),
+    }),
+  });

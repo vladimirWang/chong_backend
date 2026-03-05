@@ -1,5 +1,5 @@
 @base=http://localhost:3000/nodejs_api
-@token =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImVtYWlsIjoiMTIzNDU2QHFxLmNvbSIsImlhdCI6MTc2OTA1MTk4N30.Ed6boqUBb5sDyhM5foKQfSH107oy-YNZ5Blu8Funfws
+@token =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImVtYWlsIjoiZmVybmFuZG93YW5nNTg0QGdtYWlsLmNvbSIsInVzZXJuYW1lIjoibWlrZSIsImV4cCI6MTc3Mjc3OTE4MiwiaWF0IjoxNzcyNjkyNzgyfQ._c5y4l9j5c4K7_VNtbLfFLbl4-ELo-erRumSeSSFww4
 ### user list
 GET {{base}}/user
 Authorization: Bearer {{token}}
@@ -55,19 +55,19 @@ POST {{base}}/avatar
 Authorization: Bearer {{token}}
 
 ### user avatar
-POST {{base}}/user/avatar
-Authorization: Bearer {{token}}
+POST {{base}}/user/upload
+Authorization: {{token}}
 Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
 
 ------WebKitFormBoundary7MA4YWxkTrZu0gW
-Content-Disposition: form-data; name="text"
+Content-Disposition: form-data; name="hash"
 
 avatar
 ------WebKitFormBoundary7MA4YWxkTrZu0gW
-Content-Disposition: form-data; name="image"; filename="1.png"
+Content-Disposition: form-data; name="file"; filename="1.png"
 Content-Type: image/png
 
-< ./user.http
+< ./1.png
 ------WebKitFormBoundary7MA4YWxkTrZu0gW--
 
 ### user info
@@ -80,3 +80,8 @@ Authorization: Bearer {{token}}
 
 ### user captcha
 GET {{base}}/user/captcha?q=123
+
+
+### 根据hash检查文件是否存在
+GET {{base}}/user/checkFileExisted/avatar
+Authorization: {{token}}

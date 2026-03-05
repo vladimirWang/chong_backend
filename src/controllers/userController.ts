@@ -1,10 +1,18 @@
 import { errorCode, ErrorResponse, SuccessResponse } from "../models/Response";
-import { LoginUserBody, RegisterUserBody } from "../validators/userValidator";
+import {
+  LoginUserBody,
+  RegisterUserBody,
+  UploadFileBody,
+} from "../validators/userValidator";
 import prisma from "../utils/prisma";
 import svgCaptcha from "svg-captcha";
 import { redisClient } from "../utils/redis";
 import { v4 as uuidv4 } from "uuid";
 import { logger } from "../utils/logger";
+import { sanitizeFilename } from "../utils/file";
+import path from "node:path";
+
+const UPLOAD_DIR = path.join(process.cwd(), "uploads");
 
 export const loginUser = async ({
   body,
@@ -154,4 +162,61 @@ export const logoutUser = async ({ headers }) => {
   const { authorization } = headers;
   await redisClient.del(`token:${authorization}`);
   return new SuccessResponse(null, "用户登出成功");
+};
+
+export const uploadFile = async ({ body }: { body: UploadFileBody }) => {
+  const { hash, file } = body;
+
+  const { ext } = sanitizeFilename(file.name);
+  const storageFileName = uuidv4() + ext;
+
+  console.log("---uploadFile---: ", hash, file.name, ext, storageFileName);
+
+  const savePath = path.join(UPLOAD_DIR, storageFileName);
+
+  await Bun.write(savePath, file);
+
+  await prisma.fileHash.create({
+    data: {
+      hash,
+      filePath: path.join("/uploads", storageFileName),
+    },
+  });
+  return new SuccessResponse(
+    {
+      filePath: path.join("/uploads", storageFileName),
+      baseUrl: process.env.PUBLIC_BASE_URL,
+    },
+    "文件保存成功",
+  );
+};
+
+export const checkFileExistedByHash = async ({
+  params,
+}: {
+  params: { hash: string };
+}) => {
+  const { hash } = params;
+  const fileHash = await prisma.fileHash.findFirst({
+    where: {
+      hash,
+    },
+  });
+  if (fileHash) {
+    return new SuccessResponse(
+      {
+        filePath: fileHash.filePath,
+        baseUrl: process.env.PUBLIC_BASE_URL,
+      },
+      "文件已存在1",
+    );
+  } else {
+    return new SuccessResponse(
+      {
+        filePath: "",
+        baseUrl: process.env.PUBLIC_BASE_URL,
+      },
+      "文件不存在2",
+    );
+  }
 };
