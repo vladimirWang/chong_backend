@@ -68,6 +68,7 @@ services:
       - "3000:3000"
     environment:
       NODE_ENV: "production"
+      LOG_DIR: "${LOG_DIR:-/var/log/galleryrepo}"
       DATABASE_URL: "mysql://root:123456@mysql:3306/gallary_development"
       DATABASE_HOST: "mysql"
       DATABASE_NAME: "gallary_development"
@@ -77,6 +78,9 @@ services:
       JWT_SECRET: "Fischl von Luftschloss Narfidort"
       REDIS_URL: "redis://redis:6379"
       GO_SERVER_ADDRESS: "http://golang-backend:8888"
+    volumes:
+      # 宿主机 HOST_LOG_DIR -> 容器内 LOG_DIR，可通过环境变量覆盖
+      - "${HOST_LOG_DIR:-/var/log/galleryrepo}:${LOG_DIR:-/var/log/galleryrepo}"
     depends_on:
       mysql:
         condition: service_healthy
