@@ -42,7 +42,7 @@ package-lock.json
 **/*.bun
 
 # uploads
-/uploads
+/public/uploads
 
 # logs (production 日志目录)
 /logs/
