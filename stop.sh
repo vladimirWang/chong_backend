@@ -7,7 +7,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-CONTAINERS="fullstack-mysql fullstack-redis fullstack-bun fullstack-golang"
+CONTAINERS="fullstack-mysql fullstack-redis fullstack-bun"
 
 echo "🛑 停止 Docker 服务..."
 docker compose down 2>/dev/null || true

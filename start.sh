@@ -1,5 +1,5 @@
 #!/bin/bash
-# 启动脚本：使用 Docker Compose 启动 Bun + Golang 服务
+# 启动脚本：使用 Docker Compose 启动 Bun 服务
 # 需要本地安装 Docker 28.x
 # 请在 repo_backend 目录下运行
 #
@@ -34,7 +34,7 @@ case "${1:-}" in
     ;;
   debug)
     echo "🐛 前台启动（查看实时日志，Ctrl+C 退出）..."
-    for c in fullstack-mysql fullstack-redis fullstack-bun fullstack-golang; do
+    for c in fullstack-mysql fullstack-redis fullstack-bun; do
       docker rm -f "$c" 2>/dev/null || true
     done
     docker compose up --build
@@ -43,7 +43,6 @@ case "${1:-}" in
     echo "🐳 启动 Docker 服务..."
     echo "   - MySQL:    localhost:3307"
     echo "   - Redis:    localhost:6379"
-    echo "   - Golang:   http://localhost:8888"
     echo "   - Bun:      http://localhost:3000"
     echo ""
 
@@ -51,12 +50,12 @@ case "${1:-}" in
     mkdir -p "${HOST_LOG_DIR}" && chmod 777 "${HOST_LOG_DIR}" 2>/dev/null || true
 
     # 启动前移除可能存在的旧容器，避免名称冲突
-    for c in fullstack-mysql fullstack-redis fullstack-bun fullstack-golang; do
+    for c in fullstack-mysql fullstack-redis fullstack-bun; do
       docker rm -f "$c" 2>/dev/null || true
     done
 
-    # 若 8888/3000 被占用，尝试释放（可能是残留进程）
-    for port in 8888 3000; do
+    # 若 3000 被占用，尝试释放（可能是残留进程）
+    for port in 3000; do
       pid=$(lsof -ti :"$port" 2>/dev/null || true)
       if [ -n "$pid" ]; then
         echo "   端口 $port 被占用 (PID $pid)，正在释放..."

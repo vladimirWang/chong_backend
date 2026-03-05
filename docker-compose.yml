@@ -1,4 +1,4 @@
-# Docker Compose 配置 - Bun + Golang 服务
+# Docker Compose 配置 - Bun 服务
 # 适用 Docker 28.x
 # 从 repo_backend 目录运行
 name: fullstack
@@ -36,28 +36,6 @@ services:
       timeout: 3s
       retries: 5
 
-  golang-backend:
-    build:
-      context: ../chong_backend_golang
-      dockerfile: Dockerfile
-    container_name: fullstack-golang
-    restart: unless-stopped
-    ports:
-      - "8888:8888"
-    environment:
-      PORT: "8888"
-      SERVER_ADDR: ":8888"
-      PUBLIC_BASE_URL: "http://localhost:8888"
-      REDIS_ADDR: "redis:6379"
-      REDIS_PASSWORD: ""
-      REDIS_DB: "0"
-      MYSQL_DSN: "root:123456@tcp(mysql:3306)/gallary_development?charset=utf8mb4&parseTime=True&loc=Local"
-    depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
   bun-backend:
     build:
       context: .
@@ -77,7 +55,6 @@ services:
       DATABASE_PORT: "3306"
       JWT_SECRET: "Fischl von Luftschloss Narfidort"
       REDIS_URL: "redis://redis:6379"
-      GO_SERVER_ADDRESS: "http://golang-backend:8888"
     volumes:
       # 宿主机 HOST_LOG_DIR -> 容器内 LOG_DIR，可通过环境变量覆盖
       - "${HOST_LOG_DIR:-/var/log/galleryrepo}:${LOG_DIR:-/var/log/galleryrepo}"
