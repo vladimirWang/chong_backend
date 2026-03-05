@@ -6,7 +6,7 @@ ARG FRONTEND_DIR
 RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
 COPY ${FRONTEND_DIR}/ ./
-RUN pnpm install --frozen-lockfile && pnpm run build
+RUN pnpm install && pnpm run build
 
 # 阶段 2：Nginx 镜像（内含前端构建产物）
 FROM nginx:alpine

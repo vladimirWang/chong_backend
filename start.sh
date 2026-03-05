@@ -29,6 +29,25 @@ export HOST_LOG_DIR="${HOST_LOG_DIR:-${SCRIPT_DIR}/logs/galleryrepo}"
 export BACKEND_DIR="${BACKEND_DIR:-$(basename "$SCRIPT_DIR")}"
 export FRONTEND_DIR="${FRONTEND_DIR:-repo_frontend}"
 
+# 前端目录路径（父目录下的同级目录），不存在时自动创建占位
+FRONTEND_PATH="${SCRIPT_DIR}/../${FRONTEND_DIR}"
+if [ ! -d "$FRONTEND_PATH" ] || [ ! -f "$FRONTEND_PATH/package.json" ]; then
+  echo "⚠️  前端目录不存在，创建占位: $FRONTEND_PATH"
+  mkdir -p "$FRONTEND_PATH"
+  cat > "$FRONTEND_PATH/package.json" << 'PKG'
+{
+  "name": "placeholder",
+  "private": true,
+  "scripts": {
+    "build": "node -e \"require('fs').mkdirSync('dist',{recursive:true});require('fs').writeFileSync('dist/index.html','<!DOCTYPE html><html><body><h1>前端未部署</h1><p>请将前端代码放在父目录下并重新执行 ./start.sh</p></body></html>')\""
+  }
+}
+PKG
+  echo 'lockfileVersion: "6.0"' > "$FRONTEND_PATH/pnpm-lock.yaml"
+  echo "" >> "$FRONTEND_PATH/pnpm-lock.yaml"
+  echo "packages: {}" >> "$FRONTEND_PATH/pnpm-lock.yaml"
+fi
+
 case "${1:-}" in
   stop)
     echo "🛑 停止 Docker 服务..."
