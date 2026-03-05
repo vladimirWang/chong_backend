@@ -13,7 +13,7 @@ import {
   ProductNameString,
 } from "../validators/commonValidator";
 
-const { GO_SERVER_ADDRESS } = process.env;
+const { PUBLIC_BASE_URL } = process.env;
 
 // 获取产品列表
 export const getProducts = async ({ query }: { query: ProductQuery }) => {
@@ -60,7 +60,7 @@ export const getProductById = async ({ params }: { params: UpdateId }) => {
     },
   });
   if (res && res.img) {
-    res.img = `${GO_SERVER_ADDRESS}/${res.img}`;
+    res.img = `${PUBLIC_BASE_URL}${res.img}`;
   }
   return new SuccessResponse(res, "产品信息查询成功");
 };

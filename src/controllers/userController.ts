@@ -11,8 +11,9 @@ import { v4 as uuidv4 } from "uuid";
 import { logger } from "../utils/logger";
 import { sanitizeFilename } from "../utils/file";
 import path from "node:path";
+import fs from "node:fs";
 
-const UPLOAD_DIR = path.join(process.cwd(), "uploads");
+const UPLOAD_DIR = path.join(process.cwd(), "public/uploads");
 
 export const loginUser = async ({
   body,
@@ -164,27 +165,42 @@ export const logoutUser = async ({ headers }) => {
   return new SuccessResponse(null, "用户登出成功");
 };
 
+function ensureUploadDir(dir: string) {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+}
+
 export const uploadFile = async ({ body }: { body: UploadFileBody }) => {
   const { hash, file } = body;
 
   const { ext } = sanitizeFilename(file.name);
   const storageFileName = uuidv4() + ext;
 
-  console.log("---uploadFile---: ", hash, file.name, ext, storageFileName);
+  console.log(
+    "---uploadFile---: ",
+    UPLOAD_DIR,
+    hash,
+    file.name,
+    ext,
+    storageFileName,
+  );
 
   const savePath = path.join(UPLOAD_DIR, storageFileName);
+
+  ensureUploadDir(UPLOAD_DIR);
 
   await Bun.write(savePath, file);
 
   await prisma.fileHash.create({
     data: {
       hash,
-      filePath: path.join("/uploads", storageFileName),
+      filePath: path.join("/public/uploads", storageFileName),
     },
   });
   return new SuccessResponse(
     {
-      filePath: path.join("/uploads", storageFileName),
+      filePath: path.join("/public/uploads", storageFileName),
       baseUrl: process.env.PUBLIC_BASE_URL,
     },
     "文件保存成功",

@@ -5,6 +5,7 @@
       "name": "app",
       "dependencies": {
         "@elysiajs/jwt": "^1.4.0",
+        "@elysiajs/static": "^1.4.7",
         "@prisma/adapter-mariadb": "^7.3.0",
         "@prisma/client": "^7.3.0",
         "@redis/client": "^5.10.0",
@@ -48,6 +49,8 @@
     "@elysiajs/eden": ["@elysiajs/eden@1.4.6", "https://registry.npmmirror.com/@elysiajs/eden/-/eden-1.4.6.tgz", { "peerDependencies": { "elysia": ">=1.4.19" } }, "sha512-Tsa4NwXEWg/u73vWiYZQ3L5/ecgZSxqiEjYwpS+4qBKXeTZqZKl2hcgHJSVBL+InEDMi35Xugct7qyAXE5oM4Q=="],
 
     "@elysiajs/jwt": ["@elysiajs/jwt@1.4.0", "", { "dependencies": { "jose": "^6.0.11" }, "peerDependencies": { "elysia": ">= 1.4.0" } }, "sha512-Z0PvZhQxdDeKZ8HslXzDoXXD83NKExNPmoiAPki3nI2Xvh5wtUrBH+zWOD17yP14IbRo8fxGj3L25MRCAPsgPA=="],
+
+    "@elysiajs/static": ["@elysiajs/static@1.4.7", "https://registry.npmmirror.com/@elysiajs/static/-/static-1.4.7.tgz", { "peerDependencies": { "elysia": ">= 1.4.0" } }, "sha512-Go4kIXZ0G3iWfkAld07HmLglqIDMVXdyRKBQK/sVEjtpDdjHNb+rUIje73aDTWpZYg4PEVHUpi9v4AlNEwrQug=="],
 
     "@hono/node-server": ["@hono/node-server@1.19.9", "https://registry.npmmirror.com/@hono/node-server/-/node-server-1.19.9.tgz", { "peerDependencies": { "hono": "^4" } }, "sha512-vHL6w3ecZsky+8P5MD+eFfaGTyCeOHUIFYMGpQGbrBTSmNNoxv0if69rEZ5giu36weC5saFuznL411gRX7bJDw=="],
 

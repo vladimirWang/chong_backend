@@ -1,6 +1,7 @@
 import { Elysia, t } from "elysia";
 import { config } from "dotenv";
 import { logger } from "./utils/logger";
+import { staticPlugin } from "@elysiajs/static";
 
 // 开发环境使用 .env.development，否则使用 .env
 config({
@@ -38,6 +39,12 @@ await connectRedis();
 
 // 创建主应用并注册所有路由模块
 export const app = new Elysia()
+  .use(
+    staticPlugin({
+      assets: "./public",
+      prefix: "/public",
+    }),
+  )
   .use(loggerPlugin)
   .use(
     jwt({
