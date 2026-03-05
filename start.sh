@@ -80,9 +80,14 @@ case "${1:-}" in
       docker rm -f "$c" 2>/dev/null || true
     done
 
-    # 若 80/3000 被占用，尝试释放（可能是残留进程）
+    # 若 80/3000 被占用，尝试释放（兼容 Ubuntu，timeout 1s 防 lsof/fuser 卡住）
     for port in 80 3000; do
-      pid=$(lsof -ti :"$port" 2>/dev/null || true)
+      pid=""
+      run_with_timeout() { command -v timeout >/dev/null 2>&1 && timeout 1 "$@" || "$@"; }
+      if command -v fuser >/dev/null 2>&1; then
+        pid=$(run_with_timeout fuser "$port/tcp" 2>&1 | cut -d: -f2 | tr -d ' \n' || true)
+      fi
+      [ -z "$pid" ] && pid=$(run_with_timeout lsof -ti :"$port" 2>/dev/null || true)
       if [ -n "$pid" ]; then
         echo "   端口 $port 被占用 (PID $pid)，正在释放..."
         kill -9 $pid 2>/dev/null || true
@@ -90,7 +95,11 @@ case "${1:-}" in
       fi
     done
 
-    docker compose up -d --build
+    echo "📦 构建镜像（首次拉取基础镜像 + 前端构建较慢，请耐心等待）..."
+    export DOCKER_BUILDKIT=1
+    docker compose build
+    echo "🚀 启动容器..."
+    docker compose up -d
 
     echo ""
     echo "等待容器就绪..."
