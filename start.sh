@@ -50,17 +50,6 @@ case "${1:-}" in
     # 确保宿主机日志目录存在且可写，避免容器内 EACCES
     mkdir -p "${HOST_LOG_DIR}" && chmod 777 "${HOST_LOG_DIR}" 2>/dev/null || true
 
-    # 前端 dist 目录（用于 Nginx 挂载），默认 ../repo_frontend/dist
-    export FRONTEND_DIST="${FRONTEND_DIST:-$(cd "$SCRIPT_DIR/../repo_frontend" 2>/dev/null && pwd)/dist}"
-    if [ ! -f "${FRONTEND_DIST}/index.html" ]; then
-      echo "⚠️  前端 dist 不存在 (${FRONTEND_DIST})，正在构建..."
-      (cd "$SCRIPT_DIR/../repo_frontend" 2>/dev/null && npm run build) || {
-        echo "   请先在 repo_frontend 执行 npm run build，或设置 FRONTEND_DIST 指向已构建的目录"
-        mkdir -p "${FRONTEND_DIST}"
-        echo "<!doctype html><html><body>请先在 repo_frontend 执行 npm run build</body></html>" > "${FRONTEND_DIST}/index.html"
-      }
-    fi
-
     # 启动前移除可能存在的旧容器，避免名称冲突
     for c in fullstack-mysql fullstack-redis fullstack-bun fullstack-nginx; do
       docker rm -f "$c" 2>/dev/null || true
