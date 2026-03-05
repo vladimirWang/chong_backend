@@ -64,6 +64,18 @@ services:
       redis:
         condition: service_healthy
 
+  nginx:
+    image: nginx:alpine
+    container_name: fullstack-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - "${FRONTEND_DIST:-../repo_frontend/dist}:/usr/share/nginx/html:ro"
+    depends_on:
+      - bun-backend
+
 volumes:
   mysql_data:
   redis_data:

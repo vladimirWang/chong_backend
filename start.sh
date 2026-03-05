@@ -34,7 +34,7 @@ case "${1:-}" in
     ;;
   debug)
     echo "🐛 前台启动（查看实时日志，Ctrl+C 退出）..."
-    for c in fullstack-mysql fullstack-redis fullstack-bun; do
+    for c in fullstack-mysql fullstack-redis fullstack-bun fullstack-nginx; do
       docker rm -f "$c" 2>/dev/null || true
     done
     docker compose up --build
@@ -43,19 +43,31 @@ case "${1:-}" in
     echo "🐳 启动 Docker 服务..."
     echo "   - MySQL:    localhost:3307"
     echo "   - Redis:    localhost:6379"
-    echo "   - Bun:      http://localhost:3000"
+    echo "   - Nginx:    http://localhost:80 (前端 + API 入口)"
+    echo "   - Bun:      http://localhost:3000 (直连调试用)"
     echo ""
 
     # 确保宿主机日志目录存在且可写，避免容器内 EACCES
     mkdir -p "${HOST_LOG_DIR}" && chmod 777 "${HOST_LOG_DIR}" 2>/dev/null || true
 
+    # 前端 dist 目录（用于 Nginx 挂载），默认 ../repo_frontend/dist
+    export FRONTEND_DIST="${FRONTEND_DIST:-$(cd "$SCRIPT_DIR/../repo_frontend" 2>/dev/null && pwd)/dist}"
+    if [ ! -f "${FRONTEND_DIST}/index.html" ]; then
+      echo "⚠️  前端 dist 不存在 (${FRONTEND_DIST})，正在构建..."
+      (cd "$SCRIPT_DIR/../repo_frontend" 2>/dev/null && npm run build) || {
+        echo "   请先在 repo_frontend 执行 npm run build，或设置 FRONTEND_DIST 指向已构建的目录"
+        mkdir -p "${FRONTEND_DIST}"
+        echo "<!doctype html><html><body>请先在 repo_frontend 执行 npm run build</body></html>" > "${FRONTEND_DIST}/index.html"
+      }
+    fi
+
     # 启动前移除可能存在的旧容器，避免名称冲突
-    for c in fullstack-mysql fullstack-redis fullstack-bun; do
+    for c in fullstack-mysql fullstack-redis fullstack-bun fullstack-nginx; do
       docker rm -f "$c" 2>/dev/null || true
     done
 
-    # 若 3000 被占用，尝试释放（可能是残留进程）
-    for port in 3000; do
+    # 若 80/3000 被占用，尝试释放（可能是残留进程）
+    for port in 80 3000; do
       pid=$(lsof -ti :"$port" 2>/dev/null || true)
       if [ -n "$pid" ]; then
         echo "   端口 $port 被占用 (PID $pid)，正在释放..."
