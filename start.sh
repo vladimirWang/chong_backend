@@ -12,6 +12,8 @@
 # 环境变量（可选，在运行前 export 覆盖默认值）:
 #   LOG_DIR         - 容器内日志目录，默认 /var/log/galleryrepo
 #   HOST_LOG_DIR    - 宿主机日志目录（挂载卷），默认 ./logs/galleryrepo
+#   BACKEND_DIR     - 后端目录名（与父目录下的实际目录名一致），默认自动检测
+#   FRONTEND_DIR    - 前端目录名（与父目录下的实际目录名一致），默认 repo_frontend
 
 set -e
 
@@ -22,6 +24,10 @@ cd "$SCRIPT_DIR"
 # HOST_LOG_DIR 默认用项目下 ./logs/galleryrepo，避免 /var/log 需 root 权限
 export LOG_DIR="${LOG_DIR:-/var/log/galleryrepo}"
 export HOST_LOG_DIR="${HOST_LOG_DIR:-${SCRIPT_DIR}/logs/galleryrepo}"
+
+# 前后端目录名：用于 Nginx 构建，未设置时自动取当前目录名作为后端
+export BACKEND_DIR="${BACKEND_DIR:-$(basename "$SCRIPT_DIR")}"
+export FRONTEND_DIR="${FRONTEND_DIR:-repo_frontend}"
 
 case "${1:-}" in
   stop)

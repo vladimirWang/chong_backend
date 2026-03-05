@@ -64,11 +64,15 @@ services:
       redis:
         condition: service_healthy
 
-  # Nginx 镜像内包含前端构建产物，build 时需确保 repo_frontend 与 repo_backend 为同级目录
+  # Nginx 镜像内包含前端构建产物，需前后端目录在父目录下同级
+  # 支持环境变量：BACKEND_DIR（默认 repo_backend）、FRONTEND_DIR（默认 repo_frontend）
   nginx:
     build:
       context: ..
-      dockerfile: repo_backend/nginx/Dockerfile
+      dockerfile: ${BACKEND_DIR:-repo_backend}/nginx/Dockerfile
+      args:
+        BACKEND_DIR: ${BACKEND_DIR:-repo_backend}
+        FRONTEND_DIR: ${FRONTEND_DIR:-repo_frontend}
     container_name: fullstack-nginx
     restart: unless-stopped
     ports:
