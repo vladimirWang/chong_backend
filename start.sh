@@ -12,8 +12,7 @@
 # 环境变量（可选，在运行前 export 覆盖默认值）:
 #   LOG_DIR         - 容器内日志目录，默认 /var/log/galleryrepo
 #   HOST_LOG_DIR    - 宿主机日志目录（挂载卷），默认 ./logs/galleryrepo
-#   BACKEND_DIR     - 后端目录名（与父目录下的实际目录名一致），默认自动检测
-#   FRONTEND_DIR    - 前端目录名（与父目录下的实际目录名一致），默认 repo_frontend
+#   FRONTEND_DIST   - 前端打包产物目录（手动 pnpm run build 后上传 dist 内容），默认 ./frontend-dist
 
 set -e
 
@@ -21,31 +20,17 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
 # 日志目录：容器内与宿主机映射，未设置时使用默认值
-# HOST_LOG_DIR 默认用项目下 ./logs/galleryrepo，避免 /var/log 需 root 权限
 export LOG_DIR="${LOG_DIR:-/var/log/galleryrepo}"
 export HOST_LOG_DIR="${HOST_LOG_DIR:-${SCRIPT_DIR}/logs/galleryrepo}"
 
-# 前后端目录名：用于 Nginx 构建，未设置时自动取当前目录名作为后端
-export BACKEND_DIR="${BACKEND_DIR:-$(basename "$SCRIPT_DIR")}"
-export FRONTEND_DIR="${FRONTEND_DIR:-repo_frontend}"
-
-# 前端目录路径（父目录下的同级目录），不存在时自动创建占位
-FRONTEND_PATH="${SCRIPT_DIR}/../${FRONTEND_DIR}"
-if [ ! -d "$FRONTEND_PATH" ] || [ ! -f "$FRONTEND_PATH/package.json" ]; then
-  echo "⚠️  前端目录不存在，创建占位: $FRONTEND_PATH"
-  mkdir -p "$FRONTEND_PATH"
-  cat > "$FRONTEND_PATH/package.json" << 'PKG'
-{
-  "name": "placeholder",
-  "private": true,
-  "scripts": {
-    "build": "node -e \"require('fs').mkdirSync('dist',{recursive:true});require('fs').writeFileSync('dist/index.html','<!DOCTYPE html><html><body><h1>前端未部署</h1><p>请将前端代码放在父目录下并重新执行 ./start.sh</p></body></html>')\""
-  }
-}
-PKG
-  echo 'lockfileVersion: "6.0"' > "$FRONTEND_PATH/pnpm-lock.yaml"
-  echo "" >> "$FRONTEND_PATH/pnpm-lock.yaml"
-  echo "packages: {}" >> "$FRONTEND_PATH/pnpm-lock.yaml"
+# 前端静态文件目录：挂载到 Nginx，需手动打包并上传（见下方说明）
+export FRONTEND_DIST="${FRONTEND_DIST:-${SCRIPT_DIR}/frontend-dist}"
+if [ ! -f "${FRONTEND_DIST}/index.html" ]; then
+  echo "⚠️  前端目录无 index.html: $FRONTEND_DIST"
+  echo "   请本地执行 pnpm run build 后，将 dist/ 内容上传到该目录"
+  mkdir -p "${FRONTEND_DIST}"
+  echo '<!DOCTYPE html><html><body><h1>前端未部署</h1><p>请本地 pnpm run build，将 dist/ 内容上传到 frontend-dist/ 后重启</p></body></html>' > "${FRONTEND_DIST}/index.html"
+  echo "   已创建占位页，可先启动服务"
 fi
 
 case "${1:-}" in
@@ -95,7 +80,7 @@ case "${1:-}" in
       fi
     done
 
-    echo "📦 构建镜像（首次拉取基础镜像 + 前端构建较慢，请耐心等待）..."
+    echo "📦 构建镜像..."
     export DOCKER_BUILDKIT=1
     docker compose build
     echo "🚀 启动容器..."
@@ -116,6 +101,7 @@ case "${1:-}" in
       echo "   查看退出原因: docker compose ps -a"
     fi
     echo ""
+    echo "前端部署：本地 cd repo_frontend && pnpm run build，将 dist/ 内容上传到 ${FRONTEND_DIST}"
     echo "查看日志: ./start.sh logs"
     echo "停止服务: ./start.sh stop"
     ;;
