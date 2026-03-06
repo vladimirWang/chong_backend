@@ -28,6 +28,12 @@ import { readFile } from "fs/promises";
 import { join } from "path";
 import { existsSync } from "fs";
 import { connectRedis } from "./utils/redis";
+import path from "node:path";
+import { ensureDirExists } from "./utils/file";
+
+const UPLOAD_DIR = path.join(process.cwd(), "public/uploads");
+
+ensureDirExists(UPLOAD_DIR);
 
 // // 注册插件
 // dayjs.extend(utc);

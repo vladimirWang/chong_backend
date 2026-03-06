@@ -13,8 +13,6 @@ import { sanitizeFilename } from "../utils/file";
 import path from "node:path";
 import fs from "node:fs";
 
-const UPLOAD_DIR = path.join(process.cwd(), "public/uploads");
-
 export const loginUser = async ({
   body,
   jwt,
@@ -165,11 +163,6 @@ export const logoutUser = async ({ headers }) => {
   return new SuccessResponse(null, "用户登出成功");
 };
 
-function ensureUploadDir(dir: string) {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-}
 
 export const uploadFile = async ({ body }: { body: UploadFileBody }) => {
   const { hash, file } = body;
@@ -188,7 +181,7 @@ export const uploadFile = async ({ body }: { body: UploadFileBody }) => {
 
   const savePath = path.join(UPLOAD_DIR, storageFileName);
 
-  ensureUploadDir(UPLOAD_DIR);
+
 
   await Bun.write(savePath, file);
 

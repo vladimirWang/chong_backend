@@ -16,12 +16,12 @@ export interface StockInRecord {
 const UPLOAD_DIR = join(process.cwd(), "uploads");
 const EXCEL_UPLOAD_DIR = join(process.cwd(), "uploads", "excel");
 
-// 确保上传目录存在
-async function ensureUploadDir() {
-  if (!existsSync(UPLOAD_DIR)) {
-    await mkdir(UPLOAD_DIR, { recursive: true });
-  }
-}
+// // 确保上传目录存在
+// async function ensureUploadDir() {
+//   if (!existsSync(UPLOAD_DIR)) {
+//     await mkdir(UPLOAD_DIR, { recursive: true });
+//   }
+// }
 
 // 生成唯一的文件名
 function generateFileName(originalName: string): string {
@@ -39,7 +39,7 @@ export const uploadFile = async ({
 }) => {
   try {
     // 确保上传目录存在
-    await ensureUploadDir();
+    // await ensureUploadDir();
 
     // 验证文件类型（双重验证，虽然 Elysia 已经验证过）
     const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp", "image/svg+xml"];
@@ -71,12 +71,12 @@ export const uploadFile = async ({
   }
 };
 
-// 确保 Excel 上传目录存在
-async function ensureExcelUploadDir() {
-  if (!existsSync(EXCEL_UPLOAD_DIR)) {
-    await mkdir(EXCEL_UPLOAD_DIR, { recursive: true });
-  }
-}
+// // 确保 Excel 上传目录存在
+// async function ensureExcelUploadDir() {
+//   if (!existsSync(EXCEL_UPLOAD_DIR)) {
+//     await mkdir(EXCEL_UPLOAD_DIR, { recursive: true });
+//   }
+// }
 
 // 验证是否为 Excel 文件
 function isValidExcelFile(file: File): boolean {
@@ -182,7 +182,7 @@ export const uploadExcelFile = async ({
 }) => {
   try {
     // 确保 Excel 上传目录存在
-    await ensureExcelUploadDir();
+    // await ensureExcelUploadDir();
 
     // 验证文件类型
     if (!isValidExcelFile(file)) {

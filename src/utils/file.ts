@@ -1,4 +1,5 @@
-import path from "path";
+import path from "node:path";
+import fs from "node:fs";
 
 /**
  * 处理/清理文件名（与 Go utils.SanitizeFilename 逻辑一致）
@@ -33,4 +34,10 @@ export function sanitizeFilename(
   }
 
   return { safeMain: main, ext };
+}
+
+export function ensureDirExists(dir: string) {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
 }
