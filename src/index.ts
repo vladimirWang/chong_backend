@@ -48,8 +48,13 @@ export const app = new Elysia()
   .use(
     staticPlugin({
       // 使用绝对路径：相对路径在 Docker/生产环境中 process.cwd() 可能不是项目根目录，导致静态资源 404
-      assets:  process.env.NODE_ENV === "development" ? "./public" : path.join(import.meta.dir, "..", "public"),
+      assets:
+        process.env.NODE_ENV === "development"
+          ? "./public"
+          : path.join(import.meta.dir, "..", "public"),
       prefix: "/public",
+      // uploads 目录下的文件是运行时上传的，必须用懒加载模式
+      alwaysStatic: false,
     }),
   )
   .use(loggerPlugin)

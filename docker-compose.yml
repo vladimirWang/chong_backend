@@ -59,6 +59,8 @@ services:
     volumes:
       # 宿主机 HOST_LOG_DIR -> 容器内 LOG_DIR，可通过环境变量覆盖
       - "${HOST_LOG_DIR:-/var/log/galleryrepo}:${LOG_DIR:-/var/log/galleryrepo}"
+      # 宿主机 public 目录挂载，便于本地开发直接访问 public/uploads 中的图片，且上传文件持久化
+      - "./public:/app/public"
     depends_on:
       mysql:
         condition: service_healthy
