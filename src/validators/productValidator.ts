@@ -22,8 +22,8 @@ export type CreateProductBody = z.infer<typeof createProductBodySchema>;
 
 // 更新产品 Body Schema
 export const updateProductBodySchema = z.object({
-  price: z.number().optional(),
-  cost: z.number().optional(),
+  salePrice: z.number().optional(),
+  // cost: z.number().optional(),
   name: z.string().optional(),
   remark: z.string().optional(),
   img: z.string().optional(),

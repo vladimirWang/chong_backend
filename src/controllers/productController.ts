@@ -97,17 +97,20 @@ export const updateProduct = async ({
   params: UpdateId;
   body: UpdateProductBody;
 }) => {
-  const { price, cost, name, remark, img } = body;
+  const { salePrice, name, remark, img } = body;
+  logger.info(
+    `updateProduct request body: id: ${params.id}, name: ${name}, remark: ${remark}, salePrice: ${salePrice}, img: ${img}`,
+  );
   const product = await prisma.product.update({
     where: {
       id: params.id,
     },
     data: {
       name,
-      cost,
+      // cost,
       remark,
       img,
-      price,
+      salePrice,
     },
   });
   return new SuccessResponse(product, "产品更新成功");
