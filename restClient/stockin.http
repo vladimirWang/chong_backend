@@ -28,14 +28,12 @@ Authorization: {{token}}
             "cost": 100, 
             "count": 200,
             "productId": 1,
-            "shelfPrice":1,
             "vendorId": 1
         },
         {
             "cost": 10, 
             "count": 20,
             "productId": 1,
-            "shelfPrice":10,
             "vendorId": 1
         }
     ]
@@ -53,15 +51,13 @@ Authorization: {{token}}
             "cost": 19, 
             "count": 40,
             "productId": 1,
-            "vendorId": 1,
-            "shelfPrice": 10
+            "vendorId": 1
         },
         {
             "cost": 200, 
             "count": 300,
             "productId": 2,
-            "vendorId": 1,
-            "shelfPrice": 10
+            "vendorId": 1
         }
     ]
 }

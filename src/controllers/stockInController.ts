@@ -252,33 +252,6 @@ export const createMultipleStockIn = async ({
 }: {
   body: MultipleStockInBody;
 }) => {
-  // 合并相同 productId 和 cost 的数据，count 相加
-  // [{productId: 1, cost: 10, count: 10}, {productId: 1, cost: 10, count: 30}]
-  // => [{productId: 1, cost: 10, count: 40}]
-  // const mergedMap = new Map<
-  //   string,
-  //   { productId: number; cost: number; count: number; createdAt: string }
-  // >();
-  // const productIds = [];
-  // body.productJoinStockIn.forEach((item) => {
-  //   productIds.push(item.productId);
-  //   const key = `${item.productId}-${item.cost}`;
-  //   const existing = mergedMap.get(key);
-  //   if (existing) {
-  //     existing.count += item.count;
-  //   } else {
-  //     mergedMap.set(key, {
-  //       productId: item.productId,
-  //       cost: item.cost,
-  //       count: item.count,
-  //       vendorId: item.vendorId,
-  //       shelfPrice: item.shelfPrice
-  //     });
-  //   }
-  // });
-
-  // 转换为数组
-  // const mergedProductJoinStockIn = Array.from(mergedMap.values());
   const { productJoinStockIn, createdAt, remark } = body;
 
   // const totalCost = productJoinStockIn.reduce((a, c) => {
@@ -299,8 +272,6 @@ export const createMultipleStockIn = async ({
             return {
               cost: item.cost,
               count: item.count,
-              // 本次提交的推荐零售价
-              shelfPrice: item.shelfPrice,
               product: {
                 connect: {
                   id: item.productId,
@@ -403,7 +374,6 @@ export const updateStockIn = async ({
       cost: r.cost,
       count: r.count,
       vendorId: r.vendorId,
-      shelfPrice: r.shelfPrice,
     }),
   );
   const { added, modified, deleted, unchanged } =
@@ -446,7 +416,6 @@ export const updateStockIn = async ({
         data: {
           cost: item.cost,
           count: item.count,
-          shelfPrice: item.shelfPrice,
           vendor: {
             connect: {
               id: item.vendorId,
@@ -477,7 +446,6 @@ export const updateStockIn = async ({
         data: {
           cost: item.cost,
           count: item.count,
-          shelfPrice: item.shelfPrice,
         },
       });
     }),

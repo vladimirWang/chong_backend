@@ -57,6 +57,7 @@ export const getProductById = async ({ params }: { params: UpdateId }) => {
       remark: true,
       latestCost: true,
       latestPrice: true,
+      salePrice: true,
     },
   });
   if (res && res.img) {
@@ -67,7 +68,7 @@ export const getProductById = async ({ params }: { params: UpdateId }) => {
 
 // 创建产品
 export const createProduct = async ({ body }: { body: CreateProductBody }) => {
-  const { name, remark, vendorId, shelfPrice, img } = body;
+  const { name, remark, vendorId, salePrice, img } = body;
   const product = await prisma.product.create({
     data: {
       name,
@@ -78,7 +79,7 @@ export const createProduct = async ({ body }: { body: CreateProductBody }) => {
           id: vendorId,
         },
       },
-      shelfPrice,
+      salePrice,
     },
   });
   return new SuccessResponse(product, "产品创建成功");
@@ -134,15 +135,16 @@ export const getLatestShelfPriceByProductId = async ({
 }: {
   params: UpdateId;
 }) => {
-  const oldRecordSql = `select pjsi.shelfPrice as shelfPrice, pjsi.productId as productId, pjsi.id as pjsi_id, si.completedAt from StockIn si JOIN ProductJoinStockIn pjsi on si.id = pjsi.stockInId  
-    where si.completedAt is not NULL and pjsi.productId = ? ORDER BY si.completedAt DESC
-  `;
+  // const oldRecordSql = `select pjsi.shelfPrice as shelfPrice, pjsi.productId as productId, pjsi.id as pjsi_id, si.completedAt from StockIn si JOIN ProductJoinStockIn pjsi on si.id = pjsi.stockInId
+  //   where si.completedAt is not NULL and pjsi.productId = ? ORDER BY si.completedAt DESC
+  // `;
 
-  const result = await prisma.$queryRawUnsafe(oldRecordSql, params.id);
-  console.log("result: ", result[0]);
+  // const result = await prisma.$queryRawUnsafe(oldRecordSql, params.id);
+  // console.log("result: ", result[0]);
 
   return new SuccessResponse(
-    { shelfPrice: result[0]?.shelfPrice ?? null },
+    // { shelfPrice: result[0]?.shelfPrice ?? null },
+    { shelfPrice: 100 },
     "产品最近一次建议零售价获取成功",
   );
 };

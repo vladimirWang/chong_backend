@@ -11,7 +11,7 @@ Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImVtYWlsIjoi
 {
     "name": "beer123",
     "vendorId": 3,
-    "shelfPrice": 100
+    "salePrice": 100
 }
 
 
