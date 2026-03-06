@@ -41,3 +41,5 @@ export function ensureDirExists(dir: string) {
     fs.mkdirSync(dir, { recursive: true });
   }
 }
+
+export const UPLOAD_DIR = path.join(process.cwd(), "public/uploads");

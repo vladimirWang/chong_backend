@@ -29,9 +29,9 @@ import { join } from "path";
 import { existsSync } from "fs";
 import { connectRedis } from "./utils/redis";
 import path from "node:path";
-import { ensureDirExists } from "./utils/file";
+import { ensureDirExists, UPLOAD_DIR } from "./utils/file";
 
-const UPLOAD_DIR = path.join(process.cwd(), "public/uploads");
+
 
 ensureDirExists(UPLOAD_DIR);
 

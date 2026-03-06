@@ -9,7 +9,7 @@ import svgCaptcha from "svg-captcha";
 import { redisClient } from "../utils/redis";
 import { v4 as uuidv4 } from "uuid";
 import { logger } from "../utils/logger";
-import { sanitizeFilename } from "../utils/file";
+import { sanitizeFilename, UPLOAD_DIR } from "../utils/file";
 import path from "node:path";
 import fs from "node:fs";
 
