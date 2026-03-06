@@ -10,6 +10,7 @@
 #   ./start.sh debug  - 前台启动（可看到错误输出，Ctrl+C 退出）
 #
 # 环境变量（可选，在运行前 export 覆盖默认值）:
+#   ENV_FILE        - 敏感变量文件路径，默认 .env.production（含 DATABASE_PASSWORD、JWT_SECRET 等）
 #   LOG_DIR         - 容器内日志目录，默认 /var/log/galleryrepo
 #   HOST_LOG_DIR    - 宿主机日志目录（挂载卷），默认 ./logs/galleryrepo
 #   FRONTEND_DIST   - 前端打包产物目录（手动 pnpm run build 后上传 dist 内容），默认 ../frontend-dist（后端目录外，避免 git 操作误删）
@@ -18,6 +19,14 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
+
+# Docker Compose 使用 .env.production 加载敏感变量（密码、JWT_SECRET 等）
+ENV_FILE="${ENV_FILE:-.env.production}"
+if [ ! -f "$ENV_FILE" ]; then
+  echo "❌ 错误: 未找到 $ENV_FILE，请创建该文件并配置 DATABASE_PASSWORD、JWT_SECRET 等变量"
+  exit 1
+fi
+COMPOSE_ENV="--env-file $ENV_FILE"
 
 # 日志目录：容器内与宿主机映射，未设置时使用默认值
 export LOG_DIR="${LOG_DIR:-/var/log/galleryrepo}"
@@ -36,18 +45,18 @@ fi
 case "${1:-}" in
   stop)
     echo "🛑 停止 Docker 服务..."
-    docker compose down
+    docker compose $COMPOSE_ENV down
     echo "✅ 服务已停止"
     ;;
   logs)
-    docker compose logs -f
+    docker compose $COMPOSE_ENV logs -f
     ;;
   debug)
     echo "🐛 前台启动（查看实时日志，Ctrl+C 退出）..."
     for c in fullstack-mysql fullstack-redis fullstack-bun fullstack-nginx; do
       docker rm -f "$c" 2>/dev/null || true
     done
-    docker compose up --build
+    docker compose $COMPOSE_ENV up --build
     ;;
   *)
     echo "🐳 启动 Docker 服务..."
@@ -82,9 +91,9 @@ case "${1:-}" in
 
     echo "📦 构建镜像..."
     export DOCKER_BUILDKIT=1
-    docker compose build
+    docker compose $COMPOSE_ENV build
     echo "🚀 启动容器..."
-    docker compose up -d
+    docker compose $COMPOSE_ENV up -d
 
     echo ""
     echo "等待容器就绪..."
