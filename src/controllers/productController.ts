@@ -12,6 +12,7 @@ import {
   VendorId,
   ProductNameString,
 } from "../validators/commonValidator";
+import { logger } from "../utils/logger";
 
 const { PUBLIC_BASE_URL } = process.env;
 
@@ -69,6 +70,9 @@ export const getProductById = async ({ params }: { params: UpdateId }) => {
 // 创建产品
 export const createProduct = async ({ body }: { body: CreateProductBody }) => {
   const { name, remark, vendorId, salePrice, img } = body;
+  logger.info(
+    `createProduct request body: name: ${name}, remark: ${remark}, vendorId: ${vendorId}, salePrice: ${salePrice}, img: ${img}`,
+  );
   const product = await prisma.product.create({
     data: {
       name,
