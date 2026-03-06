@@ -1,0 +1,54 @@
+# 后端部署：推送代码到服务器并重启 Docker
+# 前置条件：服务器需手动创建 .env.production（含 DATABASE_PASSWORD、JWT_SECRET 等）
+# Secrets：在仓库 Settings → Secrets 中配置 SERVER_PASSWORD
+name: 后端构建并部署到服务器
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch: # 允许手动触发
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "deploy-backend"
+  cancel-in-progress: false
+
+env:
+  SERVER_HOST: "139.224.68.145"
+  DEPLOY_PATH: "/root/galleryrepo_server/chong_backend"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 sshpass 和 rsync
+        run: sudo apt-get update && sudo apt-get install -y sshpass rsync
+
+      - name: 同步代码到服务器
+        env:
+          SERVER_PASSWORD: ${{ secrets.SERVER_PASSWORD }}
+        run: |
+          export SSHPASS="$SERVER_PASSWORD"
+          sshpass -e rsync -avz --delete \
+            -e "ssh -o StrictHostKeyChecking=no" \
+            --exclude 'node_modules' \
+            --exclude '.git' \
+            --exclude 'logs' \
+            --exclude '.env*' \
+            --exclude '*.log' \
+            ./ root@${{ env.SERVER_HOST }}:${{ env.DEPLOY_PATH }}/
+
+      - name: 重启 Docker 服务
+        env:
+          SERVER_PASSWORD: ${{ secrets.SERVER_PASSWORD }}
+        run: |
+          export SSHPASS="$SERVER_PASSWORD"
+          sshpass -e ssh -o StrictHostKeyChecking=no root@${{ env.SERVER_HOST }} \
+            "cd ${{ env.DEPLOY_PATH }} && ./start.sh stop 2>/dev/null; ./start.sh"
