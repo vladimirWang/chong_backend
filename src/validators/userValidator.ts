@@ -4,7 +4,8 @@ import { z } from "zod";
 export const registerUserBodySchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
-  username: z.string().max(8)
+  username: z.string().max(8),
+  verifyCode: z.string(),
 });
 
 export type RegisterUserBody = z.infer<typeof registerUserBodySchema>;

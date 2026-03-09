@@ -12,12 +12,14 @@ import {
   logoutUser,
   uploadFile,
   checkFileExistedByHash,
+  checkEmailExisted
 } from "../controllers/userController";
 import {
   registerUserBodySchema,
   loginUserBodySchema,
   uploadFileBodySchema,
 } from "../validators/userValidator";
+import { paramEmailSchema } from "../validators/commonValidator";
 
 // 使用 group 创建用户相关的路由组
 export const userRouter = new Elysia({ prefix: "/user" })
@@ -84,4 +86,7 @@ export const userRouter = new Elysia({ prefix: "/user" })
     params: t.Object({
       hash: t.String(),
     }),
+  })
+  .get("/checkEmailExisted/:email", checkEmailExisted, {
+    params: paramEmailSchema
   });

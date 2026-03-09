@@ -6,7 +6,7 @@ import {
   CheckEmailValidation,
 } from "../validators/utilValidator";
 
-const emailVerificationTag = "register:emailVerification";
+export const emailVerificationTag = "register:emailVerification";
 export const sendEmailVerificationCode = async ({
   body,
 }: {
@@ -42,9 +42,7 @@ export const checkEmailValidation = async ({
   if (storedVerifyCode !== verifyCode) {
     return new ErrorResponse(errorCode.EMAIL_VALIDATION_FAIL, "邮箱验证失败");
   }
-  await redisClient.del(redisKey);
+  // await redisClient.del(redisKey);
 
   return new SuccessResponse(null, "邮件验证通过");
 };
-
-

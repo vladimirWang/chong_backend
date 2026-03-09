@@ -12,6 +12,8 @@ import { logger } from "../utils/logger";
 import { sanitizeFilename, UPLOAD_DIR } from "../utils/file";
 import path from "node:path";
 import fs from "node:fs";
+import { ParamEmail } from "../validators/commonValidator";
+import { emailVerificationTag } from "./utilController";
 
 export const loginUser = async ({
   body,
@@ -131,8 +133,20 @@ export const generateCaptcha = async ({ set, request }) => {
 
 export const registerUser = async ({ body }: { body: RegisterUserBody }) => {
   // console.log("register body: ", prisma.user)
-  // return {code: '1'}
-  const { username, email, password } = body;
+  //
+  const { username, email, password, verifyCode } = body;
+
+  // redis查邮箱和验证码是否匹配
+  // const redisKey = `email:verify:${email}`;
+  const verifyCodeRedisKey = `${emailVerificationTag}:${email}`;
+  const verifiCodeInRedis = await redisClient.get(verifyCodeRedisKey);
+
+  if (verifiCodeInRedis !== verifyCode) {
+    return new ErrorResponse(errorCode.EMAIL_VALIDATION_FAIL, "邮箱验证失败");
+  }
+
+  await redisClient.del(verifyCodeRedisKey);
+
   const user = await prisma.user.create({
     data: {
       email,
@@ -163,7 +177,6 @@ export const logoutUser = async ({ headers }) => {
   return new SuccessResponse(null, "用户登出成功");
 };
 
-
 export const uploadFile = async ({ body }: { body: UploadFileBody }) => {
   const { hash, file } = body;
 
@@ -180,8 +193,6 @@ export const uploadFile = async ({ body }: { body: UploadFileBody }) => {
   );
 
   const savePath = path.join(UPLOAD_DIR, storageFileName);
-
-
 
   await Bun.write(savePath, file);
 
@@ -228,4 +239,14 @@ export const checkFileExistedByHash = async ({
       "文件不存在2",
     );
   }
+};
+
+export const checkEmailExisted = async ({ params }: { params: ParamEmail }) => {
+  const { email } = params;
+  const user = await prisma.user.findFirst({
+    where: {
+      email,
+    },
+  });
+  return new SuccessResponse(!!user, "邮箱已存在");
 };
