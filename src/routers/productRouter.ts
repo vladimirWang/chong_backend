@@ -20,7 +20,7 @@ import {
   createProduct,
   updateProduct,
   getProductsByVendorId,
-  getLatestShelfPriceByProductId,
+  getLatestSalePriceByProductId,
   checkProductNameExistedInVendor,
 } from "../controllers/productController";
 const { JWT_SECRET } = process.env;
@@ -99,7 +99,7 @@ export const productRouter = new Elysia({
   .get("/getProductsByVendorId/:vendorId", getProductsByVendorId, {
     params: productByVendorParamsSchema,
   })
-  .get("/getLatestShelfPriceByProductId/:id", getLatestShelfPriceByProductId, {
+  .get("/getLatestSalePriceByProductId/:id", getLatestSalePriceByProductId, {
     params: updateIdSchema,
   })
   .get(

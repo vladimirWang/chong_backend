@@ -37,6 +37,7 @@ model StockIn {
   productJoinStockIn ProductJoinStockIn[]
   status             StockInStatus        @default(PENDING) // 进货单的状态
   completedAt        DateTime?
+  historyCosts       HistoryCost[]
 }
 
 // 产品进货单中间表
@@ -99,15 +100,15 @@ model User {
 
 // 历史成本
 model HistoryCost {
-  id                   Int       @id @default(autoincrement())
-  productJoinStockInId Int       @unique
-  // productJoinStockIn   ProductJoinStockIn @relation(fields: [productJoinStockInId], references: [id], onDelete: Cascade)
-  productId            Int
-  Product              Product   @relation("HistoryCostProduct", fields: [productId], references: [id])
-  value                Int       @db.UnsignedMediumInt
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
-  deletedAt            DateTime?
+  id        Int       @id @default(autoincrement())
+  stockInId Int
+  stockIn   StockIn   @relation(fields: [stockInId], references: [id])
+  productId Int
+  product   Product   @relation("HistoryCostProduct", fields: [productId], references: [id])
+  value     Int       @db.UnsignedMediumInt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 }
 
 // 出货表

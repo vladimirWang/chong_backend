@@ -137,11 +137,19 @@ export const getProductsByVendorId = async ({
 };
 
 // 根据产品id查询最近一次的建议零售价
-export const getLatestShelfPriceByProductId = async ({
+export const getLatestSalePriceByProductId = async ({
   params,
 }: {
   params: UpdateId;
 }) => {
+  const res = await prisma.historyCost.findMany({
+    where: {
+      productId: params.id,
+      deletedAt: {
+        not: null,
+      },
+    },
+  });
   // const oldRecordSql = `select pjsi.shelfPrice as shelfPrice, pjsi.productId as productId, pjsi.id as pjsi_id, si.completedAt from StockIn si JOIN ProductJoinStockIn pjsi on si.id = pjsi.stockInId
   //   where si.completedAt is not NULL and pjsi.productId = ? ORDER BY si.completedAt DESC
   // `;
@@ -151,8 +159,8 @@ export const getLatestShelfPriceByProductId = async ({
 
   return new SuccessResponse(
     // { shelfPrice: result[0]?.shelfPrice ?? null },
-    { shelfPrice: 100 },
-    "产品最近一次建议零售价获取成功",
+    { list: res },
+    "历史成本列表查询成功",
   );
 };
 

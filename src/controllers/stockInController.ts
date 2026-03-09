@@ -551,6 +551,26 @@ export const confirmCompleted = async ({
         },
       });
     }),
+    // 新增历史成本
+    ...relatedProducts.map((item) => {
+      return prisma.historyCost.create({
+        data: {
+          value: item.cost,
+          productId: item.productId,
+          stockInId: params.id,
+          // product: {
+          //   connect: {
+          //     id: item.productId,
+          //   },
+          // },
+          // stockIn: {
+          //   connect: {
+          //     id: params.id,
+          //   },
+          // },
+        },
+      });
+    }),
   ]);
   return new SuccessResponse(record, "进货单确认成功");
 };
