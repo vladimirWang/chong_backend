@@ -11,6 +11,8 @@ export const createMultipleStockOutSchema = z.object({
   ),
   remark: z.string().optional(),
   createdAt: z.string().optional(),
+  platformId: z.number(),
+  platformOrderNo: z.string(),
 });
 
 export type CreateMultipleStockOut = z.infer<createMultipleStockOutSchema>;

@@ -71,7 +71,7 @@ export const createMultipleStockOut = async ({
 }: {
   body: CreateMultipleStockOut;
 }) => {
-  const { productJoinStockOut, remark } = body;
+  const { productJoinStockOut, remark, platformId, platformOrderNo } = body;
   const totalPrice = sum2(productJoinStockOut, "price");
   const createdAt = body.createdAt
     ? dayjs(body.createdAt).toDate()
@@ -83,6 +83,12 @@ export const createMultipleStockOut = async ({
         createdAt,
         totalPrice,
         remark,
+        platform: {
+          connect: {
+            id: platformId,
+          },
+        },
+        platformOrderNo,
         productJoinStockOut: {
           create: productJoinStockOut.map((item) => {
             return {

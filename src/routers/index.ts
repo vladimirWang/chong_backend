@@ -10,6 +10,7 @@ import { stockInRouter } from "./stockInRouter";
 import { stockOutRouter } from "./stockOutRouter";
 import { statisticsOutRouter } from "./statisticsOutRouter";
 import { utilRouter } from "./utilRouter";
+import { platformRouter } from "./platformRouter";
 
 const testRouter = new Elysia().get("/ok", () => "Hello Elysia test123");
 
@@ -30,6 +31,7 @@ export const apiRouter = new Elysia().group(
       .use(stockInRouter)
       .use(stockOutRouter)
       .use(statisticsOutRouter)
-      .use(utilRouter);
+      .use(utilRouter)
+      .use(platformRouter);
   },
 );

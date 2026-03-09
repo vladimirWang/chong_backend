@@ -122,6 +122,9 @@ model StockOut {
   completedAt         DateTime?
   remark              String?
   productJoinStockOut ProductJoinStockOut[]
+  platformId          Int
+  platform            Platform?             @relation(fields: [platformId], references: [id])
+  platformOrderNo     String
 }
 
 model ProductJoinStockOut {
@@ -148,4 +151,14 @@ model FileHash {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
+}
+
+// 平台
+model Platform {
+  id        Int        @id @default(autoincrement())
+  name      String     @unique
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  deletedAt DateTime?
+  stockOuts StockOut[]
 }
