@@ -12,28 +12,28 @@
     "reset:dev": "bunx dotenv -e .env.development -- prisma migrate reset"
   },
   "dependencies": {
-    "@elysiajs/jwt": "^1.4.0",
+    "@elysiajs/jwt": "^1.4.1",
     "@elysiajs/static": "^1.4.7",
-    "@prisma/adapter-mariadb": "^7.3.0",
-    "@prisma/client": "^7.3.0",
-    "@redis/client": "^5.10.0",
+    "@prisma/adapter-mariadb": "^7.4.2",
+    "@prisma/client": "^7.4.2",
+    "@redis/client": "^5.11.0",
     "dayjs": "^1.11.19",
-    "dotenv": "^17.2.3",
-    "elysia": "1.4.22",
+    "dotenv": "^17.3.1",
+    "elysia": "^1.4.27",
     "lodash": "^4.17.21",
     "nodemailer": "^7.0.13",
     "pino": "^9.5.0",
     "svg-captcha": "^1.4.0",
     "uuid": "^13.0.0",
     "xlsx": "^0.18.5",
-    "zod": "^4.2.1"
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@elysiajs/eden": "^1.4.6",
     "@types/lodash": "^4.17.23",
     "bun-types": "latest",
     "dotenv-cli": "^11.0.0",
-    "prisma": "^7.3.0"
+    "prisma": "^7.4.2"
   },
   "module": "src/index.js"
 }
