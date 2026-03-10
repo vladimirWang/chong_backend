@@ -71,7 +71,8 @@ export const createMultipleStockOut = async ({
 }: {
   body: CreateMultipleStockOut;
 }) => {
-  const { productJoinStockOut, remark, platformId, platformOrderNo } = body;
+  const { productJoinStockOut, remark, platformId, platformOrderNo, clientId } =
+    body;
   const totalPrice = sum2(productJoinStockOut, "price");
   const createdAt = body.createdAt
     ? dayjs(body.createdAt).toDate()
@@ -80,6 +81,11 @@ export const createMultipleStockOut = async ({
     // 创建出货记录
     prisma.stockOut.create({
       data: {
+        client: {
+          connect: {
+            id: clientId,
+          },
+        },
         createdAt,
         totalPrice,
         remark,

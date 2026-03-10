@@ -13,6 +13,7 @@ export const createMultipleStockOutSchema = z.object({
   createdAt: z.string().optional(),
   platformId: z.number(),
   platformOrderNo: z.string(),
+  clientId: z.number().optional(),
 });
 
 export type CreateMultipleStockOut = z.infer<createMultipleStockOutSchema>;

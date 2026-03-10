@@ -125,6 +125,8 @@ model StockOut {
   platformId          Int
   platform            Platform?             @relation(fields: [platformId], references: [id])
   platformOrderNo     String
+  clientId            Int?
+  client              Client?               @relation(fields: [clientId], references: [id])
 }
 
 model ProductJoinStockOut {
@@ -157,6 +159,19 @@ model FileHash {
 model Platform {
   id        Int        @id @default(autoincrement())
   name      String     @unique
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  deletedAt DateTime?
+  stockOuts StockOut[]
+}
+
+// 客户
+model Client {
+  id        Int        @id @default(autoincrement())
+  name      String
+  tel       String?
+  address   String?
+  remark    String?
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
   deletedAt DateTime?

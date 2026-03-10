@@ -20,9 +20,9 @@ Content-Type: application/json
 
 {
     "password": "123456",
-    "email": "aachen2012@outlook.com",
-    "captchaText": "a56r",
-    "captchaId": "6e7a8eb0-a4bc-4851-b951-0b33b88f3ca2"
+    "email": "fernandowang584@gmail.com",
+    "captchaText": "8wzp",
+    "captchaId": "586a8d99-4bc5-4a63-830a-2c57d364cb29"
 }
 
 ### user login             done
