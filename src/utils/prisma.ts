@@ -12,6 +12,8 @@ function getDatabaseConfig() {
   const baseConfig = {
     connectionLimit: 10,
     connectTimeout: 10000, // 10 秒内连不上直接报连接错误，便于排查
+    // 解决 MySQL 8 caching_sha2_password 认证时 "RSA public key is not available" 错误
+    allowPublicKeyRetrieval: true,
   };
 
   if (
