@@ -11,6 +11,7 @@ import { getPaginationValues, getWhereValues } from "../utils/db";
 import { CommonStockLineComparable } from "./stockInController";
 import { generateStockOperationSql } from "../sqlMap/stockOperation";
 import dayjs from "dayjs";
+import { StockOperationListRow } from "./stockInController";
 
 type StockOutLineComparable = CommonStockLineComparable & {
   stockOutId?: number;
@@ -36,25 +37,185 @@ export const getStockOuts = async ({ query }: { query: Pagination }) => {
   } = query;
   const { skip, take } = getPaginationValues({ limit, page });
 
-  const { listSql, params, countSql } = generateStockOperationSql<StockInQuery>(
-    "StockOut",
-    "ProductJoinStockOut",
-    query,
-  );
-  const listParams = pagination ? [...params, take, skip] : params;
-  type StockOutListRow = StockOperationListRow & {
-    totalPrice: number;
-  };
-  const list = await prisma.$queryRawUnsafe<StockOutListRow[]>(
-    listSql,
-    ...listParams,
-  );
+  const productNameStr =
+    typeof productName === "string" ? productName.trim() : undefined;
+  const vendorNameStr =
+    typeof vendorName === "string" ? vendorName.trim() : undefined;
+
+  const hasVendorFilter = Boolean(vendorNameStr && vendorNameStr.length > 0);
+
+  const whereClauses: string[] = ["1=1"];
+  const params: unknown[] = [];
+
+  if (productNameStr) {
+    whereClauses.push("p.name LIKE ?");
+    params.push(`%${productNameStr}%`);
+  }
+
+  if (deletedStart || deletedEnd) {
+    if (deletedStart) {
+      whereClauses.push("s.deletedAt >= ?");
+      params.push(dayjs(deletedStart).format("YYYY-MM-DD HH:mm:ss"));
+    }
+    if (deletedEnd) {
+      whereClauses.push("s.deletedAt <= ?");
+      params.push(dayjs(deletedEnd).format("YYYY-MM-DD HH:mm:ss"));
+    }
+  } else {
+    whereClauses.push("s.deletedAt IS NULL");
+  }
+  if (completedStart) {
+    whereClauses.push("s.completedAt >= ?");
+    params.push(dayjs(completedStart).format("YYYY-MM-DD HH:mm:ss"));
+  }
+  if (completedEnd) {
+    whereClauses.push("s.completedAt <= ?");
+    params.push(dayjs(completedEnd).format("YYYY-MM-DD HH:mm:ss"));
+  }
+
+  if (hasVendorFilter) {
+    whereClauses.push("v.name LIKE ?");
+    params.push(`%${vendorNameStr}%`);
+  }
+
+  const vendorJoinSql = hasVendorFilter
+    ? " LEFT JOIN Vendor v ON v.id = p.vendorId "
+    : "";
+  const whereSql = "WHERE " + whereClauses.join(" AND ");
+
+  const joinFrom =
+    `FROM StockOut s ` +
+    `LEFT JOIN ProductJoinStockOut pjs ON pjs.stockOutId = s.id ` +
+    `LEFT JOIN Product p ON p.id = pjs.productId` +
+    vendorJoinSql;
+
+  const countSql = `SELECT COUNT(DISTINCT s.id) as cnt ${joinFrom} ${whereSql}`;
 
   const countRows = await prisma.$queryRawUnsafe<{ cnt: bigint }[]>(
     countSql,
     ...params,
   );
+
   const total = Number(countRows[0]?.cnt ?? 0);
+
+  type StockOutListRow = StockOperationListRow & {
+    totalPrice: number;
+    productId: number;
+    productName: string;
+    cost: number;
+    count: number;
+  };
+
+  let list: Array<
+    StockOperationListRow & {
+      totalCost: number;
+      products: Array<{
+        productId: number;
+        productName: string;
+        cost: number;
+        count: number;
+      }>;
+    }
+  >;
+
+  if (total === 0) {
+    list = [];
+  } else {
+    // 先按「进货单」分页拿到当前页的 stockInId 列表
+    const idSql =
+      `SELECT s.id ${joinFrom} ${whereSql} GROUP BY s.id ORDER BY s.updatedAt DESC` +
+      (pagination ? " LIMIT ? OFFSET ?" : "");
+    const idParams = pagination ? [...params, take, skip] : params;
+    const idRows = await prisma.$queryRawUnsafe<{ id: number }[]>(
+      idSql,
+      ...idParams,
+    );
+    const stockOutIds = idRows.map((r) => r.id);
+    if (stockOutIds.length === 0) {
+      list = [];
+    } else {
+      const placeholders = stockOutIds.map(() => "?").join(",");
+      console.log("-------------- stockoutcontroller -有数据----------------");
+      const rowsSql =
+        `SELECT s.id, s.remark, s.createdAt, s.updatedAt, s.deletedAt, s.totalPrice, s.status, s.completedAt, pjs.productId, p.name as productName, pjs.price, pjs.count, s.platformOrderNo ` +
+        `FROM StockOut s ` +
+        `LEFT JOIN ProductJoinStockOut pjs ON pjs.stockOutId = s.id ` +
+        `LEFT JOIN Product p ON p.id = pjs.productId ` +
+        `WHERE s.id IN (${placeholders}) ORDER BY s.updatedAt DESC`;
+      const rows = await prisma.$queryRawUnsafe<StockOutListRow[]>(
+        rowsSql,
+        ...stockOutIds,
+      );
+
+      // 按进货单 id 聚合成「一单多商品」
+      const byId = new Map<
+        number,
+        StockOperationListRow & {
+          totalPrice: number;
+          products: Array<{
+            productId: number;
+            productName: string;
+            price: number;
+            count: number;
+          }>;
+        }
+      >();
+      for (const row of rows) {
+        const existing = byId.get(row.id);
+        if (!existing) {
+          byId.set(row.id, {
+            id: row.id,
+            remark: row.remark,
+            createdAt: row.createdAt,
+            updatedAt: row.updatedAt,
+            deletedAt: row.deletedAt,
+            status: row.status,
+            completedAt: row.completedAt,
+            totalPrice: row.totalPrice,
+            platformOrderNo: row.platformOrderNo,
+            products: [
+              {
+                productId: row.productId,
+                productName: row.productName,
+                price: row.price,
+                count: row.count,
+              },
+            ],
+          });
+        } else {
+          existing.products.push({
+            productId: row.productId,
+            productName: row.productName,
+            price: row.price,
+            count: row.count,
+          });
+        }
+      }
+      list = Array.from(byId.values()).sort(
+        (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime(),
+      );
+    }
+  }
+
+  // const { listSql, params, countSql } = generateStockOperationSql<StockInQuery>(
+  //   "StockOut",
+  //   "ProductJoinStockOut",
+  //   query,
+  // );
+  // const listParams = pagination ? [...params, take, skip] : params;
+  // type StockOutListRow = StockOperationListRow & {
+  //   totalPrice: number;
+  // };
+  // const list = await prisma.$queryRawUnsafe<StockOutListRow[]>(
+  //   listSql,
+  //   ...listParams,
+  // );
+
+  // const countRows = await prisma.$queryRawUnsafe<{ cnt: bigint }[]>(
+  //   countSql,
+  //   ...params,
+  // );
+  // const total = Number(countRows[0]?.cnt ?? 0);
 
   return new SuccessResponse(
     {
