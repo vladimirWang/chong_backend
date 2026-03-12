@@ -20,9 +20,9 @@ export type CreateMultipleStockOut = z.infer<createMultipleStockOutSchema>;
 
 // 批量出货 Body Schema（更新用）
 export const multipleStockOutBodySchema = z.object({
-  remark: z.string().optional(),
+  remark: z.string().optional().nullable(),
   createdAt: z.string().optional(),
-  clientId: z.number().optional(),
+  clientId: z.number().optional().nullable(),
   platformId: z.number().optional(),
   platformOrderNo: z.string().optional(),
   productJoinStockOut: z.array(

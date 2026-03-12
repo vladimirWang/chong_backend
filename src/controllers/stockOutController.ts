@@ -449,6 +449,12 @@ export const updateStockOut = async ({
     },
     {},
   );
+  const newClientValue =
+    clientId === null
+      ? { disconnect: true }
+      : typeof clientId === "number"
+        ? { connect: { id: clientId } }
+        : undefined;
   const result = await prisma.$transaction([
     // 更新出货中间表
     prisma.stockOut.update({
@@ -459,13 +465,8 @@ export const updateStockOut = async ({
         remark,
         createdAt,
         totalPrice,
-        client: clientId
-          ? {
-              connect: {
-                id: clientId,
-              },
-            }
-          : undefined,
+        // clientId 为 null 时须 disconnect，传 undefined 时 Prisma 不会清空该字段
+        client: newClientValue,
         platform: platformId
           ? {
               connect: {
