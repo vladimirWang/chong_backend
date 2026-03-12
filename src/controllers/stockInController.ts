@@ -152,7 +152,7 @@ export const getStockIns = async ({ query }: { query: StockInQuery }) => {
     } else {
       const placeholders = stockInIds.map(() => "?").join(",");
       const rowsSql =
-        `SELECT s.id, s.remark, s.createdAt, s.updatedAt, s.deletedAt, s.totalCost, s.status, s.completedAt, pjs.productId, p.name as productName, pjs.cost, pjs.count ` +
+        `SELECT s.id, s.remark, s.stockInCode, s.createdAt, s.updatedAt, s.deletedAt, s.totalCost, s.status, s.completedAt, pjs.productId, p.name as productName, pjs.cost, pjs.count ` +
         `FROM StockIn s ` +
         `LEFT JOIN ProductJoinStockIn pjs ON pjs.stockInId = s.id ` +
         `LEFT JOIN Product p ON p.id = pjs.productId ` +
@@ -186,6 +186,7 @@ export const getStockIns = async ({ query }: { query: StockInQuery }) => {
             status: row.status,
             completedAt: row.completedAt,
             totalCost: row.totalCost,
+            stockInCode: row.stockInCode,
             products: [
               {
                 productId: row.productId,

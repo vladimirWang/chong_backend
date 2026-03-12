@@ -137,9 +137,8 @@ export const getStockOuts = async ({ query }: { query: Pagination }) => {
       list = [];
     } else {
       const placeholders = stockOutIds.map(() => "?").join(",");
-      console.log("-------------- stockoutcontroller -有数据----------------");
       const rowsSql =
-        `SELECT s.id, s.remark, s.createdAt, s.updatedAt, s.deletedAt, s.totalPrice, s.status, s.completedAt, pjs.productId, p.name as productName, pjs.price, pjs.count, s.platformOrderNo ` +
+        `SELECT s.id, s.remark, s.stockOutCode, s.createdAt, s.updatedAt, s.deletedAt, s.totalPrice, s.status, s.completedAt, pjs.productId, p.name as productName, pjs.price, pjs.count, s.platformOrderNo ` +
         `FROM StockOut s ` +
         `LEFT JOIN ProductJoinStockOut pjs ON pjs.stockOutId = s.id ` +
         `LEFT JOIN Product p ON p.id = pjs.productId ` +
@@ -175,6 +174,7 @@ export const getStockOuts = async ({ query }: { query: Pagination }) => {
             completedAt: row.completedAt,
             totalPrice: row.totalPrice,
             platformOrderNo: row.platformOrderNo,
+            stockOutCode: row.stockOutCode,
             products: [
               {
                 productId: row.productId,
@@ -247,12 +247,14 @@ export const createMultipleStockOut = async ({
     // 创建出货记录
     prisma.stockOut.create({
       data: {
-        // client: {
-        //   connect: {
-        //     id: clientId,
-        //   },
-        // },
-        clientId,
+        client: clientId
+          ? {
+              connect: {
+                id: clientId,
+              },
+            }
+          : undefined,
+        // clientId,
         stockOutCode: serviceCode,
         createdAt,
         totalPrice,
