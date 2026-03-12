@@ -3,13 +3,13 @@ import { redisClient } from "./redis";
 
 interface IGenerateServiceResult {
   serviceCode: string;
-  previousValue: number;
+  previousValue: number | null;
 }
 // 生成进货单号
 export async function generateServiceCode(
   serviceCode: string, // 服务单号前缀
   redisKeyPrefix: string, // 缓存key
-): Promise<string> {
+): Promise<IGenerateServiceResult> {
   const date = dayjs().format("YYMMDD");
   const redisKey = `${redisKeyPrefix}:${date}`;
   const redisValue = await redisClient.get(redisKey);
@@ -19,7 +19,8 @@ export async function generateServiceCode(
     return Promise.reject(new Error("生成服务单号失败"));
   }
   return {
-    serviceCode: head + (currentValue + 1).toString().padStart(3, "0"),
-    previousValue: currentValue,
+    serviceCode:
+      head + ((redisValue ? currentValue : 0) + 1).toString().padStart(3, "0"),
+    previousValue: redisValue ? currentValue : null,
   };
 }

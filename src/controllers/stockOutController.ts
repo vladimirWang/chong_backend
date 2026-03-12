@@ -14,6 +14,7 @@ import dayjs from "dayjs";
 import { StockOperationListRow } from "./stockInController";
 import { generateServiceCode } from "../utils/common";
 import { redisClient } from "../utils/redis";
+import { logger } from "../utils/logger";
 
 type StockOutLineComparable = CommonStockLineComparable & {
   stockOutId?: number;
@@ -306,7 +307,13 @@ export const createMultipleStockOut = async ({
     return new ErrorResponse(null, "出货记录批量新建失败");
   }
   const date = dayjs().format("YYMMDD");
-  await redisClient.incr(`stockOutCode:${date}`);
+  if (previousStockOutCodeRedisValue) {
+    await redisClient.incr(`stockOutCode:${date}`);
+  } else {
+    const exat = dayjs().endOf("day");
+
+    await redisClient.set(`stockOutCode:${date}`, 1, { EXAT: exat.unix() });
+  }
   return new SuccessResponse(
     results[0],
     "出货记录批量新建成功, 出货单号: " + serviceCode,

@@ -318,7 +318,13 @@ export const createMultipleStockIn = async ({
     return new ErrorResponse(null, "进货记录批量新建失败");
   }
   const date = dayjs().format("YYMMDD");
-  await redisClient.incr(`stockInCode:${date}`);
+  if (previousStockInCodeRedisValue) {
+    await redisClient.incr(`stockInCode:${date}`);
+  } else {
+    const exat = dayjs().endOf("day");
+
+    await redisClient.set(`stockInCode:${date}`, 1, { EXAT: exat.unix() });
+  }
   return new SuccessResponse(
     results[0],
     "进货记录批量新建成功, 进货单号: " + serviceCode,
