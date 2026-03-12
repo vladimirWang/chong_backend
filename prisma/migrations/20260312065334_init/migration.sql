@@ -21,6 +21,7 @@ CREATE TABLE `StockIn` (
     `totalCost` MEDIUMINT UNSIGNED NOT NULL,
     `status` ENUM('PENDING', 'COMPLETED') NOT NULL DEFAULT 'PENDING',
     `completedAt` DATETIME(3) NULL,
+    `stockInCode` VARCHAR(191) NOT NULL,
 
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -36,10 +37,9 @@ CREATE TABLE `ProductJoinStockIn` (
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
     `deletedAt` DATETIME(3) NULL,
-    `shelfPrice` INTEGER NOT NULL,
     `productCode` VARCHAR(20) NULL,
 
-    UNIQUE INDEX `ProductJoinStockIn_stockInId_productId_cost_key`(`stockInId`, `productId`, `cost`),
+    UNIQUE INDEX `ProductJoinStockIn_stockInId_productId_key`(`stockInId`, `productId`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -58,7 +58,7 @@ CREATE TABLE `Product` (
     `latestCost` INTEGER NULL,
     `stockOutPending` SMALLINT UNSIGNED NOT NULL DEFAULT 0,
     `stockInPending` SMALLINT UNSIGNED NOT NULL DEFAULT 0,
-    `shelfPrice` INTEGER NULL,
+    `salePrice` INTEGER NULL,
 
     UNIQUE INDEX `Product_name_key`(`name`),
     INDEX `Product_brandId_fkey`(`vendorId`),
@@ -83,14 +83,13 @@ CREATE TABLE `User` (
 -- CreateTable
 CREATE TABLE `HistoryCost` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `productJoinStockInId` INTEGER NOT NULL,
+    `stockInId` INTEGER NOT NULL,
     `productId` INTEGER NOT NULL,
     `value` MEDIUMINT UNSIGNED NOT NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
     `deletedAt` DATETIME(3) NULL,
 
-    UNIQUE INDEX `HistoryCost_productJoinStockInId_key`(`productJoinStockInId`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -104,7 +103,12 @@ CREATE TABLE `StockOut` (
     `status` ENUM('PENDING', 'COMPLETED') NOT NULL DEFAULT 'PENDING',
     `completedAt` DATETIME(3) NULL,
     `remark` VARCHAR(191) NULL,
+    `platformId` INTEGER NOT NULL,
+    `platformOrderNo` VARCHAR(191) NOT NULL,
+    `clientId` INTEGER NULL,
+    `stockOutCode` VARCHAR(191) NOT NULL,
 
+    UNIQUE INDEX `StockOut_platformId_platformOrderNo_key`(`platformId`, `platformOrderNo`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -120,7 +124,46 @@ CREATE TABLE `ProductJoinStockOut` (
     `updatedAt` DATETIME(3) NOT NULL,
     `deletedAt` DATETIME(3) NULL,
 
-    UNIQUE INDEX `ProductJoinStockOut_stockOutId_productId_count_key`(`stockOutId`, `productId`, `count`),
+    UNIQUE INDEX `ProductJoinStockOut_stockOutId_productId_key`(`stockOutId`, `productId`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `FileHash` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `hash` VARCHAR(191) NOT NULL,
+    `filePath` VARCHAR(191) NOT NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+    `deletedAt` DATETIME(3) NULL,
+
+    UNIQUE INDEX `FileHash_hash_key`(`hash`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `Platform` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `name` VARCHAR(191) NOT NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+    `deletedAt` DATETIME(3) NULL,
+
+    UNIQUE INDEX `Platform_name_key`(`name`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `Client` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `name` VARCHAR(191) NOT NULL,
+    `tel` VARCHAR(191) NULL,
+    `address` VARCHAR(191) NULL,
+    `remark` VARCHAR(191) NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+    `deletedAt` DATETIME(3) NULL,
+
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -137,10 +180,16 @@ ALTER TABLE `ProductJoinStockIn` ADD CONSTRAINT `ProductJoinStockIn_vendorId_fke
 ALTER TABLE `Product` ADD CONSTRAINT `Product_vendorId_fkey` FOREIGN KEY (`vendorId`) REFERENCES `Vendor`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `HistoryCost` ADD CONSTRAINT `HistoryCost_productJoinStockInId_fkey` FOREIGN KEY (`productJoinStockInId`) REFERENCES `ProductJoinStockIn`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `HistoryCost` ADD CONSTRAINT `HistoryCost_stockInId_fkey` FOREIGN KEY (`stockInId`) REFERENCES `StockIn`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `HistoryCost` ADD CONSTRAINT `HistoryCost_productId_fkey` FOREIGN KEY (`productId`) REFERENCES `Product`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `StockOut` ADD CONSTRAINT `StockOut_platformId_fkey` FOREIGN KEY (`platformId`) REFERENCES `Platform`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `StockOut` ADD CONSTRAINT `StockOut_clientId_fkey` FOREIGN KEY (`clientId`) REFERENCES `Client`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `ProductJoinStockOut` ADD CONSTRAINT `ProductJoinStockOut_productId_fkey` FOREIGN KEY (`productId`) REFERENCES `Product`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
