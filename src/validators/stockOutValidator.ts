@@ -22,6 +22,9 @@ export type CreateMultipleStockOut = z.infer<createMultipleStockOutSchema>;
 export const multipleStockOutBodySchema = z.object({
   remark: z.string().optional(),
   createdAt: z.string().optional(),
+  clientId: z.number().optional(),
+  platformId: z.number().optional(),
+  platformOrderNo: z.string().optional(),
   productJoinStockOut: z.array(
     z.object({
       count: z.number(),

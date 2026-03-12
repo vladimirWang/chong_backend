@@ -367,7 +367,14 @@ export const updateStockOut = async ({
   params: UpdateId;
   body: MultipleStockOutBody;
 }) => {
-  const { productJoinStockOut, remark, createdAt } = body;
+  const {
+    productJoinStockOut,
+    remark,
+    createdAt,
+    clientId,
+    platformId,
+    platformOrderNo,
+  } = body;
   // 查询已有数据
   const existedRecord = await prisma.productJoinStockOut.findMany({
     where: {
@@ -452,6 +459,21 @@ export const updateStockOut = async ({
         remark,
         createdAt,
         totalPrice,
+        client: clientId
+          ? {
+              connect: {
+                id: clientId,
+              },
+            }
+          : undefined,
+        platform: platformId
+          ? {
+              connect: {
+                id: platformId,
+              },
+            }
+          : undefined,
+        platformOrderNo,
       },
     }),
     // 更新出货中间表记录
