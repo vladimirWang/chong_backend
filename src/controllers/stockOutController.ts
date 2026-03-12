@@ -12,6 +12,8 @@ import { CommonStockLineComparable } from "./stockInController";
 import { generateStockOperationSql } from "../sqlMap/stockOperation";
 import dayjs from "dayjs";
 import { StockOperationListRow } from "./stockInController";
+import { generateServiceCode } from "../utils/common";
+import { redisClient } from "../utils/redis";
 
 type StockOutLineComparable = CommonStockLineComparable & {
   stockOutId?: number;
@@ -238,15 +240,20 @@ export const createMultipleStockOut = async ({
   const createdAt = body.createdAt
     ? dayjs(body.createdAt).toDate()
     : new Date();
+  // const stockOutCode = await generateServiceCode("CH");
+  const { serviceCode, previousValue: previousStockOutCodeRedisValue } =
+    await generateServiceCode("CH", "stockOutCode");
   const results = await prisma.$transaction([
     // 创建出货记录
     prisma.stockOut.create({
       data: {
-        client: {
-          connect: {
-            id: clientId,
-          },
-        },
+        // client: {
+        //   connect: {
+        //     id: clientId,
+        //   },
+        // },
+        clientId,
+        stockOutCode: serviceCode,
         createdAt,
         totalPrice,
         remark,
@@ -296,7 +303,12 @@ export const createMultipleStockOut = async ({
   if (!results[0]) {
     return new ErrorResponse(null, "出货记录批量新建失败");
   }
-  return new SuccessResponse(results[0], "出货记录批量新建成功");
+  const date = dayjs().format("YYMMDD");
+  await redisClient.incr(`stockOutCode:${date}`);
+  return new SuccessResponse(
+    results[0],
+    "出货记录批量新建成功, 出货单号: " + serviceCode,
+  );
 };
 
 // 确认出货完成

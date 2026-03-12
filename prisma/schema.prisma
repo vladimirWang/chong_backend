@@ -38,6 +38,7 @@ model StockIn {
   status             StockInStatus        @default(PENDING) // 进货单的状态
   completedAt        DateTime?
   historyCosts       HistoryCost[]
+  stockInCode        String
 }
 
 // 产品进货单中间表
@@ -127,6 +128,9 @@ model StockOut {
   platformOrderNo     String
   clientId            Int?
   client              Client?               @relation(fields: [clientId], references: [id])
+  stockOutCode        String
+
+  @@unique([platformId, platformOrderNo])
 }
 
 model ProductJoinStockOut {

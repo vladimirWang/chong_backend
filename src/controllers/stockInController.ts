@@ -18,6 +18,8 @@ import dayjs from "dayjs";
 import { getPaginationValues } from "../utils/db";
 import { generateStockOperationSql } from "../sqlMap/stockOperation";
 import { sum2 } from "../utils/algo";
+import { redisClient } from "../utils/redis";
+import { generateServiceCode } from "../utils/common";
 
 export type StockOperationListRow = {
   id: number;
@@ -260,6 +262,9 @@ export const createMultipleStockIn = async ({
   const totalCost = sum2(productJoinStockIn, "cost");
 
   const createdAtVal = createdAt ? dayjs(createdAt).toDate() : new Date();
+  // 生成进货单号
+  const { serviceCode, previousValue: previousStockInCodeRedisValue } =
+    await generateServiceCode("JH", "stockInCode");
   const results = await prisma.$transaction([
     // 创建进库记录
     prisma.stockIn.create({
@@ -267,6 +272,7 @@ export const createMultipleStockIn = async ({
         createdAt: createdAtVal,
         remark,
         totalCost,
+        stockInCode: serviceCode,
         productJoinStockIn: {
           create: productJoinStockIn.map((item) => {
             return {
@@ -310,7 +316,12 @@ export const createMultipleStockIn = async ({
   if (!results[0]) {
     return new ErrorResponse(null, "进货记录批量新建失败");
   }
-  return new SuccessResponse(results[0], "进货记录批量新建成功");
+  const date = dayjs().format("YYMMDD");
+  await redisClient.incr(`stockInCode:${date}`);
+  return new SuccessResponse(
+    results[0],
+    "进货记录批量新建成功, 进货单号: " + serviceCode,
+  );
 };
 
 // 根据ID获取进货记录
