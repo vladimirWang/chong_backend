@@ -12,6 +12,7 @@
     "reset:dev": "bunx dotenv -e .env.development -- prisma migrate reset"
   },
   "dependencies": {
+    "@elysiajs/cron": "^1.4.1",
     "@elysiajs/jwt": "^1.4.1",
     "@elysiajs/static": "^1.4.7",
     "@prisma/adapter-mariadb": "^7.4.2",

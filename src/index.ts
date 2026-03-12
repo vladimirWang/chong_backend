@@ -30,6 +30,7 @@ import { existsSync } from "fs";
 import { connectRedis } from "./utils/redis";
 import path from "node:path";
 import { ensureDirExists, UPLOAD_DIR } from "./utils/file";
+import { createDailyUserInsertJob } from "./plugins/dailyUserInsertJob";
 
 
 
@@ -58,6 +59,7 @@ export const app = new Elysia()
     }),
   )
   .use(loggerPlugin)
+  .use(createDailyUserInsertJob())
   .use(
     jwt({
       name: "jwt",
