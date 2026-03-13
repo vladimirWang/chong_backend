@@ -1,6 +1,20 @@
 import { z } from "zod";
 
-export const createMultipleStockOutSchema = z.object({
+// 拆分两种场景的 Schema，通过 union 合并
+const Platform1Schema = z.object({
+  platformId: z.literal(1),
+  platformOrderNo: z.never().optional(),
+});
+
+const OtherPlatformSchema = z.object({
+  platformId: z
+    .number()
+    .refine((id) => id !== 1, "当填写platformOrderNo时，platformId 不能为1"),
+  platformOrderNo: z.string(), // 强制必填
+});
+
+export const platformSchema = z.union([Platform1Schema, OtherPlatformSchema]);
+export const baseCreateMultipleStockOutSchema = z.object({
   productJoinStockOut: z.array(
     z.object({
       price: z.number(),
@@ -11,10 +25,14 @@ export const createMultipleStockOutSchema = z.object({
   ),
   remark: z.string().optional(),
   createdAt: z.string().optional(),
-  platformId: z.number(),
-  platformOrderNo: z.string(),
   clientId: z.number().optional(),
+  // ...OtherPlatformSchema.shape,
 });
+
+export const createMultipleStockOutSchema = z.intersection(
+  baseCreateMultipleStockOutSchema,
+  platformSchema,
+);
 
 export type CreateMultipleStockOut = z.infer<createMultipleStockOutSchema>;
 

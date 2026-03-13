@@ -10,22 +10,28 @@ POST {{base}}/multiple
 Content-Type: application/json
 
 {
+    "platformId": 1,
+    "platformOrderNo": "1234567890",
+    "clientId": 1,
     "remark": "good",
     "productJoinStockOut": [
         {
             "price": 10, 
             "count": 1,
-            "productId": 1
+            "productId": 1,
+            "vendorId": 1
         },
         {
             "price": 20, 
             "count": 2,
-            "productId": 2
+            "productId": 2,
+            "vendorId": 2
         },
         {
             "price": 30, 
             "count": 3,
-            "productId": 3
+            "productId": 3,
+            "vendorId": 3
         }
     ]
 }
