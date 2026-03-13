@@ -125,10 +125,11 @@ model StockOut {
   productJoinStockOut ProductJoinStockOut[]
   platformId          Int
   platform            Platform?             @relation(fields: [platformId], references: [id])
-  platformOrderNo     String
+  platformOrderNo     String?
   clientId            Int?
   client              Client?               @relation(fields: [clientId], references: [id])
   stockOutCode        String
+  docs                Json? // 单据：多个文件地址，存为字符串数组 JSON
 
   @@unique([platformId, platformOrderNo])
 }

@@ -3,7 +3,7 @@ import { z } from "zod";
 // 拆分两种场景的 Schema，通过 union 合并
 const Platform1Schema = z.object({
   platformId: z.literal(1),
-  platformOrderNo: z.never().optional(),
+  // platformOrderNo: z.never().optional(),
 });
 
 const OtherPlatformSchema = z.object({
@@ -26,7 +26,7 @@ export const baseCreateMultipleStockOutSchema = z.object({
   remark: z.string().optional(),
   createdAt: z.string().optional(),
   clientId: z.number().optional(),
-  // ...OtherPlatformSchema.shape,
+  docs: z.array(z.string()).optional(), // 单据：多个文件地址（URL 或路径）
 });
 
 export const createMultipleStockOutSchema = z.intersection(
@@ -51,6 +51,7 @@ export const multipleStockOutBodySchema = z.object({
       vendorId: z.number(),
     }),
   ),
+  docs: z.array(z.string()).optional(), // 单据：多个文件地址
 });
 
 export type MultipleStockOutBody = z.infer<typeof multipleStockOutBodySchema>;

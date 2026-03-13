@@ -16,6 +16,8 @@ import { generateServiceCode } from "../utils/common";
 import { redisClient } from "../utils/redis";
 import { logger } from "../utils/logger";
 
+const { PUBLIC_BASE_URL } = process.env;
+
 type StockOutLineComparable = CommonStockLineComparable & {
   stockOutId?: number;
   price: number;
@@ -139,7 +141,7 @@ export const getStockOuts = async ({ query }: { query: Pagination }) => {
     } else {
       const placeholders = stockOutIds.map(() => "?").join(",");
       const rowsSql =
-        `SELECT s.id, s.remark, s.stockOutCode, s.createdAt, s.updatedAt, s.deletedAt, s.totalPrice, s.status, s.completedAt, pjs.productId, p.name as productName, pjs.price, pjs.count, s.platformOrderNo ` +
+        `SELECT s.id, s.remark, s.docs, s.stockOutCode, s.createdAt, s.updatedAt, s.deletedAt, s.totalPrice, s.status, s.completedAt, pjs.productId, p.name as productName, pjs.price, pjs.count, s.platformOrderNo ` +
         `FROM StockOut s ` +
         `LEFT JOIN ProductJoinStockOut pjs ON pjs.stockOutId = s.id ` +
         `LEFT JOIN Product p ON p.id = pjs.productId ` +
@@ -154,6 +156,7 @@ export const getStockOuts = async ({ query }: { query: Pagination }) => {
         number,
         StockOperationListRow & {
           totalPrice: number;
+          docs: string[];
           products: Array<{
             productId: number;
             productName: string;
@@ -176,6 +179,9 @@ export const getStockOuts = async ({ query }: { query: Pagination }) => {
             totalPrice: row.totalPrice,
             platformOrderNo: row.platformOrderNo,
             stockOutCode: row.stockOutCode,
+            docs: row.docs
+              ? row.docs.map((doc) => `${PUBLIC_BASE_URL}${doc}`)
+              : undefined,
             products: [
               {
                 productId: row.productId,
@@ -235,8 +241,14 @@ export const createMultipleStockOut = async ({
 }: {
   body: CreateMultipleStockOut;
 }) => {
-  const { productJoinStockOut, remark, platformId, platformOrderNo, clientId } =
-    body;
+  const {
+    productJoinStockOut,
+    remark,
+    platformId,
+    platformOrderNo,
+    clientId,
+    docs,
+  } = body;
   const totalPrice = sum2(productJoinStockOut, "price");
   const createdAt = body.createdAt
     ? dayjs(body.createdAt).toDate()
@@ -260,6 +272,7 @@ export const createMultipleStockOut = async ({
         createdAt,
         totalPrice,
         remark,
+        docs,
         platform: {
           connect: {
             id: platformId,
@@ -381,6 +394,7 @@ export const updateStockOut = async ({
     clientId,
     platformId,
     platformOrderNo,
+    docs,
   } = body;
   // 查询已有数据
   const existedRecord = await prisma.productJoinStockOut.findMany({
@@ -472,6 +486,7 @@ export const updateStockOut = async ({
         remark,
         createdAt,
         totalPrice,
+        ...(docs !== undefined && { docs }),
         // clientId 为 null 时须 disconnect，传 undefined 时 Prisma 不会清空该字段
         client: newClientValue,
         platform: platformId
@@ -604,6 +619,11 @@ export const getStockOutDetailById = async ({
       productJoinStockOut: true,
     },
   });
+  if (result) {
+    result.docs = result.docs
+      ? result.docs.map((doc) => `${PUBLIC_BASE_URL}${doc}`)
+      : undefined;
+  }
   return new SuccessResponse(result, "出货单更新成功");
 };
 

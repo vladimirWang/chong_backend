@@ -1,5 +1,5 @@
 @base=http://localhost:3000/nodejs_api/stockout
-@token =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiI0MTMxMTQ0QHFxLmNvbSIsInVzZXJuYW1lIjoibWlrMTEyIiwiYXZhdGFyIjoiMTIzMTIiLCJjcmVhdGVBdCI6IjIwMjUtMDEtMjVUMDU6MjM6NDcuNDU4WiIsInVwZGF0ZUF0IjoiMjAyNS0wMi0wMlQyMzowOTo1Ny4wMjVaIiwiaWF0IjoxNzM4NTUwOTAyLCJleHAiOjE3Mzg2MzczMDJ9.jPCKGmaEOLe-JrITR8-whbYfoS3r-Xf1y8JOVVrCOK4
+@token =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjIsImVtYWlsIjoiZmVybmFuZG93YW5nNTg0QGdtYWlsLmNvbSIsInVzZXJuYW1lIjoiZmVybmFuZG8iLCJleHAiOjE3NzM0NzU5NTEsImlhdCI6MTc3MzM4OTU1MX0.46aPKxAX749-56O_BHY7sPxzo1eopAwqofcyi_70b5k
 
 ### user list
 GET {{base}}?limit=10&page=1
@@ -8,11 +8,11 @@ Authorization: Bearer {{token}}
 ### create stockOut
 POST {{base}}/multiple
 Content-Type: application/json
+Authorization: {{token}}
 
 {
     "platformId": 1,
-    "platformOrderNo": "1234567890",
-    "clientId": 1,
+    "docs": ["123"],
     "remark": "good",
     "productJoinStockOut": [
         {
@@ -22,16 +22,10 @@ Content-Type: application/json
             "vendorId": 1
         },
         {
-            "price": 20, 
-            "count": 2,
-            "productId": 2,
-            "vendorId": 2
-        },
-        {
             "price": 30, 
             "count": 3,
             "productId": 3,
-            "vendorId": 3
+            "vendorId": 2
         }
     ]
 }
