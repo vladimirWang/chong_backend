@@ -14,7 +14,7 @@ export const createProductBodySchema = z.object({
   name: z.string().min(2),
   remark: z.string().max(255).optional(),
   vendorId: z.coerce.number(),
-  salePrice: z.number(),
+  salePrice: z.number().optional(),
   img: z.string().optional(),
 });
 
