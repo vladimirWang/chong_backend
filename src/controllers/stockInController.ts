@@ -13,6 +13,7 @@ import {
   updateIdSchema,
   Pagination,
   DeletedStartEnd,
+  IdArray,
 } from "../validators/commonValidator";
 import dayjs from "dayjs";
 import { getPaginationValues } from "../utils/db";
@@ -593,6 +594,62 @@ export const confirmCompleted = async ({
   return new SuccessResponse(record, "进货单确认成功");
 };
 
+async function getValidsAndPendingCount(
+  ids: number[],
+  isDeleted: boolean = false,
+) {
+  // 只处理「未完成、未删除」的进货单，避免把已经完成的单子反向扣 pending
+  const pendingStockIns = await prisma.stockIn.findMany({
+    where: {
+      id: {
+        in: ids,
+      },
+      status: "PENDING",
+      deletedAt: isDeleted
+        ? {
+            not: null,
+          }
+        : null,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  const validIds = pendingStockIns.map((s) => s.id);
+
+  // return { validIds: [], pendingCount: {} };
+
+  if (validIds.length === 0) {
+    return { validIds: [], pendingCount: {} };
+  }
+
+  // 查出所有关联的中间表记录，用于统计每个商品需要扣减的 stockInPending 数量
+  const joinRows = await prisma.productJoinStockIn.findMany({
+    where: {
+      stockInId: {
+        in: validIds,
+      },
+      deletedAt: isDeleted
+        ? {
+            not: null,
+          }
+        : null,
+    },
+    select: {
+      productId: true,
+      count: true,
+    },
+  });
+
+  const pendingCount: Record<number, number> = {};
+  joinRows.forEach((row) => {
+    pendingCount[row.productId] =
+      (pendingCount[row.productId] ?? 0) + row.count;
+  });
+  return { validIds, pendingCount };
+}
+
 export const batchDeleteStockIn = async ({
   query,
 }: {
@@ -604,45 +661,11 @@ export const batchDeleteStockIn = async ({
     return new SuccessResponse(null, "没有需要删除的进货单");
   }
 
-  // 只处理「未完成、未删除」的进货单，避免把已经完成的单子反向扣 pending
-  const pendingStockIns = await prisma.stockIn.findMany({
-    where: {
-      id: {
-        in: ids,
-      },
-      status: "PENDING",
-      deletedAt: null,
-    },
-    select: {
-      id: true,
-    },
-  });
-
-  const validIds = pendingStockIns.map((s) => s.id);
+  const { validIds, pendingCount } = await getValidsAndPendingCount(ids, false);
 
   if (validIds.length === 0) {
     return new SuccessResponse(null, "没有符合条件的进货单可删除");
   }
-
-  // 查出所有关联的中间表记录，用于统计每个商品需要扣减的 stockInPending 数量
-  const joinRows = await prisma.productJoinStockIn.findMany({
-    where: {
-      stockInId: {
-        in: validIds,
-      },
-      deletedAt: null,
-    },
-    select: {
-      productId: true,
-      count: true,
-    },
-  });
-
-  const pendingDeltaByProduct: Record<number, number> = {};
-  joinRows.forEach((row) => {
-    pendingDeltaByProduct[row.productId] =
-      (pendingDeltaByProduct[row.productId] ?? 0) + row.count;
-  });
 
   const now = new Date();
 
@@ -671,7 +694,7 @@ export const batchDeleteStockIn = async ({
       },
     }),
     // 扣减对应商品的 stockInPending
-    ...Object.entries(pendingDeltaByProduct).map(([productId, totalCount]) =>
+    ...Object.entries(pendingCount).map(([productId, totalCount]) =>
       prisma.product.update({
         where: {
           id: Number(productId),
@@ -686,4 +709,56 @@ export const batchDeleteStockIn = async ({
   ]);
 
   return new SuccessResponse(txResults, "进货单批量删除成功");
+};
+
+export const restoreDeletedStockIn = async ({ body }: { body: IdArray }) => {
+  const ids = body.ids;
+  if (!ids || ids.length === 0) {
+    return new SuccessResponse(null, "没有需要恢复的进货单");
+  }
+
+  const { validIds, pendingCount } = await getValidsAndPendingCount(ids, true);
+  if (validIds.length === 0) {
+    return new SuccessResponse(null, "没有符合条件的进货单可恢复");
+  }
+
+  const txResults = await prisma.$transaction([
+    // 软删除进货单
+    prisma.stockIn.updateMany({
+      where: {
+        id: {
+          in: validIds,
+        },
+      },
+      data: {
+        deletedAt: null,
+      },
+    }),
+    // 软删除中间表记录
+    prisma.productJoinStockIn.updateMany({
+      where: {
+        stockInId: {
+          in: validIds,
+        },
+      },
+      data: {
+        deletedAt: null,
+      },
+    }),
+    // 扣减对应商品的 stockInPending
+    ...Object.entries(pendingCount).map(([productId, totalCount]) =>
+      prisma.product.update({
+        where: {
+          id: Number(productId),
+        },
+        data: {
+          stockInPending: {
+            increment: totalCount,
+          },
+        },
+      }),
+    ),
+  ]);
+
+  return new SuccessResponse(txResults, "进货单恢复成功");
 };

@@ -47,17 +47,24 @@ export const deletedStartEndSchema = z
 export type DeletedStartEnd = z.infer<typeof deletedStartEndSchema>;
 
 export const vendorIdSchema = z.object({
-  vendorId: z.coerce.number()
-})
+  vendorId: z.coerce.number(),
+});
 export type VendorId = z.infer<typeof vendorIdSchema>;
 
 export const productNameStringSchema = z.object({
-  productName: z.string()
-})
+  productName: z.string(),
+});
 
 export type ProductNameString = z.infer<typeof productNameStringSchema>;
 
 export const paramEmailSchema = z.object({
-  email: z.string().email()
-})
+  email: z.string().email(),
+});
 export type ParamEmail = z.infer<typeof paramEmailSchema>;
+
+export const idArray = z.object({
+  ids: z.array(z.coerce.number()),
+  // ids: z.string(),
+});
+
+export type IdArray = z.infer<typeof idArray>;

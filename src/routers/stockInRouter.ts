@@ -20,11 +20,13 @@ import {
   updateStockIn,
   confirmCompleted,
   batchDeleteStockIn,
+  restoreDeletedStockIn,
 } from "../controllers/stockInController";
 import {
   updateIdSchema,
   completedAtSchema,
   paginationSchema,
+  idArray,
 } from "../validators/commonValidator";
 
 export const stockInRouter = new Elysia({
@@ -75,4 +77,7 @@ export const stockInRouter = new Elysia({
   })
   .delete("/batchDelete", batchDeleteStockIn, {
     query: batchDeleteStockInQuerySchema,
+  })
+  .post("/restoreDeleted", restoreDeletedStockIn, {
+    body: idArray,
   });

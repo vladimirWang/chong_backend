@@ -6,6 +6,7 @@ import {
   Pagination,
   UpdateId,
   CompletedAt,
+  IdArray,
 } from "../validators/commonValidator";
 import { getPaginationValues, getWhereValues } from "../utils/db";
 import { CommonStockLineComparable } from "./stockInController";
@@ -627,6 +628,61 @@ export const getStockOutDetailById = async ({
   return new SuccessResponse(result, "出货单更新成功");
 };
 
+async function getValidIdsAndPendingStockOut(
+  ids: number[],
+  isDeleted: boolean = false,
+) {
+  const pendingStockOuts = await prisma.stockOut.findMany({
+    where: {
+      id: {
+        in: ids,
+      },
+      status: "PENDING",
+      deletedAt: isDeleted
+        ? {
+            not: null,
+          }
+        : null,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  const validIds = pendingStockOuts.map((s) => s.id);
+
+  if (validIds.length === 0) {
+    return { validIds: [], pendingCount: {} };
+  }
+
+  // 查出所有关联的中间表记录，用于统计每个商品需要扣减的 stockInPending 数量
+  const joinRows = await prisma.productJoinStockOut.findMany({
+    where: {
+      stockOutId: {
+        in: validIds,
+      },
+      deletedAt: isDeleted
+        ? {
+            not: null,
+          }
+        : null,
+    },
+    select: {
+      productId: true,
+      count: true,
+    },
+  });
+
+  const pendingCount: Record<number, number> = {};
+  joinRows.forEach((row) => {
+    pendingCount[row.productId] =
+      (pendingCount[row.productId] ?? 0) + row.count;
+  });
+
+  return { validIds, pendingCount };
+}
+
+// 批量删除出货单
 export const batchDeleteStockOut = async ({
   query,
 }: {
@@ -639,45 +695,14 @@ export const batchDeleteStockOut = async ({
   }
 
   // 只处理「未完成、未删除」的进货单，避免把已经完成的单子反向扣 pending
-  const pendingStockOuts = await prisma.stockOut.findMany({
-    where: {
-      id: {
-        in: ids,
-      },
-      status: "PENDING",
-      deletedAt: null,
-    },
-    select: {
-      id: true,
-    },
-  });
-
-  const validIds = pendingStockOuts.map((s) => s.id);
+  const { validIds, pendingCount } = await getValidIdsAndPendingStockOut(
+    ids,
+    false,
+  );
 
   if (validIds.length === 0) {
     return new SuccessResponse(null, "没有符合条件的出货单可删除");
   }
-
-  // 查出所有关联的中间表记录，用于统计每个商品需要扣减的 stockInPending 数量
-  const joinRows = await prisma.productJoinStockOut.findMany({
-    where: {
-      stockOutId: {
-        in: validIds,
-      },
-      deletedAt: null,
-    },
-    select: {
-      productId: true,
-      count: true,
-    },
-  });
-
-  const pendingDeltaByProduct: Record<number, number> = {};
-  joinRows.forEach((row) => {
-    pendingDeltaByProduct[row.productId] =
-      (pendingDeltaByProduct[row.productId] ?? 0) + row.count;
-  });
-
   const now = new Date();
 
   const txResults = await prisma.$transaction([
@@ -704,8 +729,8 @@ export const batchDeleteStockOut = async ({
         deletedAt: now,
       },
     }),
-    // 扣减对应商品的 stockInPending
-    ...Object.entries(pendingDeltaByProduct).map(([productId, totalCount]) =>
+    // 扣减对应商品的 stockInPending，并把商品数量加回
+    ...Object.entries(pendingCount).map(([productId, totalCount]) =>
       prisma.product.update({
         where: {
           id: Number(productId),
@@ -714,10 +739,71 @@ export const batchDeleteStockOut = async ({
           stockOutPending: {
             decrement: totalCount,
           },
+          balance: {
+            increment: totalCount,
+          },
         },
       }),
     ),
   ]);
 
   return new SuccessResponse(txResults, "进货单批量删除成功");
+};
+
+// 恢复已删除的出货单
+export const restoreDeletedStockOut = async ({ body }: { body: IdArray }) => {
+  const ids = body.ids;
+  if (!ids || ids.length === 0) {
+    return new SuccessResponse(null, "没有需要恢复的出货单");
+  }
+
+  const { validIds, pendingCount } = await getValidIdsAndPendingStockOut(
+    ids,
+    true,
+  );
+  if (validIds.length === 0) {
+    return new SuccessResponse(null, "没有符合条件的出货单可恢复");
+  }
+  const txResults = await prisma.$transaction([
+    // 恢复出货单
+    prisma.stockOut.updateMany({
+      where: {
+        id: {
+          in: validIds,
+        },
+      },
+      data: {
+        deletedAt: null,
+      },
+    }),
+    // 恢复中间表记录
+    prisma.productJoinStockOut.updateMany({
+      where: {
+        stockOutId: {
+          in: validIds,
+        },
+      },
+      data: {
+        deletedAt: null,
+      },
+    }),
+    // 恢复对应商品的 stockOutPending，并把商品数量减去
+    ...Object.entries(pendingCount).map(([productId, totalCount]) =>
+      prisma.product.update({
+        where: {
+          id: Number(productId),
+        },
+        data: {
+          stockOutPending: {
+            increment: totalCount,
+          },
+          balance: {
+            decrement: totalCount,
+          },
+        },
+      }),
+    ),
+  ]);
+
+  return new SuccessResponse(txResults, "出货单恢复成功");
 };

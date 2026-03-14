@@ -1,5 +1,5 @@
 @base=http://localhost:3000/nodejs_api/stockin
-@token =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImVtYWlsIjoiYWFjaGVuMjAxMkBvdXRsb29rLmNvbSIsInVzZXJuYW1lIjoibWlrZSIsImV4cCI6MTc3MTQ4NDI5NywiaWF0IjoxNzcxMzk3ODk3fQ.JRvm5-qU0dHxa0IzYceaxxhhYqJk_JfDvpLjcd-36_8
+@token =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjIsImVtYWlsIjoiZmVybmFuZG93YW5nNTg0QGdtYWlsLmNvbSIsInVzZXJuYW1lIjoiZmVybmFuZG8iLCJleHAiOjE3NzM1MjY5MzcsImlhdCI6MTc3MzQ0MDUzN30._7IvAfy7-5AFax_GnpWTfZu-8h8cNS4EFF2Y_RInAKc
 
 ### stockIn list
 GET {{base}}
@@ -65,3 +65,12 @@ Authorization: {{token}}
 ### 删除进货单
 DELETE {{base}}/86
 Authorization: {{token}}
+
+### 批量恢复已删除的进货单
+POST {{base}}/restoreDeleted
+Authorization: {{token}}
+Content-Type: application/json
+
+{
+    "ids": [2]
+}
