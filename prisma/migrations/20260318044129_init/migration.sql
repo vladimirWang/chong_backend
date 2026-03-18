@@ -104,9 +104,10 @@ CREATE TABLE `StockOut` (
     `completedAt` DATETIME(3) NULL,
     `remark` VARCHAR(191) NULL,
     `platformId` INTEGER NOT NULL,
-    `platformOrderNo` VARCHAR(191) NOT NULL,
+    `platformOrderNo` VARCHAR(191) NULL,
     `clientId` INTEGER NULL,
     `stockOutCode` VARCHAR(191) NOT NULL,
+    `docs` JSON NULL,
 
     UNIQUE INDEX `StockOut_platformId_platformOrderNo_key`(`platformId`, `platformOrderNo`),
     PRIMARY KEY (`id`)
@@ -129,7 +130,7 @@ CREATE TABLE `ProductJoinStockOut` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `FileHash` (
+CREATE TABLE `FileInfo` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `hash` VARCHAR(191) NOT NULL,
     `filePath` VARCHAR(191) NOT NULL,
@@ -137,7 +138,7 @@ CREATE TABLE `FileHash` (
     `updatedAt` DATETIME(3) NOT NULL,
     `deletedAt` DATETIME(3) NULL,
 
-    UNIQUE INDEX `FileHash_hash_key`(`hash`),
+    UNIQUE INDEX `FileInfo_hash_key`(`hash`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
