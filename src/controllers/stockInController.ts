@@ -45,6 +45,7 @@ export const getStockIns = async ({ query }: { query: StockInQuery }) => {
     vendorName,
     completedStart,
     completedEnd,
+    isDeleted,
   } = query;
   const { skip, take } = getPaginationValues({ limit, page });
 
@@ -81,7 +82,11 @@ export const getStockIns = async ({ query }: { query: StockInQuery }) => {
       params.push(dayjs(deletedEnd).format("YYYY-MM-DD HH:mm:ss"));
     }
   } else {
-    whereClauses.push("s.deletedAt IS NULL");
+    if (isDeleted === "1") {
+      whereClauses.push("s.deletedAt IS NOT NULL");
+    } else {
+      whereClauses.push("s.deletedAt IS NULL");
+    }
   }
 
   if (completedStart) {

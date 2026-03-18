@@ -11,6 +11,7 @@ import {
 import {
   multipleStockOutBodySchema,
   createMultipleStockOutSchema,
+  stockOutQuerySchema,
 } from "../validators/stockOutValidator";
 import {
   paginationSchema,
@@ -23,7 +24,7 @@ import { batchDeleteStockInQuerySchema } from "../validators/stockInValidator";
 
 export const stockOutRouter = new Elysia({ prefix: "/stockout" })
   .get("/", getStockOuts, {
-    query: paginationSchema,
+    query: stockOutQuerySchema,
   })
   .post("/multiple", createMultipleStockOut, {
     body: createMultipleStockOutSchema,

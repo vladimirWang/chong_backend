@@ -87,6 +87,7 @@ export const stockInQuerySchema = z
     vendorName: z.string().optional(),
     completedStart: z.coerce.date().optional(),
     completedEnd: z.coerce.date().optional(),
+    isDeleted: z.literal("1").or(z.literal("0")),
   })
   .merge(paginationSchema);
 

@@ -1,4 +1,8 @@
-import { CreateMultipleStockOut } from "../validators/stockOutValidator";
+import {
+  CreateMultipleStockOut,
+  stockOutQuerySchema,
+  StockOutQuery,
+} from "../validators/stockOutValidator";
 import { sum2, compareArrayMinLoop } from "../utils/algo";
 import { SuccessResponse, ErrorResponse } from "../models/Response";
 import prisma from "../utils/prisma";
@@ -29,7 +33,7 @@ type StockOutInfo = {
   price: number;
 };
 
-export const getStockOuts = async ({ query }: { query: Pagination }) => {
+export const getStockOuts = async ({ query }: { query: StockOutQuery }) => {
   const {
     pagination = true,
     limit = 10,
@@ -40,6 +44,7 @@ export const getStockOuts = async ({ query }: { query: Pagination }) => {
     vendorName,
     completedStart,
     completedEnd,
+    isDeleted,
   } = query;
   const { skip, take } = getPaginationValues({ limit, page });
 
@@ -68,7 +73,11 @@ export const getStockOuts = async ({ query }: { query: Pagination }) => {
       params.push(dayjs(deletedEnd).format("YYYY-MM-DD HH:mm:ss"));
     }
   } else {
-    whereClauses.push("s.deletedAt IS NULL");
+    if (isDeleted === "1") {
+      whereClauses.push("s.deletedAt IS NOT NULL");
+    } else {
+      whereClauses.push("s.deletedAt IS NULL");
+    }
   }
   if (completedStart) {
     whereClauses.push("s.completedAt >= ?");

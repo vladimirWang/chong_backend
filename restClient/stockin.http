@@ -1,8 +1,7 @@
 @base=http://localhost:3000/nodejs_api/stockin
-@token =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjIsImVtYWlsIjoiZmVybmFuZG93YW5nNTg0QGdtYWlsLmNvbSIsInVzZXJuYW1lIjoiZmVybmFuZG8iLCJleHAiOjE3NzM1MjY5MzcsImlhdCI6MTc3MzQ0MDUzN30._7IvAfy7-5AFax_GnpWTfZu-8h8cNS4EFF2Y_RInAKc
-
+@token =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjIsImVtYWlsIjoiZmVybmFuZG93YW5nNTg0QGdtYWlsLmNvbSIsInVzZXJuYW1lIjoiZmVybmFuZG8iLCJleHAiOjE3NzM1NjM3MjYsImlhdCI6MTc3MzQ3NzMyNn0.C_pb4rwMU8vTymVd7c7Em5mH6Y136lmy36xC58PNxFA
 ### stockIn list
-GET {{base}}
+GET {{base}}?isDeleted=1
 Authorization: {{token}}
 
 ### create import

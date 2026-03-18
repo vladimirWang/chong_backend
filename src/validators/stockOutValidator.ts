@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { stockInQuerySchema, StockInQuery } from "./stockInValidator";
 
 // 拆分两种场景的 Schema，通过 union 合并
 const Platform1Schema = z.object({
@@ -55,3 +56,6 @@ export const multipleStockOutBodySchema = z.object({
 });
 
 export type MultipleStockOutBody = z.infer<typeof multipleStockOutBodySchema>;
+
+export const stockOutQuerySchema = stockInQuerySchema;
+export type StockOutQuery = StockInQuery;
