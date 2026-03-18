@@ -31,4 +31,5 @@ export const errorCode = {
   PASSWORD_INCORRECT: 10008, // 密码不正确
   EMAIL_VALIDATION_FAIL: 10009, // 邮箱验证失败
   ACCOUNT_LOCKED: 10010, // 密码错账号锁定
+  NONCE_INVALID: 10011, // nonce无效
 };

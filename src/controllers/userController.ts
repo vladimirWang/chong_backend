@@ -14,14 +14,32 @@ import path from "node:path";
 import fs from "node:fs";
 import { ParamEmail } from "../validators/commonValidator";
 import { emailVerificationTag } from "./utilController";
+import {
+  generateFixedSalt,
+  generateNonce,
+  sha256,
+  isValidNonce,
+} from "../utils/algo";
+
+// 获取一次性nonce
+export const getNonce = async () => {
+  const nonce = generateNonce();
+  return new SuccessResponse(nonce, "nonce生成成功");
+};
 
 export const loginUser = async ({
   body,
   jwt,
+  status,
 }: {
   body: LoginUserBody;
   jwt: any;
 }) => {
+  console.log("0000---status----1111: ", status);
+  const isValid = await isValidNonce(body.nonce);
+  if (!isValid) {
+    return new ErrorResponse(errorCode.NONCE_INVALID, "nonce无效");
+  }
   const redisKey = `captcha:login:${body.captchaId}`;
   const storedCaptcha = await redisClient.get(redisKey);
   if (!storedCaptcha) {
@@ -54,8 +72,10 @@ export const loginUser = async ({
   }
   // 密码错误次数的key
   const loginFailedKey = `login:failed:${body.email}`;
+  const calculatedPassword = sha256(userExisted.password + "_" + body.nonce);
+  console.log("-------calculatedPassword----------: ", calculatedPassword);
   // 如果密码不对就记录次数
-  if (userExisted.password !== body.password) {
+  if (calculatedPassword !== body.password) {
     // 一小时
     const FREEZE_DURATION = 60 * 60;
 
@@ -140,18 +160,26 @@ export const registerUser = async ({ body }: { body: RegisterUserBody }) => {
   // const redisKey = `email:verify:${email}`;
   const verifyCodeRedisKey = `${emailVerificationTag}:${email}`;
   const verifiCodeInRedis = await redisClient.get(verifyCodeRedisKey);
-
+  console.log("verifiCodeInRedis: ", verifiCodeInRedis);
+  console.log("verifyCode: ", verifyCode);
   if (verifiCodeInRedis !== verifyCode) {
-    return new ErrorResponse(errorCode.EMAIL_VALIDATION_FAIL, "邮箱验证失败");
+    return new ErrorResponse(errorCode.EMAIL_VALIDATION_FAIL, "邮箱验证失败1");
   }
 
   await redisClient.del(verifyCodeRedisKey);
 
+  const salt = generateFixedSalt();
+
+  const passwordHash = sha256(password + "_" + salt);
+
+  // return new SuccessResponse(salt, "盐生成成功");
+
   const user = await prisma.user.create({
     data: {
       email,
-      password,
+      password: passwordHash,
       username,
+      salt,
     },
     // select: [
     //     'id',

@@ -40,7 +40,7 @@ export const checkEmailValidation = async ({
   const redisKey = `${emailVerificationTag}:${email}`;
   const storedVerifyCode = await redisClient.get(redisKey);
   if (storedVerifyCode !== verifyCode) {
-    return new ErrorResponse(errorCode.EMAIL_VALIDATION_FAIL, "邮箱验证失败");
+    return new ErrorResponse(errorCode.EMAIL_VALIDATION_FAIL, "邮箱验证失败2");
   }
   // await redisClient.del(redisKey);
 

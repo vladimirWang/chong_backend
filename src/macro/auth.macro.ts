@@ -15,6 +15,7 @@ export const authService = new Elysia({ name: "Auth.Service" }).macro({
         "/nodejs_api/util/sendEmailVerificationCode",
         "/nodejs_api/util/checkEmailValidation",
         "/nodejs_api/user/checkEmailExisted/:email",
+        "/nodejs_api/user/get-nonce",
       ];
       // 对于公共路由，不进行鉴权
       if (publicRoutes.includes(ctx.route) || ctx.route.startsWith("/public")) {

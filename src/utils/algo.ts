@@ -1,6 +1,8 @@
+import { createHash, randomBytes } from "node:crypto";
 import dayjs from "dayjs";
 import { IProduct } from "../models/Product";
 import _ from "lodash";
+import { redisClient } from "./redis";
 
 export const sum = (arr: number[]) => {
   return arr.reduce((a, c) => a + c, 0);
@@ -135,4 +137,38 @@ export function sum2<T extends Record<K, number>, K extends keyof T>(
     const currentValue = c[key] ?? 0;
     return a + currentValue * c.count;
   }, 0);
+}
+
+// 工具函数：生成固定盐（用户注册时用）
+export function generateFixedSalt() {
+  // Bun 下全局 crypto 是 Web Crypto，须用 node:crypto 的 randomBytes
+  return randomBytes(16).toString("hex");
+}
+
+// 工具函数：SHA256哈希（密码+盐）
+export function sha256(str) {
+  return createHash("sha256").update(str, "utf8").digest("hex");
+}
+
+// 工具函数：生成一次性nonce（登录前获取）
+export function generateNonce() {
+  const randomStr = randomBytes(16).toString("hex");
+  const timestamp = Date.now().toString();
+  return `${randomStr}_${timestamp}`;
+}
+
+// 工具函数：校验nonce有效性
+export async function isValidNonce(nonce) {
+  const [randomPart, timestamp] = nonce.split("_");
+  if (!randomPart || !timestamp) return false;
+  // 5分钟有效期
+  if (Date.now() - Number(timestamp) > 300000) return false;
+  const nonceRedisKey = `nonce:${nonce}`;
+  const nonceInRedis = await redisClient.get(nonceRedisKey);
+  if (nonceInRedis) return false;
+  await redisClient.setEx(nonceRedisKey, 300, "1");
+  // if (usedNonces.has(nonce)) return false;
+  // usedNonces.set(nonce, Date.now());
+  // setTimeout(() => usedNonces.delete(nonce), 300000);
+  return true;
 }

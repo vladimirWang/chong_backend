@@ -12,7 +12,8 @@ import {
   logoutUser,
   uploadFile,
   checkFileExistedByHash,
-  checkEmailExisted
+  checkEmailExisted,
+  getNonce,
 } from "../controllers/userController";
 import {
   registerUserBodySchema,
@@ -88,5 +89,6 @@ export const userRouter = new Elysia({ prefix: "/user" })
     }),
   })
   .get("/checkEmailExisted/:email", checkEmailExisted, {
-    params: paramEmailSchema
-  });
+    params: paramEmailSchema,
+  })
+  .get("/get-nonce", getNonce);

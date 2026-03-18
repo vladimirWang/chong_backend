@@ -97,6 +97,7 @@ model User {
   deletedAt DateTime?
   password  String
   avatar    String?
+  salt      String
 }
 
 // 历史成本
