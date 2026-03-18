@@ -196,7 +196,7 @@ export const uploadFile = async ({ body }: { body: UploadFileBody }) => {
 
   await Bun.write(savePath, file);
 
-  await prisma.fileHash.create({
+  await prisma.fileInfo.create({
     data: {
       hash,
       filePath: path.join("/public/uploads", storageFileName),
@@ -217,15 +217,15 @@ export const checkFileExistedByHash = async ({
   params: { hash: string };
 }) => {
   const { hash } = params;
-  const fileHash = await prisma.fileHash.findFirst({
+  const fileInfo = await prisma.fileInfo.findFirst({
     where: {
       hash,
     },
   });
-  if (fileHash) {
+  if (fileInfo) {
     return new SuccessResponse(
       {
-        filePath: fileHash.filePath,
+        filePath: fileInfo.filePath,
         baseUrl: process.env.PUBLIC_BASE_URL,
       },
       "文件已存在1",

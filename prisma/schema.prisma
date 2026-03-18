@@ -151,7 +151,7 @@ model ProductJoinStockOut {
   @@unique([stockOutId, productId])
 }
 
-model FileHash {
+model FileInfo {
   id        Int       @id @default(autoincrement())
   hash      String    @unique
   filePath  String

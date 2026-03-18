@@ -81,6 +81,9 @@ function createPrismaClient() {
             "ProductJoinStockIn",
             "ProductJoinStockOut",
             "HistoryCost",
+            "FileInfo",
+            "Client",
+            "Platform",
           ].includes(model);
           if (hasDeletedAt) {
             // 在查询之前修改 args
