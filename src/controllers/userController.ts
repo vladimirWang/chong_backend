@@ -73,9 +73,13 @@ export const loginUser = async ({
   // 密码错误次数的key
   const loginFailedKey = `login:failed:${body.email}`;
   // const calculatedPassword = sha256(userExisted.password + "_" + body.nonce);
-  const passwordHash = sha256(body.password + "_" + userExisted.salt);
+  // const passwordHash = sha256(body.password + "_" + userExisted.salt);
+  const calculatedPassword = sha256(userExisted.password + "_" + body.nonce);
+  console.log("calculatedPassword: ", calculatedPassword);
+  console.log("body.password: ", body.password);
+  console.log("body.nonce: ", body.nonce);
   // 如果密码不对就记录次数
-  if (passwordHash !== userExisted.password) {
+  if (calculatedPassword !== body.password) {
     // 一小时
     const FREEZE_DURATION = 60 * 60;
 
@@ -277,4 +281,21 @@ export const checkEmailExisted = async ({ params }: { params: ParamEmail }) => {
     },
   });
   return new SuccessResponse(!!user, "邮箱已存在");
+};
+
+export const getUserSaltByEmail = async ({
+  params,
+}: {
+  params: ParamEmail;
+}) => {
+  const { email } = params;
+  // 仅查询salt字段，最小权限原则
+  const user = await prisma.user.findFirst({
+    where: { email },
+    select: { salt: true },
+  });
+  if (!user) {
+    return new ErrorResponse(errorCode.USER_NOT_FOUND, "用户不存在");
+  }
+  return new SuccessResponse(user.salt, "获取salt成功");
 };

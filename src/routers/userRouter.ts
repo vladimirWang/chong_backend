@@ -14,6 +14,7 @@ import {
   checkFileExistedByHash,
   checkEmailExisted,
   getNonce,
+  getUserSaltByEmail,
 } from "../controllers/userController";
 import {
   registerUserBodySchema,
@@ -91,4 +92,7 @@ export const userRouter = new Elysia({ prefix: "/user" })
   .get("/checkEmailExisted/:email", checkEmailExisted, {
     params: paramEmailSchema,
   })
-  .get("/get-nonce", getNonce);
+  .get("/get-nonce", getNonce)
+  .get("/getSalt/:email", getUserSaltByEmail, {
+    params: paramEmailSchema, // 复用已有的邮箱参数校验规则
+  });
