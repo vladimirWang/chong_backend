@@ -72,10 +72,10 @@ export const loginUser = async ({
   }
   // 密码错误次数的key
   const loginFailedKey = `login:failed:${body.email}`;
-  const calculatedPassword = sha256(userExisted.password + "_" + body.nonce);
-  console.log("-------calculatedPassword----------: ", calculatedPassword);
+  // const calculatedPassword = sha256(userExisted.password + "_" + body.nonce);
+  const passwordHash = sha256(body.password + "_" + userExisted.salt);
   // 如果密码不对就记录次数
-  if (calculatedPassword !== body.password) {
+  if (passwordHash !== userExisted.password) {
     // 一小时
     const FREEZE_DURATION = 60 * 60;
 
