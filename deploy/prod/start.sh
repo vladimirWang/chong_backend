@@ -15,8 +15,8 @@ COMPOSE=(docker compose -f deploy/prod/docker-compose.yml --env-file "$ENV_FILE"
 
 export LOG_DIR="${LOG_DIR:-/var/log/galleryrepo}"
 export HOST_LOG_DIR="${HOST_LOG_DIR:-${REPO_ROOT}/logs/galleryrepo}"
-export FRONTEND_DIST_PROD="${FRONTEND_DIST_PROD:-$(cd "$REPO_ROOT/.." && pwd)/frontend-dist-prod}"
-export FRONTEND_DIST_TEST="${FRONTEND_DIST_TEST:-$(cd "$REPO_ROOT/.." && pwd)/frontend-dist-test}"
+export FRONTEND_DIST_PROD="${FRONTEND_DIST_PROD:-/root/gallery/production/frontend-dist}"
+export FRONTEND_DIST_TEST="${FRONTEND_DIST_TEST:-/root/gallery/test/frontend-dist}"
 
 ensure_frontend_dist() {
   local target_dir="$1"

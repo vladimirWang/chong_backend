@@ -89,8 +89,8 @@ services:
       - "443:443"
     volumes:
       - ../../nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - "${FRONTEND_DIST_PROD:-../../../frontend-dist-prod}:/usr/share/nginx/html-prod:ro"
-      - "${FRONTEND_DIST_TEST:-../../../frontend-dist-test}:/usr/share/nginx/html-test:ro"
+      - "${FRONTEND_DIST_PROD:-/root/gallery/production/frontend-dist}:/usr/share/nginx/html-prod:ro"
+      - "${FRONTEND_DIST_TEST:-/root/gallery/test/frontend-dist}:/usr/share/nginx/html-test:ro"
       - "/etc/ssl/cert:/etc/ssl/cert:ro"
     depends_on:
       - bun-backend-prod
