@@ -1,16 +1,8 @@
 import { Elysia, t } from "elysia";
 import { config } from "dotenv";
+import { existsSync } from "fs";
 import { logger } from "./utils/logger";
 import { staticPlugin } from "@elysiajs/static";
-
-// 开发环境使用 .env.development，否则使用 .env
-config({
-  path:
-    process.env.NODE_ENV === "development"
-      ? ".env.development"
-      : ".env.production",
-});
-// 从 routers/index.ts 统一导入所有路由模块
 import { apiRouter } from "./routers";
 import { loggerPlugin } from "./plugins/loggerPlugin";
 import { uploadFile, uploadExcelFile } from "./controllers/uploadController";
@@ -19,20 +11,26 @@ import { ValidationError } from "elysia";
 import { ZodError } from "zod";
 import { authPlugin } from "./macro/auth.macro";
 import { jwt } from "@elysiajs/jwt";
-const { JWT_SECRET } = process.env;
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import { authService } from "./macro/auth.macro";
 import { readFile } from "fs/promises";
 import { join } from "path";
-import { existsSync } from "fs";
 import { connectRedis } from "./utils/redis";
 import path from "node:path";
 import { ensureDirExists, UPLOAD_DIR } from "./utils/file";
 import { createDailyUserInsertJob } from "./plugins/dailyUserInsertJob";
 
-
+// 开发环境使用 .env.development；生产/测试可由 ENV_FILE 指定（与 docker-compose env_file 一致）
+const envFile =
+  process.env.NODE_ENV === "development"
+    ? ".env.development"
+    : process.env.ENV_FILE || ".env.production";
+if (existsSync(envFile)) {
+  config({ path: envFile });
+}
+const { JWT_SECRET } = process.env;
 
 ensureDirExists(UPLOAD_DIR);
 
@@ -167,7 +165,7 @@ export const app = new Elysia()
     throw error;
   })
   .use(apiRouter)
-  .listen(3000);
+  .listen(Number(process.env.PORT) || 3000);
 
 logger.info(
   {

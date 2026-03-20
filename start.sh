@@ -13,7 +13,8 @@
 #   ENV_FILE        - 敏感变量文件路径，默认 .env.production（含 DATABASE_PASSWORD、JWT_SECRET 等）
 #   LOG_DIR         - 容器内日志目录，默认 /var/log/galleryrepo
 #   HOST_LOG_DIR    - 宿主机日志目录（挂载卷），默认 ./logs/galleryrepo
-#   FRONTEND_DIST   - 前端打包产物目录（手动 pnpm run build 后上传 dist 内容），默认 ../frontend-dist（后端目录外，避免 git 操作误删）
+#   FRONTEND_DIST_PROD - 生产前端目录（main 分支），默认 ../frontend-dist-prod
+#   FRONTEND_DIST_TEST - 测试前端目录（test 分支），默认 ../frontend-dist-test
 
 set -e
 
@@ -32,15 +33,24 @@ COMPOSE_ENV="--env-file $ENV_FILE"
 export LOG_DIR="${LOG_DIR:-/var/log/galleryrepo}"
 export HOST_LOG_DIR="${HOST_LOG_DIR:-${SCRIPT_DIR}/logs/galleryrepo}"
 
-# 前端静态文件目录：默认置于后端目录外（../frontend-dist），避免 git reset 等操作误删
-export FRONTEND_DIST="${FRONTEND_DIST:-$(cd "$SCRIPT_DIR/.." && pwd)/frontend-dist}"
-if [ ! -f "${FRONTEND_DIST}/index.html" ]; then
-  echo "⚠️  前端目录无 index.html: $FRONTEND_DIST"
-  echo "   请本地执行 pnpm run build 后，将 dist/ 内容上传到该目录（置于后端目录外，不受 git 影响）"
-  mkdir -p "${FRONTEND_DIST}"
-  echo '<!DOCTYPE html><html><body><h1>前端未部署</h1><p>请本地 pnpm run build，将 dist/ 内容上传到 frontend-dist/ 后重启</p></body></html>' > "${FRONTEND_DIST}/index.html"
-  echo "   已创建占位页，可先启动服务（目录在后端外，git 操作不影响）"
-fi
+# 前端静态文件目录：分别对应生产域名与测试域名
+export FRONTEND_DIST_PROD="${FRONTEND_DIST_PROD:-$(cd "$SCRIPT_DIR/.." && pwd)/frontend-dist-prod}"
+export FRONTEND_DIST_TEST="${FRONTEND_DIST_TEST:-$(cd "$SCRIPT_DIR/.." && pwd)/frontend-dist-test}"
+
+ensure_frontend_dist() {
+  local target_dir="$1"
+  local domain_hint="$2"
+  if [ ! -f "${target_dir}/index.html" ]; then
+    echo "⚠️  前端目录无 index.html: $target_dir"
+    echo "   请本地执行 pnpm run build 后，将 dist/ 内容上传到该目录（${domain_hint}）"
+    mkdir -p "${target_dir}"
+    echo "<!DOCTYPE html><html><body><h1>前端未部署</h1><p>${domain_hint} 对应目录未上传 dist 内容</p></body></html>" > "${target_dir}/index.html"
+    echo "   已创建占位页，可先启动服务（目录在后端外，git 操作不影响）"
+  fi
+}
+
+ensure_frontend_dist "${FRONTEND_DIST_PROD}" "www.hetou.vip"
+ensure_frontend_dist "${FRONTEND_DIST_TEST}" "test.hetou.vip"
 
 case "${1:-}" in
   stop)
@@ -110,7 +120,8 @@ case "${1:-}" in
       echo "   查看退出原因: docker compose ps -a"
     fi
     echo ""
-    echo "前端部署：本地 cd repo_frontend && pnpm run build，将 dist/ 内容上传到 ${FRONTEND_DIST}"
+    echo "前端部署（生产）：本地 cd repo_frontend && pnpm run build，将 dist/ 内容上传到 ${FRONTEND_DIST_PROD}"
+    echo "前端部署（测试）：本地 cd repo_frontend && pnpm run build，将 dist/ 内容上传到 ${FRONTEND_DIST_TEST}"
     echo "查看日志: ./start.sh logs"
     echo "停止服务: ./start.sh stop"
     ;;
