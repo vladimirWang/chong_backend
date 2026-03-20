@@ -21,8 +21,8 @@ concurrency:
 env:
   SERVER_HOST: "139.224.68.145"
   # main/master -> 生产目录；test -> 测试目录（用于 rsync 代码 + 执行 start.sh）
-  DEPLOY_PATH_PROD: "/root/gallery/production/backend"
-  DEPLOY_PATH_TEST: "/root/gallery/test/backend"
+  DEPLOY_PATH_PROD: "/root/gallery/production/chong_backend"
+  DEPLOY_PATH_TEST: "/root/gallery/test/chong_backend"
 
 jobs:
   deploy:
