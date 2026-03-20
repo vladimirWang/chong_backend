@@ -1,0 +1,26 @@
+# 测试目录栈：仅测试后端 :3001，加入生产栈创建的共享网络 gallery_internal
+# 必须先在生产目录启动 deploy/prod（创建网络与 MySQL/Redis）
+# 在仓库根目录执行: ./deploy/test/start.sh
+name: fullstack-test
+
+networks:
+  gallery_net:
+    external: true
+    name: gallery_internal
+
+services:
+  bun-backend-test:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    container_name: fullstack-bun-test
+    restart: unless-stopped
+    networks:
+      - gallery_net
+    ports:
+      - "3001:3001"
+    env_file:
+      - ../../.env.test
+    volumes:
+      - "${HOST_LOG_DIR:-/var/log/galleryrepo}:${LOG_DIR:-/var/log/galleryrepo}"
+      - ../../public:/app/public

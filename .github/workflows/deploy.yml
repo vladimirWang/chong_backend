@@ -8,6 +8,7 @@ on:
     branches:
       - main
       - master
+      - test
   workflow_dispatch: # 允许手动触发
 
 permissions:
@@ -19,7 +20,9 @@ concurrency:
 
 env:
   SERVER_HOST: "139.224.68.145"
-  DEPLOY_PATH: "/root/galleryrepo_server/chong_backend"
+  # main/master -> 生产目录；test -> 测试目录（与 deploy/README.md 一致）
+  DEPLOY_PATH_PROD: "/root/galleryrepo_server/chong_backend_prod"
+  DEPLOY_PATH_TEST: "/root/galleryrepo_server/chong_backend_test"
 
 jobs:
   deploy:
@@ -31,11 +34,19 @@ jobs:
       - name: 安装 sshpass 和 rsync
         run: sudo apt-get update && sudo apt-get install -y sshpass rsync
 
-      - name: 同步代码到服务器
+      - name: 同步代码到服务器并部署
         env:
           SERVER_PASSWORD: ${{ secrets.SERVER_PASSWORD }}
         run: |
           export SSHPASS="$SERVER_PASSWORD"
+          BR="${{ github.ref_name }}"
+          if [ "$BR" = "test" ]; then
+            DEST="${{ env.DEPLOY_PATH_TEST }}"
+            START_CMD="bash ./start.sh test"
+          else
+            DEST="${{ env.DEPLOY_PATH_PROD }}"
+            START_CMD="bash ./start.sh production"
+          fi
           sshpass -e rsync -avz --delete \
             -e "ssh -o StrictHostKeyChecking=no" \
             --exclude 'node_modules' \
@@ -43,12 +54,6 @@ jobs:
             --exclude 'logs' \
             --exclude '.env*' \
             --exclude '*.log' \
-            ./ root@${{ env.SERVER_HOST }}:${{ env.DEPLOY_PATH }}/
-
-      - name: 重启 Docker 服务
-        env:
-          SERVER_PASSWORD: ${{ secrets.SERVER_PASSWORD }}
-        run: |
-          export SSHPASS="$SERVER_PASSWORD"
+            ./ root@${{ env.SERVER_HOST }}:"$DEST"/
           sshpass -e ssh -o StrictHostKeyChecking=no root@${{ env.SERVER_HOST }} \
-            "cd ${{ env.DEPLOY_PATH }} && ./start.sh stop 2>/dev/null; ./start.sh"
+            "cd \"$DEST\" && chmod +x deploy/prod/start.sh deploy/test/start.sh start.sh stop.sh 2>/dev/null; $START_CMD"
