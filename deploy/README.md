@@ -59,6 +59,16 @@
 - 生产目录需：`/.env.production`（含 `DATABASE_PASSWORD` 等，供 compose 与容器使用）
 - 测试目录需：`/.env.test`（`DATABASE_URL` 指向 `gallery_test`、`PORT=3001` 等）
 
+### 常见问题：`./start.sh test` 却提示缺少 `.env.production`
+
+说明脚本**没有进入测试分支**，仍走了生产栈。请依次检查：
+
+1. **服务器上的 `start.sh` 是否已更新**（需含「识别 `test` 再 `exec deploy/test/start.sh`」的逻辑）；重新 `git pull` / rsync 后再试。
+2. **不要用 `sh ./start.sh test`**，请直接 **`./start.sh test`**（shebang 为 bash）。
+3. 若文件是 **Windows 换行（CRLF）**，可能导致参数识别失败；可在服务器执行 `sed -i 's/\r$//' start.sh` 或重新拉取 LF 版本。
+
+正确行为：`./start.sh test` **只会**检查 **`.env.test`**（由 `deploy/test/start.sh` 检查）。
+
 ## 前端静态资源
 
 Nginx 仍从生产栈挂载 `FRONTEND_DIST_PROD`、`FRONTEND_DIST_TEST`（默认相对仓库根的 `frontend-dist-prod` / `frontend-dist-test`，可在启动前 `export` 覆盖）。

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # 在仓库根启动/停止指定栈（分目录部署：prod / test）
+# 请用 bash 执行：./start.sh test（勿用 sh start.sh，避免 [[ ]] 等行为不一致）
 #
 # 用法:
 #   ./start.sh                    # 默认生产栈（等同 ./start.sh production）
@@ -16,13 +17,21 @@ set -e
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$REPO_ROOT"
 
+# 去掉 Windows 换行 \r，避免因 CRLF 导致无法识别 test，误走生产栈去要 .env.production
+FIRST_RAW="${1:-}"
+FIRST="${FIRST_RAW//$'\r'/}"
+FIRST_LC=$(printf '%s' "$FIRST" | tr '[:upper:]' '[:lower:]')
+
 STACK="prod"
-if [[ "${1:-}" == "prod" || "${1:-}" == "production" ]]; then
-  STACK="prod"
-  shift
-elif [[ "${1:-}" == "test" ]]; then
-  STACK="test"
-  shift
-fi
+case "$FIRST_LC" in
+  prod|production)
+    STACK="prod"
+    shift
+    ;;
+  test)
+    STACK="test"
+    shift
+    ;;
+esac
 
 exec bash "deploy/${STACK}/start.sh" "$@"
