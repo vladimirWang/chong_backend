@@ -15,14 +15,14 @@ import {
   checkEmailExisted,
   getNonce,
   getUserSaltByEmail,
-  changePassword,
+  updatePassword,
   resetPassword
 } from "../controllers/userController";
 import {
   registerUserBodySchema,
   loginUserBodySchema,
   uploadFileBodySchema,
-  changePasswordBodySchema
+  updatePasswordBodySchema
 } from "../validators/userValidator";
 import { paramEmailSchema } from "../validators/commonValidator";
 
@@ -99,8 +99,8 @@ export const userRouter = new Elysia({ prefix: "/user" })
   .get("/getSalt/:email", getUserSaltByEmail, {
     params: paramEmailSchema, // 复用已有的邮箱参数校验规则
   })
-  .post("/changePassword", changePassword, {
-    body: changePasswordBodySchema,
+  .post("/updatePassword", updatePassword, {
+    body: updatePasswordBodySchema,
   })
   .post("/resetPassword", resetPassword, {
     body: paramEmailSchema

@@ -30,9 +30,10 @@ export const uploadFileBodySchema = z.object({
 export type UploadFileBody = z.infer<typeof uploadFileBodySchema>;
 
 // 修改密码 Body Schema
-export const changePasswordBodySchema = z.object({
-  currentPwd: z.string().min(6),
-  newPwd: z.string().min(6),
+export const updatePasswordBodySchema = z.object({
+  current: z.string().min(6),
+  password: z.string().min(6),
+  nonce: z.string(),
 });
 
-export type ChangePasswordBody = z.infer<typeof changePasswordBodySchema>;
+export type UpdatePasswordBody = z.infer<typeof updatePasswordBodySchema>;

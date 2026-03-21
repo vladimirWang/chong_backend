@@ -37,7 +37,6 @@ export const loginUser = async ({
   body: LoginUserBody;
   jwt: any;
 }) => {
-  console.log("0000---status----1111: ", status);
   const isValid = await isValidNonce(body.nonce);
   if (!isValid) {
     return new ErrorResponse(errorCode.NONCE_INVALID, "nonce无效");
@@ -77,9 +76,7 @@ export const loginUser = async ({
   // const calculatedPassword = sha256(userExisted.password + "_" + body.nonce);
   // const passwordHash = sha256(body.password + "_" + userExisted.salt);
   const calculatedPassword = sha256(userExisted.password + "_" + body.nonce);
-  console.log("calculatedPassword: ", calculatedPassword);
-  console.log("body.password: ", body.password);
-  console.log("body.nonce: ", body.nonce);
+
   // 如果密码不对就记录次数
   if (calculatedPassword !== body.password) {
     // 一小时
@@ -302,9 +299,33 @@ export const getUserSaltByEmail = async ({
   return new SuccessResponse(user.salt, "获取salt成功");
 };
 
-export const changePassword = async (context: { body: ChangePasswordBody }) => {
-  const { body, user } = context
+// 修改密码
+export const updatePassword = async (context: { body: UpdatePasswordBody }) => {
+  const { body: { current, password, nonce }, user } = context
   console.log("changePassword user: ", user);
+  const userMatched = await prisma.user.findFirst({
+    where: {
+      id: user.userId
+    }
+  })
+  if (!userMatched) {
+    return new ErrorResponse(errorCode.USER_NOT_FOUND, "用户不存在");
+  }
+
+  const calculatedPassword = sha256(userMatched.password + "_" + nonce);
+  console.log("calculatedPassword: ", current, nonce, calculatedPassword);
+  if (calculatedPassword !== current) {
+    return new ErrorResponse(errorCode.PASSWORD_INCORRECT, "密码不正确");
+  }
+  const passwordHash = sha256(password + "_" + userMatched.salt);
+  await prisma.user.update({
+    where: {
+      id: userMatched.id
+    },
+    data: {
+      password: passwordHash
+    }
+  })
   // const { email, current, password } = body;
   // const user = await prisma.user.findFirst({
   //   where: { email },
@@ -350,7 +371,6 @@ export const resetPassword = async({body}: {body: ParamEmail}) => {
       password: passwordHash
     }
   })
-  // console.log("resetPassword user: ", user.userId, passwordHash, initialPassword);
   await sendEmail(userMatched.email, "密码重置成功", `您的初始密码为：${initialPassword}`);
   return new SuccessResponse(null, "密码重置成功");
 }
