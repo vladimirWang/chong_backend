@@ -58,7 +58,14 @@ export const productNameStringSchema = z.object({
 export type ProductNameString = z.infer<typeof productNameStringSchema>;
 
 export const paramEmailSchema = z.object({
-  email: z.string().email(),
+  email: z.string().email().refine(async email => {
+    const existed = await prisma.user.findFirst({
+      where: {
+        email
+      }
+    })
+    return !!existed
+  }, {message: "邮箱未注册"})
 });
 export type ParamEmail = z.infer<typeof paramEmailSchema>;
 

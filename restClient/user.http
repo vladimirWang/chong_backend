@@ -100,3 +100,6 @@ Content-Type: application/json
 POST {{base}}/user/resetPassword
 Authorization: {{token}}
 Content-Type: application/json
+
+### user check email existed
+GET {{base}}/user/checkEmailExisted/a1achen2012@outlook.com
