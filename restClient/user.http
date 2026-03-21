@@ -1,5 +1,5 @@
 @base=http://localhost:3000/nodejs_api
-@token =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImVtYWlsIjoiZmVybmFuZG93YW5nNTg0QGdtYWlsLmNvbSIsInVzZXJuYW1lIjoibWlrZSIsImV4cCI6MTc3Mjc3OTE4MiwiaWF0IjoxNzcyNjkyNzgyfQ._c5y4l9j5c4K7_VNtbLfFLbl4-ELo-erRumSeSSFww4
+@token =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQsImVtYWlsIjoiYWFjaGVuMjAxMkBvdXRsb29rLmNvbSIsInVzZXJuYW1lIjoiamFjayIsImV4cCI6MTc3NDE2NDAxNSwiaWF0IjoxNzc0MDc3NjE1fQ.Hn6a0XUnQct5lrNV1dm5WmzL7WWWuH8z3v8FA3uMqx4
 ### user list
 GET {{base}}/user
 Authorization: Bearer {{token}}
@@ -85,3 +85,18 @@ GET {{base}}/user/captcha?q=123
 ### 根据hash检查文件是否存在
 GET {{base}}/user/checkFileExisted/avatar
 Authorization: {{token}}
+
+### user change password
+POST {{base}}/user/changePassword
+Authorization: {{token}}
+Content-Type: application/json
+
+{
+    "currentPwd": "123456",
+    "newPwd": "1234567890"
+}
+
+### user reset password
+POST {{base}}/user/resetPassword
+Authorization: {{token}}
+Content-Type: application/json

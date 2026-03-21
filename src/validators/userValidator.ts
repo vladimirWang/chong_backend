@@ -28,3 +28,11 @@ export const uploadFileBodySchema = z.object({
 });
 
 export type UploadFileBody = z.infer<typeof uploadFileBodySchema>;
+
+// 修改密码 Body Schema
+export const changePasswordBodySchema = z.object({
+  currentPwd: z.string().min(6),
+  newPwd: z.string().min(6),
+});
+
+export type ChangePasswordBody = z.infer<typeof changePasswordBodySchema>;

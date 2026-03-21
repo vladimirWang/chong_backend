@@ -17,6 +17,7 @@ export const authService = new Elysia({ name: "Auth.Service" }).macro({
         "/nodejs_api/user/checkEmailExisted/:email",
         "/nodejs_api/user/get-nonce",
         "/nodejs_api/user/getSalt/:email",
+        "/nodejs_api/user/resetPassword",
       ];
       // 对于公共路由，不进行鉴权
       if (publicRoutes.includes(ctx.route) || ctx.route.startsWith("/public")) {
@@ -45,7 +46,7 @@ export const authService = new Elysia({ name: "Auth.Service" }).macro({
         // const res = start.
         const user = JSON.parse(userInfoStr!);
         if (!user) return status(401);
-
+        console.log("----user----: ", user);
         return {
           user,
         };

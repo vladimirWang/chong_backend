@@ -3,6 +3,7 @@ import {
   LoginUserBody,
   RegisterUserBody,
   UploadFileBody,
+  ChangePasswordBody
 } from "../validators/userValidator";
 import prisma from "../utils/prisma";
 import svgCaptcha from "svg-captcha";
@@ -20,6 +21,7 @@ import {
   sha256,
   isValidNonce,
 } from "../utils/algo";
+import { sendEmail } from "../utils/mailer";
 
 // 获取一次性nonce
 export const getNonce = async () => {
@@ -299,3 +301,56 @@ export const getUserSaltByEmail = async ({
   }
   return new SuccessResponse(user.salt, "获取salt成功");
 };
+
+export const changePassword = async (context: { body: ChangePasswordBody }) => {
+  const { body, user } = context
+  console.log("changePassword user: ", user);
+  // const { email, current, password } = body;
+  // const user = await prisma.user.findFirst({
+  //   where: { email },
+  // });
+  // if (!user) {
+  //   return new ErrorResponse(errorCode.USER_NOT_FOUND, "用户不存在");
+  // }
+  return new SuccessResponse(null, "密码修改成功");
+};
+
+// generate initial password: include number and letter
+function generateInitialPassword(length: number = 8) {
+  // const numbers = '0123456789';
+  // const letters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  if (length <= 0) {
+    throw new Error("length must be greater than 0");
+  }
+  let result = ''
+  while(result.length < length) {
+    const password = Math.random().toString(36).substring(2, 12)
+    result+=password
+  }
+  return result.slice(0, length)
+}
+
+export const resetPassword = async({body}: {body: ParamEmail}) => {
+  // const { email, password } = body;
+  const userMatched = await prisma.user.findFirst({
+    where: {
+      email: body.email
+    }
+  })
+  // // console.log("resetPassword user: ", userMathced);
+  const initialPassword = generateInitialPassword(6);
+  // // console.log("resetPassword user: ", user, initialPassword);
+
+  const passwordHash = sha256(initialPassword + "_" + userMatched.salt);
+  await prisma.user.update({
+    where: {
+      id: userMatched.id
+    },
+    data: {
+      password: passwordHash
+    }
+  })
+  // console.log("resetPassword user: ", user.userId, passwordHash, initialPassword);
+  await sendEmail(userMatched.email, "密码重置成功", `您的初始密码为：${initialPassword}`);
+  return new SuccessResponse(null, "密码重置成功");
+}
