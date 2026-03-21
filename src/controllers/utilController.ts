@@ -1,4 +1,4 @@
-import { mailer, mailFrom } from "../utils/mailer";
+import { sendEmail } from "../utils/mailer";
 import { SuccessResponse, ErrorResponse, errorCode } from "../models/Response";
 import { redisClient } from "../utils/redis";
 import {
@@ -17,13 +17,12 @@ export const sendEmailVerificationCode = async ({
   await redisClient.del(redisKey);
   const rnd = Math.random();
   const verificationCode = (rnd + "").slice(2, 6);
-  const info = await mailer.sendMail({
-    from: mailFrom,
-    to: body.email,
-    subject: "仓库系统邮箱验证",
-    text: `仓库系统邮箱验证码: ${verificationCode}`, // Plain-text version of the message
-    html: `<b>验证码是： ${verificationCode}</b>`, // HTML version of the message
-  });
+  const info = await sendEmail(
+    body.email,
+    "仓库系统邮箱验证",
+    `仓库系统邮箱验证码: ${verificationCode}`, // Plain-text version of the message
+    `<b>验证码是： ${verificationCode}</b>`, // HTML version of the message
+  );
   await redisClient.setEx(redisKey, 10 * 60, verificationCode);
   console.log("--------邮箱验证码----------: ", verificationCode);
   return new SuccessResponse(null, "邮件发送成功");
@@ -40,9 +39,9 @@ export const checkEmailValidation = async ({
   const redisKey = `${emailVerificationTag}:${email}`;
   const storedVerifyCode = await redisClient.get(redisKey);
   if (storedVerifyCode !== verifyCode) {
-    return new ErrorResponse(errorCode.EMAIL_VALIDATION_FAIL, "邮箱验证失败2");
+    return new SuccessResponse({email, verified: false}, "邮箱验证失败");
   }
   // await redisClient.del(redisKey);
 
-  return new SuccessResponse(null, "邮件验证通过");
+  return new SuccessResponse({email, verified: true}, "邮件验证通过");
 };
