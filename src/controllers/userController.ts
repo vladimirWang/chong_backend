@@ -46,12 +46,12 @@ export const loginUser = async ({
   if (!storedCaptcha) {
     return new ErrorResponse(errorCode.CAPTCHA_EXPIRED, "验证码已过期");
   }
+  // 删除验证码，防止重复使用
+  await redisClient.del(redisKey);
   // redis中存的验证码与用户提交的验证码不一致
   if (storedCaptcha.toLowerCase() !== body.captchaText.toLowerCase()) {
     return new ErrorResponse(errorCode.CAPTCHA_INCORRECT, "验证码不正确");
   }
-  // 如果验证码校验通过就在redis中删除
-  await redisClient.del(redisKey);
   const userExisted = await prisma.user.findFirst({
     where: {
       email: body.email,
