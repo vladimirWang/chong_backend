@@ -8,5 +8,8 @@
     ]
   },
   "debug.allowBreakpointsEverywhere": true,
-  "debug.javascript.usePreview": true
+  "debug.javascript.usePreview": true,
+  "file.associations": {
+    "*.ts": "typescript"
+  }
 }
