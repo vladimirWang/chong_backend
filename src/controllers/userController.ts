@@ -14,7 +14,7 @@ import { logger } from "../utils/logger";
 import { sanitizeFilename, UPLOAD_DIR } from "../utils/file";
 import path from "node:path";
 import fs from "node:fs";
-import { ParamEmailExisted } from "../validators/commonValidator";
+import { ParamEmailExisted, ParamEmailNotExisted } from "../validators/commonValidator";
 import { emailVerificationTag } from "./utilController";
 import {
   generateFixedSalt,
@@ -382,4 +382,12 @@ export const resetPassword = async ({ body }: { body: ParamEmailExisted }) => {
     `您的初始密码为：${initialPassword}`,
   );
   return new SuccessResponse(null, "密码重置成功");
+};
+
+export const checkEmailNotExisted = async ({
+  params,
+}: {
+  params: ParamEmailNotExisted;
+}) => {
+  return new SuccessResponse(true, "邮箱不存在");
 };

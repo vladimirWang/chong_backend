@@ -12,6 +12,7 @@ import {
   getCurrentUser,
   updatePassword,
   resetPassword,
+  checkEmailNotExisted,
 } from "../controllers/userController";
 import {
   registerUserBodySchema,
@@ -69,6 +70,9 @@ export const userRouter = new Elysia({ prefix: "/user" })
   })
   .get("/checkEmailExisted/:email", checkEmailExisted, {
     params: paramEmailExistedSchema,
+  })
+  .get("/checkEmailNotExisted/:email", checkEmailNotExisted, {
+    params: paramEmailNotExistedSchema,
   })
   .get("/get-nonce", getNonce)
   .get("/getSalt/:email", getUserSaltByEmail, {
