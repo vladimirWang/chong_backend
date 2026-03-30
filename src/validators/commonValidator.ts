@@ -1,4 +1,5 @@
 import { z } from "zod";
+import prisma from "../utils/prisma";
 
 export const updateIdSchema = z.object({
   id: z.coerce.number(),
@@ -30,13 +31,10 @@ export const deletedStartEndSchema = z
   .optional()
   .refine(
     (data) => {
-      if (!data.deletedStart || !data.deletedEnd) {
+      if (!data?.deletedStart || !data?.deletedEnd) {
         return false;
       }
-      return (
-        new Date(data.deletedEnd).getTime() <=
-        new Date(data.deletedStart).getTime()
-      );
+      return data.deletedEnd.getTime() <= data.deletedStart.getTime();
     },
     {
       message: "startDate 和 endDate 相差不能超过一年",
@@ -57,15 +55,46 @@ export const productNameStringSchema = z.object({
 
 export type ProductNameString = z.infer<typeof productNameStringSchema>;
 
+export const paramEmailExistedSchema = z.object({
+  email: z
+    .string()
+    .email()
+    .refine(
+      async (email) => {
+        const existed = await prisma.user.findFirst({
+          where: {
+            email,
+          },
+        });
+        console.log("existed: ", existed);
+        return !!existed;
+      },
+      { message: "邮箱未注册" },
+    ),
+});
+export type ParamEmailExisted = z.infer<typeof paramEmailExistedSchema>;
+
+export const paramEmailNotExistedSchema = z.object({
+  email: z
+    .string()
+    .email()
+    .refine(
+      async (email) => {
+        const existed = await prisma.user.findFirst({
+          where: {
+            email,
+          },
+        });
+        console.log("paramEmailNotExistedSchema refine result: ", existed);
+        return !existed;
+      },
+      { message: "邮箱已注册" },
+    ),
+});
+export type ParamEmailNotExisted = z.infer<typeof paramEmailNotExistedSchema>;
+
 export const paramEmailSchema = z.object({
-  email: z.string().email().refine(async email => {
-    const existed = await prisma.user.findFirst({
-      where: {
-        email
-      }
-    })
-    return !!existed
-  }, {message: "邮箱未注册"})
+  email: z.string().email(),
 });
 export type ParamEmail = z.infer<typeof paramEmailSchema>;
 
