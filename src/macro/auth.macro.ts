@@ -15,6 +15,7 @@ export const authService = new Elysia({ name: "Auth.Service" }).macro({
         "/nodejs_api/util/sendEmailVerificationCode",
         "/nodejs_api/util/checkEmailValidation",
         "/nodejs_api/user/checkEmailExisted/:email",
+        "/nodejs_api/user/checkEmailNotExisted/:email",
         "/nodejs_api/user/get-nonce",
         "/nodejs_api/user/getSalt/:email",
         "/nodejs_api/user/resetPassword",
