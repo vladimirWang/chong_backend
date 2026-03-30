@@ -1,14 +1,14 @@
-import {z} from 'zod'
+import { z } from "zod";
 
 export const sendVerificationSchema = z.object({
-      email: z.email()
-    })
+  email: z.email(),
+});
 
-export type SendVerification = z.infer<sendVerificationSchema>
+export type SendVerification = z.infer<typeof sendVerificationSchema>;
 
 export const checkEmailValidationSchema = z.object({
-    email: z.string(),
-    verifyCode: z.string()
-})
+  email: z.string(),
+  verifyCode: z.string(),
+});
 
-export type CheckEmailValidation = z.infer<checkEmailValidationSchema>
+export type CheckEmailValidation = z.infer<typeof checkEmailValidationSchema>;

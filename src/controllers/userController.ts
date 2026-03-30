@@ -14,7 +14,7 @@ import { logger } from "../utils/logger";
 import { sanitizeFilename, UPLOAD_DIR } from "../utils/file";
 import path from "node:path";
 import fs from "node:fs";
-import { ParamEmail } from "../validators/commonValidator";
+import { ParamEmailExisted } from "../validators/commonValidator";
 import { emailVerificationTag } from "./utilController";
 import {
   generateFixedSalt,
@@ -291,31 +291,18 @@ export const checkFileExistedByHash = async ({
   }
 };
 
-export const checkEmailExisted = async ({ params }: { params: ParamEmail }) => {
-  const { email } = params;
-  const user = await prisma.user.findFirst({
-    where: {
-      email,
-    },
-  });
-  return new SuccessResponse(!!user, "邮箱已存在");
+export const checkEmailExisted = async (_ctx: {
+  params: ParamEmailExisted;
+}) => {
+  return new SuccessResponse(true, "邮箱已存在");
 };
 
 export const getUserSaltByEmail = async ({
   params,
 }: {
-  params: ParamEmail;
+  params: ParamEmailExisted;
 }) => {
-  const { email } = params;
-  // 仅查询salt字段，最小权限原则
-  const user = await prisma.user.findFirst({
-    where: { email },
-    select: { salt: true },
-  });
-  if (!user) {
-    return new ErrorResponse(errorCode.USER_NOT_FOUND, "用户不存在");
-  }
-  return new SuccessResponse(user.salt, "获取salt成功");
+  return new SuccessResponse(params.user.salt, "获取salt成功");
 };
 
 // 修改密码
@@ -376,28 +363,21 @@ function generateInitialPassword(length: number = 8) {
   return result.slice(0, length);
 }
 
-export const resetPassword = async ({ body }: { body: ParamEmail }) => {
-  // const { email, password } = body;
-  const userMatched = await prisma.user.findFirst({
-    where: {
-      email: body.email,
-    },
-  });
-  // // console.log("resetPassword user: ", userMathced);
+export const resetPassword = async ({ body }: { body: ParamEmailExisted }) => {
+  const { user: userMatched } = body;
   const initialPassword = generateInitialPassword(6);
-  // // console.log("resetPassword user: ", user, initialPassword);
 
-  const passwordHash = sha256(initialPassword + "_" + userMatched!.salt);
+  const passwordHash = sha256(initialPassword + "_" + userMatched.salt);
   await prisma.user.update({
     where: {
-      id: userMatched!.id,
+      id: userMatched.id,
     },
     data: {
       password: passwordHash,
     },
   });
   await sendEmail(
-    userMatched!.email,
+    userMatched.email,
     "密码重置成功",
     `您的初始密码为：${initialPassword}`,
   );

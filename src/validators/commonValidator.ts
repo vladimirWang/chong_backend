@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z, ZodError } from "zod";
 import prisma from "../utils/prisma";
 
 export const updateIdSchema = z.object({
@@ -55,23 +55,23 @@ export const productNameStringSchema = z.object({
 
 export type ProductNameString = z.infer<typeof productNameStringSchema>;
 
-export const paramEmailExistedSchema = z.object({
-  email: z
-    .string()
-    .email()
-    .refine(
-      async (email) => {
-        const existed = await prisma.user.findFirst({
-          where: {
-            email,
-          },
-        });
-        console.log("existed: ", existed);
-        return !!existed;
-      },
-      { message: "邮箱未注册" },
-    ),
-});
+/** 邮箱已存在校验：一次查询，解析结果含 user，供 handler 复用 */
+export const paramEmailExistedSchema = z
+  .object({
+    email: z.string().email(),
+  })
+  .transform(async (data) => {
+    const user = await prisma.user.findFirst({
+      where: { email: data.email },
+      select: { id: true, email: true, salt: true },
+    });
+    if (!user) {
+      throw new ZodError([
+        { code: "custom", path: ["email"], message: "邮箱未注册" },
+      ]);
+    }
+    return { email: data.email, user };
+  });
 export type ParamEmailExisted = z.infer<typeof paramEmailExistedSchema>;
 
 export const paramEmailNotExistedSchema = z.object({

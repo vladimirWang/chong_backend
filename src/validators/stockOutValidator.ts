@@ -35,7 +35,9 @@ export const createMultipleStockOutSchema = z.intersection(
   platformSchema,
 );
 
-export type CreateMultipleStockOut = z.infer<createMultipleStockOutSchema>;
+export type CreateMultipleStockOut = z.infer<
+  typeof createMultipleStockOutSchema
+>;
 
 // 批量出货 Body Schema（更新用）
 export const multipleStockOutBodySchema = z.object({

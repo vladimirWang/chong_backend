@@ -1,4 +1,4 @@
-import { Elysia } from "elysia";
+import { Context, Elysia } from "elysia";
 import { jwt } from "@elysiajs/jwt";
 const { JWT_SECRET } = process.env;
 import dayjs from "dayjs";
@@ -27,9 +27,7 @@ export const authService = new Elysia({ name: "Auth.Service" }).macro({
         cookie,
         status,
         headers: { authorization },
-        jwt,
         request,
-        url,
         route,
       } = ctx;
       console.log("inside auth macro: authorization: ", authorization);

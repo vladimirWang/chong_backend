@@ -68,7 +68,7 @@ export const userRouter = new Elysia({ prefix: "/user" })
     }),
   })
   .get("/checkEmailExisted/:email", checkEmailExisted, {
-    params: paramEmailSchema,
+    params: paramEmailExistedSchema,
   })
   .get("/get-nonce", getNonce)
   .get("/getSalt/:email", getUserSaltByEmail, {
