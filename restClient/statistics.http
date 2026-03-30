@@ -1,4 +1,6 @@
 @base=http://localhost:3000/nodejs_api/statistics
+@token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQsImVtYWlsIjoiYWFjaGVuMjAxMkBvdXRsb29rLmNvbSIsInVzZXJuYW1lIjoiamFjazEyMyIsImV4cCI6MTc3NDkyNTQzMSwiaWF0IjoxNzc0ODM5MDMxfQ.LVkhPCDG0uKT1Kdhpfr08-R5S-G-G16Ki6qOiwoBjPY
 
 ### 热销商品
-GET {{base}}/hot-sales?startDate=2025-06-01&endDate=2026-01-26
+GET {{base}}/hot-sales?startDate=2025-06-01
+Authorization: {{token}}
