@@ -25,7 +25,7 @@ export const multipleStockInBodySchema = z.object({
       vendorId: z.number(),
     }),
   ),
-  createdAt: z.string().optional(),
+  submittedAt: z.string().optional(),
   remark: z.string().optional(),
 });
 

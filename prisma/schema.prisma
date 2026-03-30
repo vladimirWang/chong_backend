@@ -39,7 +39,7 @@ model StockIn {
   completedAt        DateTime?
   historyCosts       HistoryCost[]
   serviceCode        String
-  submittedAt        DateTime?
+  submittedAt        DateTime
 }
 
 // 产品进货单中间表

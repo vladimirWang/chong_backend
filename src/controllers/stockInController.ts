@@ -29,6 +29,7 @@ export type StockOperationListRow = {
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
+  submittedAt: Date;
   // totalCost: number;
   status: string;
   completedAt: Date | null;
@@ -161,7 +162,7 @@ export const getStockIns = async ({ query }: { query: StockInQuery }) => {
     } else {
       const placeholders = stockInIds.map(() => "?").join(",");
       const rowsSql =
-        `SELECT s.id, s.remark, s.serviceCode, s.createdAt, s.updatedAt, s.deletedAt, s.totalCost, s.status, s.completedAt, pjs.productId, p.name as productName, pjs.cost, pjs.count ` +
+        `SELECT s.id, s.remark, s.serviceCode, s.submittedAt, s.updatedAt, s.deletedAt, s.totalCost, s.status, s.completedAt, pjs.productId, p.name as productName, pjs.cost, pjs.count ` +
         `FROM StockIn s ` +
         `LEFT JOIN ProductJoinStockIn pjs ON pjs.stockInId = s.id ` +
         `LEFT JOIN Product p ON p.id = pjs.productId ` +
@@ -190,6 +191,7 @@ export const getStockIns = async ({ query }: { query: StockInQuery }) => {
             id: row.id,
             remark: row.remark,
             createdAt: row.createdAt,
+            submittedAt: row.submittedAt,
             updatedAt: row.updatedAt,
             deletedAt: row.deletedAt,
             status: row.status,
@@ -235,21 +237,21 @@ export const createMultipleStockIn = async ({
 }: {
   body: MultipleStockInBody;
 }) => {
-  const { productJoinStockIn, createdAt, remark } = body;
+  const { productJoinStockIn, submittedAt, remark } = body;
 
   // const totalCost = productJoinStockIn.reduce((a, c) => {
   //   return a + c.cost * c.count;
   // }, 0);
   const totalCost = sum2(productJoinStockIn, "cost");
 
-  const createdAtVal = createdAt ? dayjs(createdAt).toDate() : new Date();
+  const submittedAtVal = submittedAt ? dayjs(submittedAt).toDate() : new Date();
   // 生成进货单号
   const { serviceCode } = await generateServiceCode("JH", "stockInCode");
   const results = await prisma.$transaction([
     // 创建进库记录
     prisma.stockIn.create({
       data: {
-        createdAt: createdAtVal,
+        submittedAt: submittedAtVal,
         remark,
         totalCost,
         serviceCode,
@@ -349,7 +351,7 @@ export const updateStockIn = async ({
     },
   });
   // return 'hhehh  '+params.id + '; length: ' +body.productJoinStockIn.length
-  const { productJoinStockIn, createdAt, remark } = body;
+  const { productJoinStockIn, submittedAt, remark } = body;
   const totalCost = productJoinStockIn.reduce(
     (a, c) => a + c.cost * c.count,
     0,
@@ -401,7 +403,7 @@ export const updateStockIn = async ({
       },
       data: {
         totalCost,
-        createdAt,
+        submittedAt,
         remark,
       },
     }),
