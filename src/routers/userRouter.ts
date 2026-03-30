@@ -1,10 +1,4 @@
-import { Elysia, t, status } from "elysia";
-import prisma from "../utils/prisma";
-import { jwt } from "@elysiajs/jwt";
-import { errorCode, ErrorResponse, SuccessResponse } from "../models/Response";
-import { z } from "zod";
-import { ZodError } from "zod";
-const { JWT_SECRET } = process.env;
+import { Elysia, t } from "elysia";
 import {
   loginUser,
   registerUser,
@@ -15,16 +9,21 @@ import {
   checkEmailExisted,
   getNonce,
   getUserSaltByEmail,
+  getCurrentUser,
   updatePassword,
-  resetPassword
+  resetPassword,
 } from "../controllers/userController";
 import {
   registerUserBodySchema,
   loginUserBodySchema,
   uploadFileBodySchema,
-  updatePasswordBodySchema
+  updatePasswordBodySchema,
 } from "../validators/userValidator";
-import { paramEmailSchema } from "../validators/commonValidator";
+import {
+  paramEmailExistedSchema,
+  paramEmailNotExistedSchema,
+  paramEmailSchema,
+} from "../validators/commonValidator";
 
 // 使用 group 创建用户相关的路由组
 export const userRouter = new Elysia({ prefix: "/user" })
@@ -38,33 +37,9 @@ export const userRouter = new Elysia({ prefix: "/user" })
   })
   // POST /nodejs_api/users/register - 注册用户（需要 email 和 password）
   .post("/register", registerUser, {
-    body: registerUserBodySchema,
-    beforeHandle: async ({ body }) => {
-      // 检查邮箱是否已存在
-      const userExisted = await prisma.user.findFirst({
-        where: {
-          email: body.email,
-          // password: body.password
-        },
-      });
-
-      if (userExisted) {
-        // 抛出 zod 异常，使用自定义错误消息
-        throw new ZodError([
-          {
-            code: "custom",
-            path: ["email"],
-            message: "邮箱已存在",
-          },
-        ]);
-      }
-    },
+    body: registerUserBodySchema.extend(paramEmailNotExistedSchema.shape),
   })
-  .get("/current", async ({ jwt, status, user }) => {
-    console.log("current user: ", user);
-    // return '123'
-    return user;
-  })
+  .get("/current", getCurrentUser)
   .post("/login", loginUser, {
     body: loginUserBodySchema,
   })
@@ -97,11 +72,11 @@ export const userRouter = new Elysia({ prefix: "/user" })
   })
   .get("/get-nonce", getNonce)
   .get("/getSalt/:email", getUserSaltByEmail, {
-    params: paramEmailSchema, // 复用已有的邮箱参数校验规则
+    params: paramEmailExistedSchema, // 复用已有的邮箱参数校验规则
   })
   .post("/updatePassword", updatePassword, {
     body: updatePasswordBodySchema,
   })
   .post("/resetPassword", resetPassword, {
-    body: paramEmailSchema
-  })
+    body: paramEmailExistedSchema,
+  });

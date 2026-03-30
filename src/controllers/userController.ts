@@ -1,9 +1,10 @@
+import type { Context } from "elysia";
 import { errorCode, ErrorResponse, SuccessResponse } from "../models/Response";
 import {
   LoginUserBody,
   RegisterUserBody,
   UploadFileBody,
-  ChangePasswordBody
+  UpdatePasswordBody,
 } from "../validators/userValidator";
 import prisma from "../utils/prisma";
 import svgCaptcha from "svg-captcha";
@@ -29,13 +30,23 @@ export const getNonce = async () => {
   return new SuccessResponse(nonce, "nonce生成成功");
 };
 
+export type JwtPayload = {
+  userId: number;
+  email: string;
+  username: string | null;
+  exp: string;
+};
+
+/** isSignIn 宏注入 user；与 Context 交叉后 handler 才能接住完整 context，并赋给 InlineHandler */
+export type AuthContext = Context & { user?: JwtPayload };
+
 export const loginUser = async ({
   body,
   jwt,
-  status,
 }: {
   body: LoginUserBody;
-  jwt: any;
+  /** 由主应用挂载 @elysiajs/jwt 后注入；子路由类型推断不含 jwt，故标为可选 */
+  jwt?: any;
 }) => {
   const isValid = await isValidNonce(body.nonce);
   if (!isValid) {
@@ -106,13 +117,13 @@ export const loginUser = async ({
   await redisClient.del(loginFailedKey);
 
   // 生成 token（@elysiajs/jwt 的 sign 只接收一个 payload，exp 需写在 payload 里才会生效）
-  const payload = {
+  const payload: JwtPayload = {
     userId: userExisted.id,
     email: userExisted.email,
     username: userExisted.username,
     exp: "1d",
   };
-  const token = await jwt.sign(payload);
+  const token = await jwt!.sign(payload);
 
   // 把token保存到redis中，有效期1天
   await redisClient.setEx(
@@ -124,7 +135,15 @@ export const loginUser = async ({
   return new SuccessResponse<string>(token, "用户登录成功");
 };
 
-export const generateCaptcha = async ({ set, request }) => {
+/** GET /user/current：需登录；user 由 apiRouter 的 isSignIn 宏注入 */
+export const getCurrentUser = async ({ user }: AuthContext) => {
+  if (!user) {
+    return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
+  }
+  return new SuccessResponse<JwtPayload>(user, "获取用户信息成功");
+};
+
+export const generateCaptcha = async ({ set }: Pick<Context, "set">) => {
   const captcha = svgCaptcha.create({
     size: 4, // 验证码长度
     fontSize: 50,
@@ -148,7 +167,7 @@ export const generateCaptcha = async ({ set, request }) => {
   const base64 = Buffer.from(captcha.data, "utf-8").toString("base64");
   const dataUrl = `data:image/svg+xml;base64,${base64}`;
   set.headers["Content-Type"] = "application/json";
-  return new SuccessResponse<{ image: string }>(
+  return new SuccessResponse<{ image: string; captchaId: string }>(
     { image: dataUrl, captchaId },
     "验证码生成成功",
   );
@@ -202,7 +221,7 @@ export const registerUser = async ({ body }: { body: RegisterUserBody }) => {
   return result;
 };
 
-export const logoutUser = async ({ headers }) => {
+export const logoutUser = async ({ headers }: Context) => {
   const { authorization } = headers;
   await redisClient.del(`token:${authorization}`);
   return new SuccessResponse(null, "用户登出成功");
@@ -300,14 +319,20 @@ export const getUserSaltByEmail = async ({
 };
 
 // 修改密码
-export const updatePassword = async (context: { body: UpdatePasswordBody }) => {
-  const { body: { current, password, nonce }, user } = context
+export const updatePassword = async ({
+  body,
+  user,
+}: AuthContext & { body: UpdatePasswordBody }) => {
+  const { current, password, nonce } = body;
+  if (!user) {
+    return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
+  }
   console.log("changePassword user: ", user);
   const userMatched = await prisma.user.findFirst({
     where: {
-      id: user.userId
-    }
-  })
+      id: user.userId,
+    },
+  });
   if (!userMatched) {
     return new ErrorResponse(errorCode.USER_NOT_FOUND, "用户不存在");
   }
@@ -320,12 +345,12 @@ export const updatePassword = async (context: { body: UpdatePasswordBody }) => {
   const passwordHash = sha256(password + "_" + userMatched.salt);
   await prisma.user.update({
     where: {
-      id: userMatched.id
+      id: userMatched.id,
     },
     data: {
-      password: passwordHash
-    }
-  })
+      password: passwordHash,
+    },
+  });
   // const { email, current, password } = body;
   // const user = await prisma.user.findFirst({
   //   where: { email },
@@ -343,34 +368,38 @@ function generateInitialPassword(length: number = 8) {
   if (length <= 0) {
     throw new Error("length must be greater than 0");
   }
-  let result = ''
-  while(result.length < length) {
-    const password = Math.random().toString(36).substring(2, 12)
-    result+=password
+  let result = "";
+  while (result.length < length) {
+    const password = Math.random().toString(36).substring(2, 12);
+    result += password;
   }
-  return result.slice(0, length)
+  return result.slice(0, length);
 }
 
-export const resetPassword = async({body}: {body: ParamEmail}) => {
+export const resetPassword = async ({ body }: { body: ParamEmail }) => {
   // const { email, password } = body;
   const userMatched = await prisma.user.findFirst({
     where: {
-      email: body.email
-    }
-  })
+      email: body.email,
+    },
+  });
   // // console.log("resetPassword user: ", userMathced);
   const initialPassword = generateInitialPassword(6);
   // // console.log("resetPassword user: ", user, initialPassword);
 
-  const passwordHash = sha256(initialPassword + "_" + userMatched.salt);
+  const passwordHash = sha256(initialPassword + "_" + userMatched!.salt);
   await prisma.user.update({
     where: {
-      id: userMatched.id
+      id: userMatched!.id,
     },
     data: {
-      password: passwordHash
-    }
-  })
-  await sendEmail(userMatched.email, "密码重置成功", `您的初始密码为：${initialPassword}`);
+      password: passwordHash,
+    },
+  });
+  await sendEmail(
+    userMatched!.email,
+    "密码重置成功",
+    `您的初始密码为：${initialPassword}`,
+  );
   return new SuccessResponse(null, "密码重置成功");
-}
+};
