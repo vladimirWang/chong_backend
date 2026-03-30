@@ -1,11 +1,11 @@
 import prisma from "../utils/prisma";
-import { SuccessResponse } from "../models/Response";
+import { errorCode, ErrorResponse, SuccessResponse } from "../models/Response";
 import { Prisma } from "@prisma/client";
 import {
   SingleStockInBody,
   MultipleStockInBody,
-  StockInParams,
   BatchDeleteStockInQuery,
+  StockInQuery,
 } from "../validators/stockInValidator";
 import { compareArrayMinLoop, luhn } from "../utils/algo";
 import _ from "lodash";
@@ -14,12 +14,13 @@ import {
   Pagination,
   DeletedStartEnd,
   IdArray,
+  UpdateId,
+  CompletedAt,
 } from "../validators/commonValidator";
 import dayjs from "dayjs";
 import { getPaginationValues } from "../utils/db";
 import { generateStockOperationSql } from "../sqlMap/stockOperation";
 import { sum2 } from "../utils/algo";
-import { redisClient } from "../utils/redis";
 import { generateServiceCode } from "../utils/common";
 
 export type StockOperationListRow = {
@@ -31,6 +32,7 @@ export type StockOperationListRow = {
   // totalCost: number;
   status: string;
   completedAt: Date | null;
+  serviceCode: string;
 };
 
 // 获取进货记录列表
@@ -126,6 +128,7 @@ export const getStockIns = async ({ query }: { query: StockInQuery }) => {
     productName: string;
     cost: number;
     count: number;
+    serviceCode: string;
   };
 
   let list: Array<
@@ -158,7 +161,7 @@ export const getStockIns = async ({ query }: { query: StockInQuery }) => {
     } else {
       const placeholders = stockInIds.map(() => "?").join(",");
       const rowsSql =
-        `SELECT s.id, s.remark, s.stockInCode, s.createdAt, s.updatedAt, s.deletedAt, s.totalCost, s.status, s.completedAt, pjs.productId, p.name as productName, pjs.cost, pjs.count ` +
+        `SELECT s.id, s.remark, s.serviceCode, s.createdAt, s.updatedAt, s.deletedAt, s.totalCost, s.status, s.completedAt, pjs.productId, p.name as productName, pjs.cost, pjs.count ` +
         `FROM StockIn s ` +
         `LEFT JOIN ProductJoinStockIn pjs ON pjs.stockInId = s.id ` +
         `LEFT JOIN Product p ON p.id = pjs.productId ` +
@@ -192,7 +195,7 @@ export const getStockIns = async ({ query }: { query: StockInQuery }) => {
             status: row.status,
             completedAt: row.completedAt,
             totalCost: row.totalCost,
-            stockInCode: row.stockInCode,
+            serviceCode: row.serviceCode,
             products: [
               {
                 productId: row.productId,
@@ -226,35 +229,6 @@ export const getStockIns = async ({ query }: { query: StockInQuery }) => {
   );
 };
 
-// 单个产品进货
-export const createSingleStockIn = async ({
-  body,
-}: {
-  body: SingleStockInBody;
-}) => {
-  const { productId, cost, count, remark } = body;
-  const res = await prisma.stockIn.create({
-    data: {
-      remark,
-      totalCost: cost * count,
-      productJoinStockIn: {
-        create: [
-          {
-            cost,
-            count,
-            product: {
-              connect: {
-                id: productId,
-              },
-            },
-          },
-        ],
-      },
-    },
-  });
-  return new SuccessResponse(null, "进货记录新建成功");
-};
-
 // 批量产品进货
 export const createMultipleStockIn = async ({
   body,
@@ -270,8 +244,7 @@ export const createMultipleStockIn = async ({
 
   const createdAtVal = createdAt ? dayjs(createdAt).toDate() : new Date();
   // 生成进货单号
-  const { serviceCode, previousValue: previousStockInCodeRedisValue } =
-    await generateServiceCode("JH", "stockInCode");
+  const { serviceCode } = await generateServiceCode("JH", "stockInCode");
   const results = await prisma.$transaction([
     // 创建进库记录
     prisma.stockIn.create({
@@ -279,7 +252,7 @@ export const createMultipleStockIn = async ({
         createdAt: createdAtVal,
         remark,
         totalCost,
-        stockInCode: serviceCode,
+        serviceCode,
         productJoinStockIn: {
           create: productJoinStockIn.map((item) => {
             return {
@@ -321,15 +294,10 @@ export const createMultipleStockIn = async ({
     }),
   ]);
   if (!results[0]) {
-    return new ErrorResponse(null, "进货记录批量新建失败");
-  }
-  const date = dayjs().format("YYMMDD");
-  if (previousStockInCodeRedisValue) {
-    await redisClient.incr(`stockInCode:${date}`);
-  } else {
-    const exat = dayjs().endOf("day");
-
-    await redisClient.set(`stockInCode:${date}`, 1, { EXAT: exat.unix() });
+    return new ErrorResponse(
+      errorCode.FAILED_TO_CREATE_STOCK_IN,
+      "进货记录批量新建失败",
+    );
   }
   return new SuccessResponse(
     results[0],
@@ -338,7 +306,7 @@ export const createMultipleStockIn = async ({
 };
 
 // 根据ID获取进货记录
-export const getStockInById = async ({ params }: { params: StockInParams }) => {
+export const getStockInById = async ({ params }: { params: UpdateId }) => {
   const { id } = params;
   const result = await prisma.stockIn.findUnique({
     where: {
@@ -363,6 +331,7 @@ export interface CommonStockLineComparable {
 type StockInLineComparable = CommonStockLineComparable & {
   stockInId?: number;
   cost: number;
+  vendorId: number;
 };
 
 // 更新进货单
@@ -370,7 +339,7 @@ export const updateStockIn = async ({
   params,
   body,
 }: {
-  params: updateIdSchema;
+  params: UpdateId;
   body: MultipleStockInBody;
 }) => {
   // 查询已有数据
@@ -391,7 +360,9 @@ export const updateStockIn = async ({
     productId: r.productId,
     cost: r.cost,
     count: r.count,
+    vendorId: r.vendorId,
   }));
+  console.log("----existedComparable----: ", existedComparable);
   const newComparable: StockInLineComparable[] = productJoinStockIn.map(
     (r) => ({
       productId: r.productId,
@@ -660,7 +631,7 @@ export const batchDeleteStockIn = async ({
 }: {
   query: BatchDeleteStockInQuery;
 }) => {
-  const ids = query.id;
+  const ids = query.id as number[];
 
   if (!ids || ids.length === 0) {
     return new SuccessResponse(null, "没有需要删除的进货单");

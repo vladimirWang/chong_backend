@@ -14,7 +14,7 @@ import {
 } from "../validators/stockInValidator";
 import {
   getStockIns,
-  createSingleStockIn,
+  // createSingleStockIn,
   createMultipleStockIn,
   getStockInById,
   updateStockIn,
@@ -35,28 +35,28 @@ export const stockInRouter = new Elysia({
   .get("/", getStockIns, {
     query: stockInQuerySchema,
   })
-  // POST /nodejs_api/stockin/single - 单个产品进货
-  .post("/single", createSingleStockIn, {
-    body: singleStockInBodySchema,
-    beforeHandle: async ({ body }) => {
-      const productExisted = await prisma.product.findUnique({
-        where: {
-          id: body.productId,
-        },
-      });
+  // // POST /nodejs_api/stockin/single - 单个产品进货
+  // .post("/single", createSingleStockIn, {
+  //   body: singleStockInBodySchema,
+  //   beforeHandle: async ({ body }) => {
+  //     const productExisted = await prisma.product.findUnique({
+  //       where: {
+  //         id: body.productId,
+  //       },
+  //     });
 
-      if (!productExisted) {
-        // 抛出 zod 异常，使用自定义错误消息
-        throw new ZodError([
-          {
-            code: "custom",
-            path: ["productId"],
-            message: "产品不存在",
-          },
-        ]);
-      }
-    },
-  })
+  //     if (!productExisted) {
+  //       // 抛出 zod 异常，使用自定义错误消息
+  //       throw new ZodError([
+  //         {
+  //           code: "custom",
+  //           path: ["productId"],
+  //           message: "产品不存在",
+  //         },
+  //       ]);
+  //     }
+  //   },
+  // })
   // POST /nodejs_api/stockin/multiple - 批量产品进货
   .post("/multiple", createMultipleStockIn, {
     body: multipleStockInBodySchema,

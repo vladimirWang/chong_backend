@@ -38,7 +38,7 @@ model StockIn {
   status             StockInStatus        @default(PENDING) // 进货单的状态
   completedAt        DateTime?
   historyCosts       HistoryCost[]
-  stockInCode        String
+  serviceCode        String
 }
 
 // 产品进货单中间表

@@ -12,15 +12,19 @@ export async function generateServiceCode(
 ): Promise<IGenerateServiceResult> {
   const date = dayjs().format("YYMMDD");
   const redisKey = `${redisKeyPrefix}:${date}`;
-  const redisValue = await redisClient.get(redisKey);
   const head = `${serviceCode}${date}`;
-  const currentValue = parseInt(redisValue);
-  if (redisValue && isNaN(currentValue)) {
-    return Promise.reject(new Error("生成服务单号失败"));
+
+  // 使用 Redis 原子自增保证并发下不重复
+  // - `INCR` 在 Redis 内是原子操作，同一时刻多个请求不会拿到相同的序号
+  // - 当天首次生成时给 key 设置过期时间到当天结束，避免长期堆积
+  const currentValue = await redisClient.incr(redisKey);
+  if (currentValue === 1) {
+    const exat = dayjs().endOf("day");
+    await redisClient.expireAt(redisKey, exat.unix());
   }
+
   return {
-    serviceCode:
-      head + ((redisValue ? currentValue : 0) + 1).toString().padStart(3, "0"),
-    previousValue: redisValue ? currentValue : null,
+    serviceCode: head + currentValue.toString().padStart(3, "0"),
+    previousValue: currentValue > 1 ? currentValue - 1 : null,
   };
 }
