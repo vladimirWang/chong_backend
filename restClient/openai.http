@@ -1,0 +1,28 @@
+@base=http://localhost:3000/nodejs_api
+
+### 登录拿 token（如接口开启鉴权则需要）
+# @name loginAPI
+POST {{base}}/user/login
+Content-Type: application/json
+
+{
+  "password": "123456",
+  "email": "fernandowang584@gmail.com"
+}
+
+### 提取 token（按现有约定：data 字段直接是 token）
+# @token = {{loginAPI.response.body.&.data}}
+@token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImVtYWlsIjoiZmVybmFuZG93YW5nNTg0QGdtYWlsLmNvbSIsInVzZXJuYW1lIjoibWlrZSIsImV4cCI6MTc3NDk5MjU3OSwiaWF0IjoxNzc0OTA2MTc5fQ.rBAOvohgGDdsAZ10TMBAZxCTlgR9R68FjGucrS0yPUU
+
+### DeepSeek Chat SSE（OpenAI 兼容）
+POST {{base}}/openai/deepseek/chat/stream
+Content-Type: application/json
+Authorization: {{token}}
+
+{
+  "prompt": "ping",
+  "model": "deepseek-chat",
+  "temperature": 0,
+  "maxTokens": 128
+}
+
