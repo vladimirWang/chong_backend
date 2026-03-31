@@ -84,6 +84,7 @@ model Product {
   stockOutPending     Int                   @default(0) @db.UnsignedSmallInt // 出货中产品
   stockInPending      Int                   @default(0) @db.UnsignedSmallInt // 进货中产品
   salePrice           Int? // 销售价
+  desc                String?               @db.LongText
 
   @@index([vendorId], map: "Product_brandId_fkey")
 }

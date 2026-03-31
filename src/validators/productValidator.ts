@@ -5,6 +5,7 @@ export const productQuerySchema = z.object({
   limit: z.coerce.number().optional(),
   page: z.coerce.number().optional(),
   productName: z.string().optional(),
+  pagination: z.xor([z.literal("1"), z.literal("0")]).optional(),
 });
 
 export type ProductQuery = z.infer<typeof productQuerySchema>;
@@ -16,6 +17,7 @@ export const createProductBodySchema = z.object({
   vendorId: z.coerce.number(),
   salePrice: z.number().optional(),
   img: z.string().optional(),
+  desc: z.string().optional(),
 });
 
 export type CreateProductBody = z.infer<typeof createProductBodySchema>;
@@ -27,6 +29,7 @@ export const updateProductBodySchema = z.object({
   name: z.string().optional(),
   remark: z.string().optional(),
   img: z.string().optional(),
+  desc: z.string().optional(),
 });
 
 export type UpdateProductBody = z.infer<typeof updateProductBodySchema>;

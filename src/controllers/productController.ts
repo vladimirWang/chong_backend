@@ -8,7 +8,7 @@ import {
   ProductByVendorParams,
 } from "../validators/productValidator";
 import {
-  UpdateI,
+  UpdateId,
   VendorId,
   ProductNameString,
 } from "../validators/commonValidator";
@@ -18,11 +18,14 @@ const { PUBLIC_BASE_URL } = process.env;
 
 // 获取产品列表
 export const getProducts = async ({ query }: { query: ProductQuery }) => {
-  const { limit, page, productName, pagination = true } = query;
+  const { limit, page, productName, pagination = "1" } = query;
   let skip = undefined,
     take = undefined;
   if (pagination) {
-    const paginationInfo = getPaginationValues({ limit, page });
+    const paginationInfo = getPaginationValues({
+      limit: limit ?? 20,
+      page: page ?? 1,
+    });
     skip = paginationInfo.skip;
     take = paginationInfo.take;
   }
@@ -59,6 +62,7 @@ export const getProductById = async ({ params }: { params: UpdateId }) => {
       latestCost: true,
       latestPrice: true,
       salePrice: true,
+      desc: true,
     },
   });
   if (res && res.img) {
@@ -69,9 +73,9 @@ export const getProductById = async ({ params }: { params: UpdateId }) => {
 
 // 创建产品
 export const createProduct = async ({ body }: { body: CreateProductBody }) => {
-  const { name, remark, vendorId, salePrice, img } = body;
+  const { name, remark, vendorId, salePrice, img, desc } = body;
   logger.info(
-    `createProduct request body: name: ${name}, remark: ${remark}, vendorId: ${vendorId}, salePrice: ${salePrice}, img: ${img}`,
+    `createProduct request body: name: ${name}, remark: ${remark}, vendorId: ${vendorId}, desc: ${desc}, img: ${img}`,
   );
   const product = await prisma.product.create({
     data: {
@@ -84,6 +88,7 @@ export const createProduct = async ({ body }: { body: CreateProductBody }) => {
         },
       },
       salePrice,
+      desc,
     },
   });
   return new SuccessResponse(product, "产品创建成功");
@@ -97,7 +102,7 @@ export const updateProduct = async ({
   params: UpdateId;
   body: UpdateProductBody;
 }) => {
-  const { salePrice, name, remark, img } = body;
+  const { salePrice, name, remark, img, desc } = body;
   logger.info(
     `updateProduct request body: id: ${params.id}, name: ${name}, remark: ${remark}, salePrice: ${salePrice}, img: ${img}`,
   );
@@ -107,7 +112,7 @@ export const updateProduct = async ({
     },
     data: {
       name,
-      // cost,
+      desc,
       remark,
       img,
       salePrice,
@@ -171,7 +176,7 @@ export const checkProductNameExistedInVendor = async ({
   params: VendorId;
   query: ProductNameString;
 }) => {
-  const existed = await prisma.Product.findFirst({
+  const existed = await prisma.product.findFirst({
     where: {
       vendorId: params.vendorId,
       name: query.productName,
