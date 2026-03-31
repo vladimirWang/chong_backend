@@ -9,7 +9,6 @@ import { uploadFile, uploadExcelFile } from "./controllers/uploadController";
 import { ErrorResponse, errorCode } from "./models/Response";
 import { ValidationError } from "elysia";
 import { ZodError } from "zod";
-import { authPlugin } from "./macro/auth.macro";
 import { jwt } from "@elysiajs/jwt";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
@@ -21,6 +20,7 @@ import { connectRedis } from "./utils/redis";
 import path from "node:path";
 import { ensureDirExists, UPLOAD_DIR } from "./utils/file";
 import { createDailyUserInsertJob } from "./plugins/dailyUserInsertJob";
+import { initServiceCode } from "./init";
 
 // 开发环境使用 .env.development；生产/测试可由 ENV_FILE 指定（与 docker-compose env_file 一致）
 const envFile =
@@ -39,6 +39,8 @@ ensureDirExists(UPLOAD_DIR);
 // dayjs.extend(timezone);
 
 await connectRedis();
+await initServiceCode();
+
 // dayjs.tz.setDefault("Asia/Shanghai");
 // dayjs.tz.setDefault("Europe/London");
 

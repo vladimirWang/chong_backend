@@ -5,13 +5,20 @@ interface IGenerateServiceResult {
   serviceCode: string;
   previousValue: number | null;
 }
+
+export const generateRedisKey = (prefix: string) => {
+  const d = dayjs().format("YYMMDD");
+  return {
+    date: d,
+    redisKey: `${prefix}:${d}`,
+  };
+};
 // 生成进货单号
 export async function generateServiceCode(
   serviceCode: string, // 服务单号前缀
   redisKeyPrefix: string, // 缓存key
 ): Promise<IGenerateServiceResult> {
-  const date = dayjs().format("YYMMDD");
-  const redisKey = `${redisKeyPrefix}:${date}`;
+  const { date, redisKey } = generateRedisKey(redisKeyPrefix);
   const head = `${serviceCode}${date}`;
 
   // 使用 Redis 原子自增保证并发下不重复

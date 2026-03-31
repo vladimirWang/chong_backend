@@ -36,6 +36,15 @@ export type StockOperationListRow = {
   serviceCode: string;
 };
 
+export type StockInListRow = StockOperationListRow & {
+  totalCost: number;
+  productId: number;
+  productName: string;
+  cost: number;
+  count: number;
+  serviceCode: string;
+};
+
 // 获取进货记录列表
 export const getStockIns = async ({ query }: { query: StockInQuery }) => {
   const {
@@ -122,15 +131,6 @@ export const getStockIns = async ({ query }: { query: StockInQuery }) => {
     ...params,
   );
   const total = Number(countRows[0]?.cnt ?? 0);
-
-  type StockInListRow = StockOperationListRow & {
-    totalCost: number;
-    productId: number;
-    productName: string;
-    cost: number;
-    count: number;
-    serviceCode: string;
-  };
 
   let list: Array<
     StockOperationListRow & {
