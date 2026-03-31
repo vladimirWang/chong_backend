@@ -12,6 +12,7 @@ import { statisticsOutRouter } from "./statisticsOutRouter";
 import { utilRouter } from "./utilRouter";
 import { platformRouter } from "./platformRouter";
 import { clientRouter } from "./clientRouter";
+import { openaiRouter } from "./openaiRouter";
 
 const testRouter = new Elysia().get("/ok", () => "Hello Elysia test123");
 
@@ -21,6 +22,8 @@ export const apiRouter = new Elysia().group(
     isSignIn: true,
     afterHandle({ response, set }) {
       // set.headers['content-type123123'] = 'text/html; charset=utf8123123'
+      // SSE / 文件下载等场景会直接返回原生 Response，不能再 JSON.stringify
+      if (response instanceof Response) return response;
       return JSON.stringify(response);
     },
   },
@@ -34,6 +37,7 @@ export const apiRouter = new Elysia().group(
       .use(statisticsOutRouter)
       .use(utilRouter)
       .use(platformRouter)
-      .use(clientRouter);
+      .use(clientRouter)
+      .use(openaiRouter);
   },
 );

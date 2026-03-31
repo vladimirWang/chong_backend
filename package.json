@@ -24,6 +24,7 @@
     "elysia": "^1.4.27",
     "lodash": "^4.17.21",
     "nodemailer": "^7.0.13",
+    "openai": "^6.33.0",
     "pino": "^9.5.0",
     "svg-captcha": "^1.4.0",
     "uuid": "^13.0.0",
