@@ -1,8 +1,16 @@
 import { Elysia, t } from "elysia";
-import {z} from 'zod'
+import { z } from "zod";
 import { uploadFile, uploadExcelFile } from "../controllers/uploadController";
-import { sendEmailVerificationCode, checkEmailValidation } from "../controllers/utilController";
-import {sendVerificationSchema, checkEmailValidationSchema} from '../validators/utilValidator'
+import {
+  sendEmailVerificationCode,
+  checkEmailValidation,
+  generateCaptcha,
+  getNonce,
+} from "../controllers/utilController";
+import {
+  sendVerificationSchema,
+  checkEmailValidationSchema,
+} from "../validators/utilValidator";
 
 export const utilRouter = new Elysia({
   prefix: "/util",
@@ -17,10 +25,13 @@ export const utilRouter = new Elysia({
       body: t.Object({
         file: t.File({ format: "image/*" }),
       }),
-    }
+    },
   )
   .post("/sendEmailVerificationCode", sendEmailVerificationCode, {
-    body: sendVerificationSchema
-  }).post("/checkEmailValidation", checkEmailValidation, {
-    body: checkEmailValidationSchema
+    body: sendVerificationSchema,
   })
+  .post("/checkEmailValidation", checkEmailValidation, {
+    body: checkEmailValidationSchema,
+  })
+  .get("/captcha", generateCaptcha)
+  .get("/get-nonce", getNonce);

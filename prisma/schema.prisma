@@ -185,3 +185,15 @@ model Client {
   deletedAt DateTime?
   stockOuts StockOut[]
 }
+
+// 用户
+model AdminUser {
+  id        Int       @id @default(autoincrement())
+  email     String    @unique
+  username  String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+  password  String
+  salt      String
+}

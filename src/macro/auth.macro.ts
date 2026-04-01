@@ -7,18 +7,25 @@ import { redisClient } from "../utils/redis";
 export const authService = new Elysia({ name: "Auth.Service" }).macro({
   isSignIn: {
     async resolve(ctx: Context) {
-      const apiUrl = "/nodejs_api";
+      const prefix = "/nodejs_api";
       const publicRoutes = [
-        "/nodejs_api/user/login",
-        "/nodejs_api/user/register",
-        "/nodejs_api/user/captcha",
-        "/nodejs_api/util/sendEmailVerificationCode",
-        "/nodejs_api/util/checkEmailValidation",
-        "/nodejs_api/user/checkEmailExisted/:email",
-        "/nodejs_api/user/checkEmailNotExisted/:email",
-        "/nodejs_api/user/get-nonce",
-        "/nodejs_api/user/getSalt/:email",
-        "/nodejs_api/user/resetPassword",
+        `${prefix}/user/login`,
+        `${prefix}/user/register`,
+        `${prefix}/admin/user/login`,
+        `${prefix}/admin/user/register`,
+        `${prefix}/admin/user/checkEmailExisted/:email`,
+        `${prefix}/admin/user/checkEmailNotExisted/:email`,
+        `${prefix}/admin/user/getSalt/:email`,
+        `${prefix}/util/sendEmailVerificationCode`,
+        `${prefix}/util/checkEmailValidation`,
+        `${prefix}/user/checkEmailExisted/:email`,
+        `${prefix}/user/checkEmailNotExisted/:email`,
+        `${prefix}/user/getSalt/:email`,
+        `${prefix}/user/resetPassword`,
+
+        // util
+        `${prefix}/util/captcha`,
+        `${prefix}/util/get-nonce`,
       ];
       // 对于公共路由，不进行鉴权
       if (publicRoutes.includes(ctx.route) || ctx.route.startsWith("/public")) {

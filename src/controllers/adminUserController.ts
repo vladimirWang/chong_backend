@@ -7,13 +7,17 @@ import {
   UpdatePasswordBody,
 } from "../validators/userValidator";
 import prisma from "../utils/prisma";
+import svgCaptcha from "svg-captcha";
 import { redisClient } from "../utils/redis";
 import { v4 as uuidv4 } from "uuid";
 import { logger } from "../utils/logger";
 import { sanitizeFilename, UPLOAD_DIR } from "../utils/file";
 import path from "node:path";
 import fs from "node:fs";
-import {} from "../validators/commonValidator";
+import {
+  ParamEmailExisted,
+  ParamEmailNotExisted,
+} from "../validators/adminCommonValidator";
 import { emailVerificationTag } from "./utilController";
 import {
   generateFixedSalt,
@@ -22,21 +26,8 @@ import {
   isValidNonce,
 } from "../utils/algo";
 import { sendEmail } from "../utils/mailer";
+import { AuthContext, JwtPayload } from "./userController";
 import { generateInitialPassword } from "../utils/common";
-import {
-  ParamEmailExisted,
-  ParamEmailNotExisted,
-} from "../validators/merchantCommonValidator";
-
-export type JwtPayload = {
-  userId: number;
-  email: string;
-  username: string | null;
-  exp: string;
-};
-
-/** isSignIn 宏注入 user；与 Context 交叉后 handler 才能接住完整 context，并赋给 InlineHandler */
-export type AuthContext = Context & { user?: JwtPayload };
 
 export const loginUser = async ({
   body,
@@ -61,7 +52,7 @@ export const loginUser = async ({
   if (storedCaptcha.toLowerCase() !== body.captchaText.toLowerCase()) {
     return new ErrorResponse(errorCode.CAPTCHA_INCORRECT, "验证码不正确");
   }
-  const userExisted = await prisma.user.findFirst({
+  const userExisted = await prisma.adminUser.findFirst({
     where: {
       email: body.email,
     },
@@ -74,14 +65,14 @@ export const loginUser = async ({
   }
 
   // 当前账号是否冻结
-  const ACCOUNT_LOCKED_KEY = "login:locked:" + body.email;
+  const ACCOUNT_LOCKED_KEY = "adminLogin:locked:" + body.email;
   const lockStatus = await redisClient.get(ACCOUNT_LOCKED_KEY);
   if (lockStatus) {
     const result = new ErrorResponse(errorCode.ACCOUNT_LOCKED, "账号已锁定");
     return result;
   }
   // 密码错误次数的key
-  const loginFailedKey = `login:failed:${body.email}`;
+  const loginFailedKey = `adminLogin:failed:${body.email}`;
   // const calculatedPassword = sha256(userExisted.password + "_" + body.nonce);
   // const passwordHash = sha256(body.password + "_" + userExisted.salt);
   const calculatedPassword = sha256(userExisted.password + "_" + body.nonce);
@@ -129,21 +120,12 @@ export const loginUser = async ({
     60 * 60 * 24,
     JSON.stringify(payload),
   );
+  console.log("---------------token------------------: ", token);
 
   return new SuccessResponse<string>(token, "用户登录成功");
 };
 
-/** GET /user/current：需登录；user 由 apiRouter 的 isSignIn 宏注入 */
-export const getCurrentUser = async ({ user }: AuthContext) => {
-  if (!user) {
-    return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
-  }
-  return new SuccessResponse<JwtPayload>(user, "获取用户信息成功");
-};
-
 export const registerUser = async ({ body }: { body: RegisterUserBody }) => {
-  // console.log("register body: ", prisma.user)
-  //
   const { username, email, password, verifyCode } = body;
 
   // redis查邮箱和验证码是否匹配
@@ -153,7 +135,7 @@ export const registerUser = async ({ body }: { body: RegisterUserBody }) => {
   console.log("verifiCodeInRedis: ", verifiCodeInRedis);
   console.log("verifyCode: ", verifyCode);
   if (verifiCodeInRedis !== verifyCode) {
-    return new ErrorResponse(errorCode.EMAIL_VALIDATION_FAIL, "邮箱验证失败1");
+    return new ErrorResponse(errorCode.EMAIL_VALIDATION_FAIL, "邮箱验证失败");
   }
 
   await redisClient.del(verifyCodeRedisKey);
@@ -164,7 +146,7 @@ export const registerUser = async ({ body }: { body: RegisterUserBody }) => {
 
   // return new SuccessResponse(salt, "盐生成成功");
 
-  const user = await prisma.user.create({
+  const user = await prisma.adminUser.create({
     data: {
       email,
       password: passwordHash,
@@ -187,12 +169,6 @@ export const registerUser = async ({ body }: { body: RegisterUserBody }) => {
   };
   const result = new SuccessResponse(userCreated, "用户创建成功");
   return result;
-};
-
-export const logoutUser = async ({ headers }: Context) => {
-  const { authorization } = headers;
-  await redisClient.del(`token:${authorization}`);
-  return new SuccessResponse(null, "用户登出成功");
 };
 
 export const uploadFile = async ({ body }: { body: UploadFileBody }) => {
@@ -246,7 +222,7 @@ export const checkFileExistedByHash = async ({
         filePath: fileInfo.filePath,
         baseUrl: process.env.PUBLIC_BASE_URL,
       },
-      "文件已存在1",
+      "文件已存在",
     );
   } else {
     return new SuccessResponse(
@@ -254,7 +230,7 @@ export const checkFileExistedByHash = async ({
         filePath: "",
         baseUrl: process.env.PUBLIC_BASE_URL,
       },
-      "文件不存在2",
+      "文件不存在",
     );
   }
 };
@@ -283,7 +259,7 @@ export const updatePassword = async ({
     return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
   }
   console.log("changePassword user: ", user);
-  const userMatched = await prisma.user.findFirst({
+  const userMatched = await prisma.adminUser.findFirst({
     where: {
       id: user.userId,
     },
@@ -298,7 +274,7 @@ export const updatePassword = async ({
     return new ErrorResponse(errorCode.PASSWORD_INCORRECT, "密码不正确");
   }
   const passwordHash = sha256(password + "_" + userMatched.salt);
-  await prisma.user.update({
+  await prisma.adminUser.update({
     where: {
       id: userMatched.id,
     },
@@ -306,13 +282,6 @@ export const updatePassword = async ({
       password: passwordHash,
     },
   });
-  // const { email, current, password } = body;
-  // const user = await prisma.user.findFirst({
-  //   where: { email },
-  // });
-  // if (!user) {
-  //   return new ErrorResponse(errorCode.USER_NOT_FOUND, "用户不存在");
-  // }
   return new SuccessResponse(null, "密码修改成功");
 };
 
@@ -321,7 +290,7 @@ export const resetPassword = async ({ body }: { body: ParamEmailExisted }) => {
   const initialPassword = generateInitialPassword(6);
 
   const passwordHash = sha256(initialPassword + "_" + userMatched.salt);
-  await prisma.user.update({
+  await prisma.adminUser.update({
     where: {
       id: userMatched.id,
     },

@@ -2,30 +2,27 @@ import { Elysia, t } from "elysia";
 import {
   loginUser,
   registerUser,
-  logoutUser,
   uploadFile,
   checkFileExistedByHash,
   checkEmailExisted,
   getUserSaltByEmail,
-  getCurrentUser,
   updatePassword,
   resetPassword,
   checkEmailNotExisted,
-} from "../controllers/userController";
+} from "../controllers/adminUserController";
 import {
   registerUserBodySchema,
   loginUserBodySchema,
   uploadFileBodySchema,
   updatePasswordBodySchema,
 } from "../validators/userValidator";
-import { paramEmailSchema } from "../validators/commonValidator";
 import {
   paramEmailExistedSchema,
   paramEmailNotExistedSchema,
-} from "../validators/merchantCommonValidator";
+} from "../validators/adminCommonValidator";
 
 // 使用 group 创建用户相关的路由组
-export const userRouter = new Elysia({ prefix: "/user" })
+export const adminUserRouter = new Elysia({ prefix: "/admin/user" })
   .get("/", () => {
     return {
       users: [
@@ -38,7 +35,6 @@ export const userRouter = new Elysia({ prefix: "/user" })
   .post("/register", registerUser, {
     body: registerUserBodySchema.extend(paramEmailNotExistedSchema.shape),
   })
-  .get("/current", getCurrentUser)
   .post("/login", loginUser, {
     body: loginUserBodySchema,
   })
@@ -55,7 +51,6 @@ export const userRouter = new Elysia({ prefix: "/user" })
       message: `用户 ${params.id} 删除成功`,
     };
   })
-  .post("/logout", logoutUser)
   .post("/upload", uploadFile, {
     type: "multipart/form-data",
     body: uploadFileBodySchema,
