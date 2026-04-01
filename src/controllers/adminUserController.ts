@@ -111,6 +111,7 @@ export const loginUser = async ({
     email: userExisted.email,
     username: userExisted.username,
     exp: "1d",
+    role: "admin",
   };
   const token = await jwt!.sign(payload);
 
@@ -303,7 +304,7 @@ export const resetPassword = async ({ body }: { body: ParamEmailExisted }) => {
     "密码重置成功",
     `您的初始密码为：${initialPassword}`,
   );
-  return new SuccessResponse(null, "密码重置成功");
+  return new SuccessResponse(null, "密码重置成功，初始密码已发送至您的邮箱");
 };
 
 export const checkEmailNotExisted = async ({

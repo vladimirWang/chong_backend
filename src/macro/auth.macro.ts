@@ -11,21 +11,23 @@ export const authService = new Elysia({ name: "Auth.Service" }).macro({
       const publicRoutes = [
         `${prefix}/user/login`,
         `${prefix}/user/register`,
-        `${prefix}/admin/user/login`,
-        `${prefix}/admin/user/register`,
-        `${prefix}/admin/user/checkEmailExisted/:email`,
-        `${prefix}/admin/user/checkEmailNotExisted/:email`,
-        `${prefix}/admin/user/getSalt/:email`,
-        `${prefix}/util/sendEmailVerificationCode`,
-        `${prefix}/util/checkEmailValidation`,
         `${prefix}/user/checkEmailExisted/:email`,
         `${prefix}/user/checkEmailNotExisted/:email`,
         `${prefix}/user/getSalt/:email`,
         `${prefix}/user/resetPassword`,
 
+        `${prefix}/admin/user/login`,
+        `${prefix}/admin/user/register`,
+        `${prefix}/admin/user/checkEmailExisted/:email`,
+        `${prefix}/admin/user/checkEmailNotExisted/:email`,
+        `${prefix}/admin/user/getSalt/:email`,
+        `${prefix}/admin/user/resetPassword`,
+
         // util
         `${prefix}/util/captcha`,
         `${prefix}/util/get-nonce`,
+        `${prefix}/util/sendEmailVerificationCode`,
+        `${prefix}/util/checkEmailValidation`,
       ];
       // 对于公共路由，不进行鉴权
       if (publicRoutes.includes(ctx.route) || ctx.route.startsWith("/public")) {

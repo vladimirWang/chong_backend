@@ -33,6 +33,7 @@ export type JwtPayload = {
   email: string;
   username: string | null;
   exp: string;
+  role: "merchant" | "admin";
 };
 
 /** isSignIn 宏注入 user；与 Context 交叉后 handler 才能接住完整 context，并赋给 InlineHandler */
@@ -120,6 +121,7 @@ export const loginUser = async ({
     email: userExisted.email,
     username: userExisted.username,
     exp: "1d",
+    role: "merchant",
   };
   const token = await jwt!.sign(payload);
 
@@ -334,7 +336,7 @@ export const resetPassword = async ({ body }: { body: ParamEmailExisted }) => {
     "密码重置成功",
     `您的初始密码为：${initialPassword}`,
   );
-  return new SuccessResponse(null, "密码重置成功");
+  return new SuccessResponse(null, "密码重置成功，初始密码已发送至您的邮箱");
 };
 
 export const checkEmailNotExisted = async ({
