@@ -35,3 +35,18 @@ export async function generateServiceCode(
     previousValue: currentValue > 1 ? currentValue - 1 : null,
   };
 }
+
+// generate initial password: include number and letter
+export function generateInitialPassword(length: number = 8) {
+  // const numbers = '0123456789';
+  // const letters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  if (length <= 0) {
+    throw new Error("length must be greater than 0");
+  }
+  let result = "";
+  while (result.length < length) {
+    const password = Math.random().toString(36).substring(2, 12);
+    result += password;
+  }
+  return result.slice(0, length);
+}

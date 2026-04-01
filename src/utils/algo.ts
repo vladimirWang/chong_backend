@@ -146,7 +146,7 @@ export function generateFixedSalt() {
 }
 
 // 工具函数：SHA256哈希（密码+盐）
-export function sha256(str) {
+export function sha256(str: string) {
   return createHash("sha256").update(str, "utf8").digest("hex");
 }
 
@@ -158,7 +158,7 @@ export function generateNonce() {
 }
 
 // 工具函数：校验nonce有效性
-export async function isValidNonce(nonce) {
+export async function isValidNonce(nonce: string) {
   const [randomPart, timestamp] = nonce.split("_");
   if (!randomPart || !timestamp) return false;
   // 5分钟有效期
