@@ -36,7 +36,7 @@ export const checkInviteCode = async ({
   const application = await prisma.applicant.findUnique({
     where: {
       email,
-      inviteCode,
+      // inviteCode,
     },
   });
   if (!application) {
