@@ -329,6 +329,7 @@ export interface CommonStockLineComparable {
   id?: number;
   productId: number;
   count: number;
+  vendorId: number;
 }
 type StockInLineComparable = CommonStockLineComparable & {
   stockInId?: number;

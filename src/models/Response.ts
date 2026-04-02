@@ -36,4 +36,6 @@ export const errorCode = {
   INVITE_CODE_INVALID: 10013, // 邀请码不正确
   APPLICATION_NOT_FOUND: 10014, // 未收到系统权限申请
   SYSTEM_ERROR: 10015, // 系统错误
+  FAILED_TO_CREATE_STOCK_OUT: 10016, // 创建出货单失败
+  PRODUCT_NOT_FOUND: 10017, // 产品不存在
 };

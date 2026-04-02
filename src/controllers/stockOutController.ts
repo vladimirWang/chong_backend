@@ -2,9 +2,10 @@ import {
   CreateMultipleStockOut,
   stockOutQuerySchema,
   StockOutQuery,
+  MultipleStockOutBody,
 } from "../validators/stockOutValidator";
 import { sum2, compareArrayMinLoop } from "../utils/algo";
-import { SuccessResponse, ErrorResponse } from "../models/Response";
+import { SuccessResponse, ErrorResponse, errorCode } from "../models/Response";
 import prisma from "../utils/prisma";
 import {
   Pagination,
@@ -19,6 +20,7 @@ import dayjs from "dayjs";
 import { StockOperationListRow } from "./stockInController";
 import { generateServiceCode } from "../utils/common";
 import { logger } from "../utils/logger";
+import { BatchDeleteStockInQuery } from "../validators/stockInValidator";
 
 const { PUBLIC_BASE_URL } = process.env;
 
@@ -118,15 +120,23 @@ export const getStockOuts = async ({ query }: { query: StockOutQuery }) => {
     productName: string;
     cost: number;
     count: number;
+    platformOrderNo?: string;
+    platformId: number;
+    serviceCode: string;
+    docs?: string[];
+    price: number;
   };
 
   let list: Array<
     StockOperationListRow & {
-      totalCost: number;
+      totalPrice: number;
+      platformOrderNo?: string;
+      platformId: number;
+      submittedAt: Date;
       products: Array<{
         productId: number;
         productName: string;
-        cost: number;
+        price: number;
         count: number;
       }>;
     }
@@ -165,7 +175,10 @@ export const getStockOuts = async ({ query }: { query: StockOutQuery }) => {
         number,
         StockOperationListRow & {
           totalPrice: number;
-          docs: string[];
+          docs?: string[];
+          platformOrderNo?: string;
+          platformId: number;
+          submittedAt: Date;
           products: Array<{
             productId: number;
             productName: string;
@@ -180,6 +193,7 @@ export const getStockOuts = async ({ query }: { query: StockOutQuery }) => {
           byId.set(row.id, {
             id: row.id,
             remark: row.remark,
+            submittedAt: row.submittedAt,
             createdAt: row.createdAt,
             updatedAt: row.updatedAt,
             deletedAt: row.deletedAt,
@@ -187,7 +201,8 @@ export const getStockOuts = async ({ query }: { query: StockOutQuery }) => {
             completedAt: row.completedAt,
             totalPrice: row.totalPrice,
             platformOrderNo: row.platformOrderNo,
-            stockOutCode: row.stockOutCode,
+            platformId: row.platformId,
+            serviceCode: row.serviceCode,
             docs: row.docs
               ? row.docs.map((doc) => `${PUBLIC_BASE_URL}${doc}`)
               : undefined,
@@ -257,10 +272,11 @@ export const createMultipleStockOut = async ({
     platformOrderNo,
     clientId,
     docs,
+    submittedAt,
   } = body;
   const totalPrice = sum2(productJoinStockOut, "price");
-  const createdAt = body.createdAt
-    ? dayjs(body.createdAt).toDate()
+  const createdAt = body.submittedAt
+    ? dayjs(body.submittedAt).toDate()
     : new Date();
   // const stockOutCode = await generateServiceCode("CH");
   const { serviceCode } = await generateServiceCode("CH", "stockOutCode");
@@ -276,7 +292,7 @@ export const createMultipleStockOut = async ({
             }
           : undefined,
         // clientId,
-        stockOutCode: serviceCode,
+        serviceCode: serviceCode,
         createdAt,
         totalPrice,
         remark,
@@ -325,7 +341,10 @@ export const createMultipleStockOut = async ({
     }),
   ]);
   if (!results[0]) {
-    return new ErrorResponse(null, "出货记录批量新建失败");
+    return new ErrorResponse(
+      errorCode.FAILED_TO_CREATE_STOCK_OUT,
+      "出货记录批量新建失败",
+    );
   }
   return new SuccessResponse(
     results[0],
@@ -336,7 +355,6 @@ export const createMultipleStockOut = async ({
 // 确认出货完成
 export const confirmStockOutCompleted = async ({
   params,
-  status,
   body,
 }: {
   params: UpdateId;
@@ -348,7 +366,10 @@ export const confirmStockOutCompleted = async ({
     },
   });
   if (!productsInRecord || productsInRecord.length === 0) {
-    return new ErrorResponse(null, "出货单对应产品不存在");
+    return new ErrorResponse(
+      errorCode.PRODUCT_NOT_FOUND,
+      "出货单对应产品不存在",
+    );
   }
 
   const { completedAt = new Date() } = body || {};
@@ -442,6 +463,7 @@ export const updateStockOut = async ({
       productId: r.productId,
       price: r.price,
       count: r.count,
+      vendorId: r.vendorId,
     }),
   );
   const newComparable: StockOutLineComparable[] = productJoinStockOut.map(
@@ -620,9 +642,12 @@ export const getStockOutDetailById = async ({
     },
   });
   if (result) {
-    result.docs = result.docs
-      ? result.docs.map((doc) => `${PUBLIC_BASE_URL}${doc}`)
-      : undefined;
+    const baseUrl = PUBLIC_BASE_URL ?? "";
+    if (Array.isArray(result.docs)) {
+      result.docs = result.docs
+        .filter((d): d is string => typeof d === "string")
+        .map((doc) => `${baseUrl}${doc}`);
+    }
   }
   return new SuccessResponse(result, "出货单更新成功");
 };
@@ -687,7 +712,7 @@ export const batchDeleteStockOut = async ({
 }: {
   query: BatchDeleteStockInQuery;
 }) => {
-  const ids = query.id;
+  const ids = query.id as number[];
 
   if (!ids || ids.length === 0) {
     return new SuccessResponse(null, "没有需要删除的进货单");

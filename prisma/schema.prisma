@@ -131,7 +131,7 @@ model StockOut {
   platformOrderNo     String?
   clientId            Int?
   client              Client?               @relation(fields: [clientId], references: [id])
-  stockOutCode        String
+  serviceCode         String
   docs                Json? // 单据：多个文件地址，存为字符串数组 JSON
 
   @@unique([platformId, platformOrderNo])

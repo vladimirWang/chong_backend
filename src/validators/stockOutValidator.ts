@@ -4,7 +4,7 @@ import { stockInQuerySchema, StockInQuery } from "./stockInValidator";
 // 拆分两种场景的 Schema，通过 union 合并
 const Platform1Schema = z.object({
   platformId: z.literal(1),
-  // platformOrderNo: z.never().optional(),
+  platformOrderNo: z.string().optional(),
 });
 
 const OtherPlatformSchema = z.object({
@@ -25,7 +25,7 @@ export const baseCreateMultipleStockOutSchema = z.object({
     }),
   ),
   remark: z.string().optional(),
-  createdAt: z.string().optional(),
+  submittedAt: z.string().optional(),
   clientId: z.number().optional(),
   docs: z.array(z.string()).optional(), // 单据：多个文件地址（URL 或路径）
 });

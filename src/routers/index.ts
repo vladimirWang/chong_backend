@@ -15,10 +15,11 @@ import { clientRouter } from "./clientRouter";
 import { openaiRouter } from "./openaiRouter";
 import { adminUserRouter } from "./adminUserRouter";
 import { applicantRouter } from "./applicantRouter";
+import { authService } from "../macro/auth.macro";
 
 const testRouter = new Elysia().get("/ok", () => "Hello Elysia test123");
 
-export const apiRouter = new Elysia().group(
+export const apiRouter = new Elysia().use(authService).group(
   "/nodejs_api",
   {
     isSignIn: true,
