@@ -8,18 +8,23 @@ const mailer = nodemailer.createTransport({
   secure: true, // Use true for port 465, false for port 587
   auth: {
     user: "413114463@qq.com",
-    pass: "jfnwonfcwxvfbhjd",
+    pass: process.env.QQ_EMAIL_PASSWORD,
   },
 });
 
-const mailFrom = '"仓库系统" <413114463@qq.com>'
+const mailFrom = '"仓库系统" <413114463@qq.com>';
 
-export const sendEmail = async (to: string, subject: string, text: string, html?: string) => {
+export const sendEmail = async (
+  to: string,
+  subject: string,
+  text: string,
+  html?: string,
+) => {
   return mailer.sendMail({
     from: mailFrom,
     to,
     subject,
     text,
-    html: html?? text
+    html: html ?? text,
   });
-}
+};
