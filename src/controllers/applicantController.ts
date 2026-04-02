@@ -99,17 +99,35 @@ export const approveApplication = async ({
   } catch (error) {
     return new ErrorResponse(errorCode.SYSTEM_ERROR, "生成邀请码失败");
   }
-  await prisma.$transaction([
-    prisma.applicant.update({
-      where: { id },
-      data: { status: "APPROVED", inviteCode },
-    }),
-  ]);
-  await sendEmail(
-    applicant.email,
-    "邀请码",
-    `您的邀请码为：${inviteCode}, 请尽快使用。`,
-  );
+  try {
+    // 交互式事务：update 与 sendEmail 同属一次事务边界；任一步抛错则整笔回滚（含已执行的 update）
+    await prisma.$transaction(
+      async (tx) => {
+        await tx.applicant.update({
+          where: { id },
+          data: { status: "APPROVED", inviteCode },
+        });
+        await sendEmail(
+          applicant.email,
+          "邀请码",
+          `您的邀请码为：${inviteCode}, 请尽快使用。`,
+        );
+        // await new Promise((r, r2) => {
+        //   setTimeout(r2, 3000);
+        // });
+      },
+      {
+        // 发信可能较慢，避免默认 timeout 过早中断
+        timeout: 30_000,
+        maxWait: 10_000,
+      },
+    );
+  } catch {
+    return new ErrorResponse(
+      errorCode.SYSTEM_ERROR,
+      "审核失败：数据库更新或发送邮件出错，已回滚",
+    );
+  }
   return new SuccessResponse(null, "审核通过， 邮件已发送");
 };
 
