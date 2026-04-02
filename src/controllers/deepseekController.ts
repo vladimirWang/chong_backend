@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import type { OpenAIChatBody } from "../validators/openaiValidator";
-import deepSeekClient from "../utils/deepSeek";
+import deepSeekClient from "../utils/deepseek";
 
 const sseHeaders = {
   "Content-Type": "text/event-stream; charset=utf-8",
