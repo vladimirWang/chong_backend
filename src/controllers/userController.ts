@@ -344,5 +344,11 @@ export const checkEmailNotExisted = async ({
 }: {
   params: ParamEmailNotExisted;
 }) => {
-  return new SuccessResponse(true, "邮箱不存在");
+  const { email } = params;
+  const user = await prisma.user.findUnique({
+    where: {
+      email,
+    },
+  });
+  return new SuccessResponse(Boolean(!user), `邮箱${user ? "存在" : "不存在"}`);
 };

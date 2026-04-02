@@ -14,14 +14,22 @@ export const sendInviteCode = async ({
   body: ParamEmailNotExisted;
 }) => {
   const { email } = body;
-
+  const applicant = await prisma.applicant.findUnique({
+    where: {
+      email,
+    },
+  });
+  if (applicant) {
+    return new ErrorResponse(errorCode.EMAIL_EXISTED, "该邮箱已申请系统权限");
+  }
   await prisma.applicant.create({
     data: {
       email,
       // inviteCode: rndCode,
     },
   });
-  // return new SuccessResponse(rndCode, "发送邀请码成功");
+
+  return new SuccessResponse(null, "申请成功，请等待审核");
 };
 
 export const checkInviteCode = async ({

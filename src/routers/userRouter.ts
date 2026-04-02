@@ -22,6 +22,7 @@ import {
   paramEmailExistedSchema,
   paramEmailNotExistedSchema,
 } from "../validators/merchantCommonValidator";
+import { paramEmailSchema } from "../validators/commonValidator";
 
 // 使用 group 创建用户相关的路由组
 export const userRouter = new Elysia({ prefix: "/user" })
@@ -68,7 +69,7 @@ export const userRouter = new Elysia({ prefix: "/user" })
     params: paramEmailExistedSchema,
   })
   .get("/checkEmailNotExisted/:email", checkEmailNotExisted, {
-    params: paramEmailNotExistedSchema,
+    params: paramEmailSchema,
   })
   .get("/getSalt/:email", getUserSaltByEmail, {
     params: paramEmailExistedSchema, // 复用已有的邮箱参数校验规则

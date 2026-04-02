@@ -21,20 +21,17 @@ export const paramEmailExistedSchema = z
 export type ParamEmailExisted = z.infer<typeof paramEmailExistedSchema>;
 
 export const paramEmailNotExistedSchema = z.object({
-  email: z
-    .string()
-    .email()
-    .refine(
-      async (email) => {
-        const existed = await prisma.user.findFirst({
-          where: {
-            email,
-          },
-        });
-        console.log("paramEmailNotExistedSchema refine result: ", existed);
-        return !existed;
-      },
-      { message: "邮箱已注册" },
-    ),
+  email: z.email().refine(
+    async (email) => {
+      const existed = await prisma.user.findFirst({
+        where: {
+          email,
+        },
+      });
+      console.log("paramEmailNotExistedSchema refine result: ", existed);
+      return !existed;
+    },
+    { message: "邮箱已注册" },
+  ),
 });
 export type ParamEmailNotExisted = z.infer<typeof paramEmailNotExistedSchema>;
