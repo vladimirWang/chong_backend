@@ -18,7 +18,6 @@ import {
   uploadFileBodySchema,
   updatePasswordBodySchema,
 } from "../validators/userValidator";
-import { paramEmailSchema } from "../validators/commonValidator";
 import {
   paramEmailExistedSchema,
   paramEmailNotExistedSchema,

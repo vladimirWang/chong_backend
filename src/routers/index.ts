@@ -14,6 +14,7 @@ import { platformRouter } from "./platformRouter";
 import { clientRouter } from "./clientRouter";
 import { openaiRouter } from "./openaiRouter";
 import { adminUserRouter } from "./adminUserRouter";
+import { applicantRouter } from "./applicantRouter";
 
 const testRouter = new Elysia().get("/ok", () => "Hello Elysia test123");
 
@@ -40,6 +41,7 @@ export const apiRouter = new Elysia().group(
       .use(platformRouter)
       .use(clientRouter)
       .use(openaiRouter)
-      .use(adminUserRouter);
+      .use(adminUserRouter)
+      .use(applicantRouter);
   },
 );

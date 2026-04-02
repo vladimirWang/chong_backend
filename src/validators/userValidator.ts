@@ -12,7 +12,7 @@ export type RegisterUserBody = z.infer<typeof registerUserBodySchema>;
 
 // 登录用户 Body Schema
 export const loginUserBodySchema = z.object({
-  email: z.string().email(),
+  email: z.email(),
   password: z.string(),
   captchaId: z.string(),
   captchaText: z.string(),
@@ -37,3 +37,10 @@ export const updatePasswordBodySchema = z.object({
 });
 
 export type UpdatePasswordBody = z.infer<typeof updatePasswordBodySchema>;
+
+export const checkInviteCodeBodySchema = z.object({
+  email: z.email(),
+  inviteCode: z.string(),
+});
+
+export type CheckInviteCodeBody = z.infer<typeof checkInviteCodeBodySchema>;

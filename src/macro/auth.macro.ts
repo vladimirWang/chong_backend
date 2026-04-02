@@ -23,11 +23,16 @@ export const authService = new Elysia({ name: "Auth.Service" }).macro({
         `${prefix}/admin/user/getSalt/:email`,
         `${prefix}/admin/user/resetPassword`,
 
+        `${prefix}/applicant/sendInviteCode`,
+        `${prefix}/applicant/checkInviteCode`,
+
         // util
         `${prefix}/util/captcha`,
         `${prefix}/util/get-nonce`,
         `${prefix}/util/sendEmailVerificationCode`,
         `${prefix}/util/checkEmailValidation`,
+        `${prefix}/util/getInviteCode`,
+        `${prefix}/util/checkInviteCode`,
       ];
       // 对于公共路由，不进行鉴权
       if (publicRoutes.includes(ctx.route) || ctx.route.startsWith("/public")) {

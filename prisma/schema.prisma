@@ -197,3 +197,20 @@ model AdminUser {
   password  String
   salt      String
 }
+
+enum ApplicationStatus {
+  PENDING // 待审核
+  APPROVED // 已审核
+  REJECTED // 已拒绝
+}
+
+// 系统申请人
+model Applicant {
+  id         Int               @id @default(autoincrement())
+  email      String            @unique
+  inviteCode String?
+  status     ApplicationStatus @default(PENDING)
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  deletedAt  DateTime?
+}

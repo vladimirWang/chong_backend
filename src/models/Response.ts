@@ -33,4 +33,7 @@ export const errorCode = {
   ACCOUNT_LOCKED: 10010, // 密码错账号锁定
   NONCE_INVALID: 10011, // nonce无效
   FAILED_TO_CREATE_STOCK_IN: 10012, // 创建进货单失败
+  INVITE_CODE_INVALID: 10013, // 邀请码不正确
+  APPLICATION_NOT_FOUND: 10014, // 未收到系统权限申请
+  SYSTEM_ERROR: 10015, // 系统错误
 };
