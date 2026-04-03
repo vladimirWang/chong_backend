@@ -56,20 +56,26 @@ model StockIn {
 
 // 产品进货单中间表
 model ProductJoinStockIn {
-  id          Int       @id @default(autoincrement())
-  stockInId   Int
-  stockIn     StockIn   @relation(fields: [stockInId], references: [id])
-  productId   Int
-  product     Product   @relation(fields: [productId], references: [id])
-  cost        Int // 售价
-  count       Int // 数量
+  id            Int       @id @default(autoincrement())
+  stockInId     Int
+  stockIn       StockIn   @relation(fields: [stockInId], references: [id])
+  productId     Int
+  product       Product   @relation(fields: [productId], references: [id])
+  cost          Int // 售价
+  count         Int // 数量
   // historyCost HistoryCost?
-  vendorId    Int
-  vendor      Vendor?   @relation(fields: [vendorId], references: [id])
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
-  productCode String?   @db.VarChar(20) // 只有进库后才有
+  vendorId      Int
+  vendor        Vendor?   @relation(fields: [vendorId], references: [id])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+  productCode   String?   @db.VarChar(20) // 只有进库后才有
+  createdBy     Int
+  createdByUser User?     @relation("ProductJoinStockInCreatedBy", fields: [createdBy], references: [id])
+  updatedBy     Int
+  updatedByUser User?     @relation("ProductJoinStockInUpdatedBy", fields: [updatedBy], references: [id])
+  deletedBy     Int
+  deletedByUser User?     @relation("ProductJoinStockInDeletedBy", fields: [deletedBy], references: [id])
 
   @@unique([stockInId, productId])
 }
@@ -109,33 +115,45 @@ model Product {
 
 // 用户
 model User {
-  id              Int        @id @default(autoincrement())
-  email           String     @unique
-  username        String?
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
-  deletedAt       DateTime?
-  password        String
-  avatar          String?
-  salt            String
-  vendorsCreated  Vendor[]   @relation("VendorCreatedBy")
-  vendorsUpdated  Vendor[]   @relation("VendorUpdatedBy")
-  vendorsDeleted  Vendor[]   @relation("VendorDeletedBy")
-  productCreated  Product[]  @relation("ProductCreatedBy")
-  productUpdated  Product[]  @relation("ProductUpdatedBy")
-  productDeleted  Product[]  @relation("ProductDeletedBy")
-  platformCreated Platform[] @relation("PlatformCreatedBy")
-  platformUpdated Platform[] @relation("PlatformUpdatedBy")
-  platformDeleted Platform[] @relation("PlatformDeletedBy")
-  stockInCreated  StockIn[]  @relation("StockInCreatedBy")
-  stockInUpdated  StockIn[]  @relation("StockInUpdatedBy")
-  stockInDeleted  StockIn[]  @relation("StockInDeletedBy")
-  stockOutCreated StockOut[] @relation("StockOutCreatedBy")
-  stockOutUpdated StockOut[] @relation("StockOutUpdatedBy")
-  stockOutDeleted StockOut[] @relation("StockOutDeletedBy")
-  fileInfoCreated FileInfo[] @relation("FileInfoCreatedBy")
-  fileInfoUpdated FileInfo[] @relation("FileInfoUpdatedBy")
-  fileInfoDeleted FileInfo[] @relation("FileInfoDeletedBy")
+  id                         Int                   @id @default(autoincrement())
+  email                      String                @unique
+  username                   String?
+  createdAt                  DateTime              @default(now())
+  updatedAt                  DateTime              @updatedAt
+  deletedAt                  DateTime?
+  password                   String
+  avatar                     String?
+  salt                       String
+  vendorsCreated             Vendor[]              @relation("VendorCreatedBy")
+  vendorsUpdated             Vendor[]              @relation("VendorUpdatedBy")
+  vendorsDeleted             Vendor[]              @relation("VendorDeletedBy")
+  productCreated             Product[]             @relation("ProductCreatedBy")
+  productUpdated             Product[]             @relation("ProductUpdatedBy")
+  productDeleted             Product[]             @relation("ProductDeletedBy")
+  platformCreated            Platform[]            @relation("PlatformCreatedBy")
+  platformUpdated            Platform[]            @relation("PlatformUpdatedBy")
+  platformDeleted            Platform[]            @relation("PlatformDeletedBy")
+  stockInCreated             StockIn[]             @relation("StockInCreatedBy")
+  stockInUpdated             StockIn[]             @relation("StockInUpdatedBy")
+  stockInDeleted             StockIn[]             @relation("StockInDeletedBy")
+  stockOutCreated            StockOut[]            @relation("StockOutCreatedBy")
+  stockOutUpdated            StockOut[]            @relation("StockOutUpdatedBy")
+  stockOutDeleted            StockOut[]            @relation("StockOutDeletedBy")
+  fileInfoCreated            FileInfo[]            @relation("FileInfoCreatedBy")
+  fileInfoUpdated            FileInfo[]            @relation("FileInfoUpdatedBy")
+  fileInfoDeleted            FileInfo[]            @relation("FileInfoDeletedBy")
+  applicantCreated           Applicant[]           @relation("ApplicantCreatedBy")
+  applicantUpdated           Applicant[]           @relation("ApplicantUpdatedBy")
+  applicantDeleted           Applicant[]           @relation("ApplicantDeletedBy")
+  productJoinStockOutCreated ProductJoinStockOut[] @relation("ProductJoinStockOutCreatedBy")
+  productJoinStockOutUpdated ProductJoinStockOut[] @relation("ProductJoinStockOutUpdatedBy")
+  productJoinStockOutDeleted ProductJoinStockOut[] @relation("ProductJoinStockOutDeletedBy")
+  clientCreated              Client[]              @relation("ClientCreatedBy")
+  clientUpdated              Client[]              @relation("ClientUpdatedBy")
+  clientDeleted              Client[]              @relation("ClientDeletedBy")
+  productJoinStockInCreated  ProductJoinStockIn[]  @relation("ProductJoinStockInCreatedBy")
+  productJoinStockInUpdated  ProductJoinStockIn[]  @relation("ProductJoinStockInUpdatedBy")
+  productJoinStockInDeleted  ProductJoinStockIn[]  @relation("ProductJoinStockInDeletedBy")
 }
 
 // 历史成本
@@ -180,18 +198,24 @@ model StockOut {
 }
 
 model ProductJoinStockOut {
-  id         Int       @id @default(autoincrement())
-  productId  Int
-  product    Product   @relation(fields: [productId], references: [id])
-  stockOutId Int
-  stockOut   StockOut  @relation(fields: [stockOutId], references: [id], onDelete: Cascade)
-  price      Int // 售价
-  count      Int // 数量
-  vendorId   Int
-  vendor     Vendor?   @relation(fields: [vendorId], references: [id])
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  deletedAt  DateTime?
+  id            Int       @id @default(autoincrement())
+  productId     Int
+  product       Product   @relation(fields: [productId], references: [id])
+  stockOutId    Int
+  stockOut      StockOut  @relation(fields: [stockOutId], references: [id], onDelete: Cascade)
+  price         Int // 售价
+  count         Int // 数量
+  vendorId      Int
+  vendor        Vendor?   @relation(fields: [vendorId], references: [id])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+  createdBy     Int
+  createdByUser User?     @relation("ProductJoinStockOutCreatedBy", fields: [createdBy], references: [id])
+  updatedBy     Int
+  updatedByUser User?     @relation("ProductJoinStockOutUpdatedBy", fields: [updatedBy], references: [id])
+  deletedBy     Int
+  deletedByUser User?     @relation("ProductJoinStockOutDeletedBy", fields: [deletedBy], references: [id])
 
   @@unique([stockOutId, productId])
 }
@@ -229,15 +253,21 @@ model Platform {
 
 // 客户
 model Client {
-  id        Int        @id @default(autoincrement())
-  name      String
-  tel       String?
-  address   String?
-  remark    String?
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  deletedAt DateTime?
-  stockOuts StockOut[]
+  id            Int        @id @default(autoincrement())
+  name          String
+  tel           String?
+  address       String?
+  remark        String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  deletedAt     DateTime?
+  stockOuts     StockOut[]
+  createdBy     Int
+  createdByUser User?      @relation("ClientCreatedBy", fields: [createdBy], references: [id])
+  updatedBy     Int
+  updatedByUser User?      @relation("ClientUpdatedBy", fields: [updatedBy], references: [id])
+  deletedBy     Int
+  deletedByUser User?      @relation("ClientDeletedBy", fields: [deletedBy], references: [id])
 }
 
 // 用户
@@ -260,11 +290,17 @@ enum ApplicationStatus {
 
 // 系统申请人
 model Applicant {
-  id         Int               @id @default(autoincrement())
-  email      String            @unique
-  inviteCode String?
-  status     ApplicationStatus @default(PENDING)
-  createdAt  DateTime          @default(now())
-  updatedAt  DateTime          @updatedAt
-  deletedAt  DateTime?
+  id            Int               @id @default(autoincrement())
+  email         String            @unique
+  inviteCode    String?
+  status        ApplicationStatus @default(PENDING)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  deletedAt     DateTime?
+  createdBy     Int
+  createdByUser User?             @relation("ApplicantCreatedBy", fields: [createdBy], references: [id])
+  updatedBy     Int
+  updatedByUser User?             @relation("ApplicantUpdatedBy", fields: [updatedBy], references: [id])
+  deletedBy     Int
+  deletedByUser User?             @relation("ApplicantDeletedBy", fields: [deletedBy], references: [id])
 }
