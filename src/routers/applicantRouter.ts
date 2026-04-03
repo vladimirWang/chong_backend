@@ -4,10 +4,14 @@ import {
   getApplicants,
   sendInviteCode,
   approveApplication,
+  checkApplicantExisted,
 } from "../controllers/applicantController";
 import { paramEmailNotExistedSchema } from "../validators/merchantCommonValidator";
 import { checkInviteCodeBodySchema } from "../validators/userValidator";
-import { paginationSchema } from "../validators/commonValidator";
+import {
+  paginationSchema,
+  paramEmailSchema,
+} from "../validators/commonValidator";
 import { approveApplicationBodySchema } from "../validators/applicantValidator";
 
 export const applicantRouter = new Elysia({ prefix: "/applicant" })
@@ -22,4 +26,7 @@ export const applicantRouter = new Elysia({ prefix: "/applicant" })
   })
   .post("/approve", approveApplication, {
     body: approveApplicationBodySchema,
+  })
+  .get("/checkApplicantExisted/:email", checkApplicantExisted, {
+    params: paramEmailSchema,
   });

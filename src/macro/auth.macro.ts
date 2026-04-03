@@ -19,12 +19,12 @@ export const authService = new Elysia({ name: "Auth.Service" }).macro({
         `${prefix}/admin/user/login`,
         `${prefix}/admin/user/register`,
         `${prefix}/admin/user/checkEmailExisted/:email`,
-        `${prefix}/admin/user/checkEmailNotExisted/:email`,
         `${prefix}/admin/user/getSalt/:email`,
         `${prefix}/admin/user/resetPassword`,
 
         `${prefix}/applicant/sendInviteCode`,
         `${prefix}/applicant/checkInviteCode`,
+        `${prefix}/applicant/checkApplicantExisted/:email`,
 
         // util
         `${prefix}/util/captcha`,
@@ -45,7 +45,6 @@ export const authService = new Elysia({ name: "Auth.Service" }).macro({
         request,
         route,
       } = ctx;
-      console.log("inside auth macro: authorization: ", authorization);
       if (!authorization) return status(401);
 
       const userInfoStr = await redisClient.get(`token:${authorization}`);

@@ -13,7 +13,7 @@ import { logger } from "../utils/logger";
 import { sanitizeFilename, UPLOAD_DIR } from "../utils/file";
 import path from "node:path";
 import fs from "node:fs";
-import {} from "../validators/commonValidator";
+import { ParamEmail } from "../validators/commonValidator";
 import { emailVerificationTag } from "./utilController";
 import {
   generateFixedSalt,
@@ -261,10 +261,14 @@ export const checkFileExistedByHash = async ({
   }
 };
 
-export const checkEmailExisted = async (_ctx: {
-  params: ParamEmailExisted;
-}) => {
-  return new SuccessResponse(true, "邮箱已存在");
+export const checkEmailExisted = async ({ params }: { params: ParamEmail }) => {
+  const { email } = params;
+  const user = await prisma.user.findUnique({
+    where: {
+      email,
+    },
+  });
+  return new SuccessResponse(Boolean(user), "邮箱已存在");
 };
 
 export const getUserSaltByEmail = async ({
@@ -339,16 +343,16 @@ export const resetPassword = async ({ body }: { body: ParamEmailExisted }) => {
   return new SuccessResponse(null, "密码重置成功，初始密码已发送至您的邮箱");
 };
 
-export const checkEmailNotExisted = async ({
-  params,
-}: {
-  params: ParamEmailNotExisted;
-}) => {
-  const { email } = params;
-  const user = await prisma.user.findUnique({
-    where: {
-      email,
-    },
-  });
-  return new SuccessResponse(Boolean(!user), `邮箱${user ? "存在" : "不存在"}`);
-};
+// export const checkEmailNotExisted = async ({
+//   params,
+// }: {
+//   params: ParamEmailNotExisted;
+// }) => {
+//   const { email } = params;
+//   const user = await prisma.user.findUnique({
+//     where: {
+//       email,
+//     },
+//   });
+//   return new SuccessResponse(Boolean(!user), `邮箱${user ? "存在" : "不存在"}`);
+// };

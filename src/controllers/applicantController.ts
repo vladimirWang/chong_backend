@@ -2,7 +2,7 @@ import { errorCode, ErrorResponse, SuccessResponse } from "../models/Response";
 import { getPaginationValues } from "../utils/db";
 import { sendEmail } from "../utils/mailer";
 import prisma from "../utils/prisma";
-import { Pagination } from "../validators/commonValidator";
+import { Pagination, ParamEmail } from "../validators/commonValidator";
 import { ParamEmailNotExisted } from "../validators/merchantCommonValidator";
 import { CheckInviteCodeBody } from "../validators/userValidator";
 import { ApproveApplicationBody } from "../validators/applicantValidator";
@@ -14,14 +14,7 @@ export const sendInviteCode = async ({
   body: ParamEmailNotExisted;
 }) => {
   const { email } = body;
-  const applicant = await prisma.applicant.findUnique({
-    where: {
-      email,
-    },
-  });
-  if (applicant) {
-    return new ErrorResponse(errorCode.EMAIL_EXISTED, "该邮箱已申请系统权限");
-  }
+
   await prisma.applicant.create({
     data: {
       email,
@@ -130,7 +123,7 @@ export const approveApplication = async ({
         maxWait: 10_000,
       },
     );
-  } catch {
+  } catch (error) {
     return new ErrorResponse(
       errorCode.SYSTEM_ERROR,
       "审核失败：数据库更新或发送邮件出错，已回滚",
@@ -146,4 +139,19 @@ export const generateRndCode = (length: number = 6) => {
   const rnd = Math.random();
   const rndCode = (rnd + "").slice(2, length);
   return rndCode;
+};
+
+export const checkApplicantExisted = async ({
+  params,
+}: {
+  params: ParamEmail;
+}) => {
+  const { email } = params;
+  const applicant = await prisma.applicant.findUnique({
+    where: { email },
+  });
+  return new SuccessResponse(
+    Boolean(applicant),
+    `邮箱${applicant ? "存在" : "不存在"}`,
+  );
 };

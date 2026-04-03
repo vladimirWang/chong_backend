@@ -10,7 +10,7 @@ import {
   getCurrentUser,
   updatePassword,
   resetPassword,
-  checkEmailNotExisted,
+  // checkEmailNotExisted,
 } from "../controllers/userController";
 import {
   registerUserBodySchema,
@@ -66,11 +66,11 @@ export const userRouter = new Elysia({ prefix: "/user" })
     }),
   })
   .get("/checkEmailExisted/:email", checkEmailExisted, {
-    params: paramEmailExistedSchema,
-  })
-  .get("/checkEmailNotExisted/:email", checkEmailNotExisted, {
     params: paramEmailSchema,
   })
+  // .get("/checkEmailNotExisted/:email", checkEmailNotExisted, {
+  //   params: paramEmailSchema,
+  // })
   .get("/getSalt/:email", getUserSaltByEmail, {
     params: paramEmailExistedSchema, // 复用已有的邮箱参数校验规则
   })

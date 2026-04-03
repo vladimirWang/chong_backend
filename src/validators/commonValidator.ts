@@ -55,7 +55,7 @@ export const productNameStringSchema = z.object({
 export type ProductNameString = z.infer<typeof productNameStringSchema>;
 
 export const paramEmailSchema = z.object({
-  email: z.string().email(),
+  email: z.email(),
 });
 export type ParamEmail = z.infer<typeof paramEmailSchema>;
 
