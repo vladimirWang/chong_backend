@@ -15,6 +15,7 @@ import { clientRouter } from "./clientRouter";
 import { openaiRouter } from "./openaiRouter";
 import { adminUserRouter } from "./adminUserRouter";
 import { applicantRouter } from "./applicantRouter";
+import { microsoftTodoRouter } from "./microsoftTodoRouter";
 import { authService } from "../macro/auth.macro";
 
 const testRouter = new Elysia().get("/ok", () => "Hello Elysia test123");
@@ -43,6 +44,7 @@ export const apiRouter = new Elysia().use(authService).group(
       .use(clientRouter)
       .use(openaiRouter)
       .use(adminUserRouter)
-      .use(applicantRouter);
+      .use(applicantRouter)
+      .use(microsoftTodoRouter);
   },
 );
