@@ -1,9 +1,14 @@
 import prisma from "../utils/prisma";
 import { SuccessResponse } from "../models/Response";
-import { CreateClientBody, ClientQuery } from "../validators/clientValidator";
+import {
+  CreateClientBody,
+  ClientQuery,
+  PatchClientBody,
+} from "../validators/clientValidator";
 import { getPaginationValues, getWhereValues } from "../utils/db";
+import { UpdateId } from "../validators/commonValidator";
 
-export const getClients = async ({ query }: { query: ClientQueryParams }) => {
+export const getClients = async ({ query }: { query: ClientQuery }) => {
   const { limit = 10, page = 1, name, tel, address, pagination = 1 } = query;
   console.log("get clients pagination: ", pagination);
   const { skip, take } = getPaginationValues({ limit, page });
@@ -38,7 +43,7 @@ export const patchClient = async ({
   params,
 }: {
   body: PatchClientBody;
-  params: UpdateIdParams;
+  params: UpdateId;
 }) => {
   const { name, tel, address, remark } = body;
   const client = await prisma.client.update({

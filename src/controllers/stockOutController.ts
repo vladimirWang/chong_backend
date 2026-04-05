@@ -160,7 +160,7 @@ export const getStockOuts = async ({ query }: { query: StockOutQuery }) => {
     } else {
       const placeholders = stockOutIds.map(() => "?").join(",");
       const rowsSql =
-        `SELECT s.id, s.remark, s.docs, s.stockOutCode, s.createdAt, s.updatedAt, s.deletedAt, s.totalPrice, s.status, s.completedAt, pjs.productId, p.name as productName, pjs.price, pjs.count, s.platformOrderNo ` +
+        `SELECT s.id, s.remark, s.docs, s.serviceCode, s.createdAt, s.updatedAt, s.deletedAt, s.totalPrice, s.status, s.completedAt, pjs.productId, p.name as productName, pjs.price, pjs.count, s.platformOrderNo ` +
         `FROM StockOut s ` +
         `LEFT JOIN ProductJoinStockOut pjs ON pjs.stockOutId = s.id ` +
         `LEFT JOIN Product p ON p.id = pjs.productId ` +
