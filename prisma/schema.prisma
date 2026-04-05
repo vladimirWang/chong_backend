@@ -154,19 +154,28 @@ model User {
   productJoinStockInCreated  ProductJoinStockIn[]  @relation("ProductJoinStockInCreatedBy")
   productJoinStockInUpdated  ProductJoinStockIn[]  @relation("ProductJoinStockInUpdatedBy")
   productJoinStockInDeleted  ProductJoinStockIn[]  @relation("ProductJoinStockInDeletedBy")
+  historyCostsCreated        HistoryCost[]         @relation("HistoryCostCreatedBy")
+  historyCostsUpdated        HistoryCost[]         @relation("HistoryCostUpdatedBy")
+  historyCostsDeleted        HistoryCost[]         @relation("HistoryCostDeletedBy")
 }
 
 // 历史成本
 model HistoryCost {
-  id        Int       @id @default(autoincrement())
-  stockInId Int
-  stockIn   StockIn   @relation(fields: [stockInId], references: [id])
-  productId Int
-  product   Product   @relation("HistoryCostProduct", fields: [productId], references: [id])
-  value     Int       @db.UnsignedMediumInt
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
+  id            Int       @id @default(autoincrement())
+  stockInId     Int
+  stockIn       StockIn   @relation(fields: [stockInId], references: [id])
+  productId     Int
+  product       Product   @relation("HistoryCostProduct", fields: [productId], references: [id])
+  value         Int       @db.UnsignedMediumInt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+  createdBy     Int
+  createdByUser User?     @relation("HistoryCostCreatedBy", fields: [createdBy], references: [id])
+  updatedBy     Int
+  updatedByUser User?     @relation("HistoryCostUpdatedBy", fields: [updatedBy], references: [id])
+  deletedBy     Int
+  deletedByUser User?     @relation("HistoryCostDeletedBy", fields: [deletedBy], references: [id])
 }
 
 // 出货表
