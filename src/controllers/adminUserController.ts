@@ -28,6 +28,7 @@ import {
 import { sendEmail } from "../utils/mailer";
 import { AuthContext, JwtPayload } from "./userController";
 import { generateInitialPassword } from "../utils/common";
+import { auditCreate, auditUserId } from "../utils/auditUser";
 
 export const loginUser = async ({
   body,
@@ -172,7 +173,14 @@ export const registerUser = async ({ body }: { body: RegisterUserBody }) => {
   return result;
 };
 
-export const uploadFile = async ({ body }: { body: UploadFileBody }) => {
+export const uploadFile = async ({
+  body,
+  user,
+}: AuthContext & { body: UploadFileBody }) => {
+  if (!user) {
+    return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
+  }
+  const uid = auditUserId(user);
   const { hash, file } = body;
 
   const { ext } = sanitizeFilename(file.name);
@@ -195,6 +203,7 @@ export const uploadFile = async ({ body }: { body: UploadFileBody }) => {
     data: {
       hash,
       filePath: path.join("/public/uploads", storageFileName),
+      ...auditCreate(uid),
     },
   });
   return new SuccessResponse(

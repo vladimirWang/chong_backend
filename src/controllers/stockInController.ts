@@ -22,6 +22,14 @@ import { getPaginationValues } from "../utils/db";
 import { generateStockOperationSql } from "../sqlMap/stockOperation";
 import { sum2 } from "../utils/algo";
 import { generateServiceCode } from "../utils/common";
+import type { AuthContext } from "./userController";
+import {
+  auditCreate,
+  auditSoftDelete,
+  auditUpdate,
+  auditUpdateConnect,
+  auditUserId,
+} from "../utils/auditUser";
 
 export type StockOperationListRow = {
   id: number;
@@ -234,9 +242,14 @@ export const getStockIns = async ({ query }: { query: StockInQuery }) => {
 // 批量产品进货
 export const createMultipleStockIn = async ({
   body,
-}: {
+  user,
+}: AuthContext & {
   body: MultipleStockInBody;
 }) => {
+  if (!user) {
+    return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
+  }
+  const uid = auditUserId(user);
   const { productJoinStockIn, submittedAt, remark } = body;
 
   // const totalCost = productJoinStockIn.reduce((a, c) => {
@@ -255,21 +268,15 @@ export const createMultipleStockIn = async ({
         remark,
         totalCost,
         serviceCode,
+        ...auditCreate(uid),
         productJoinStockIn: {
           create: productJoinStockIn.map((item) => {
             return {
               cost: item.cost,
               count: item.count,
-              product: {
-                connect: {
-                  id: item.productId,
-                },
-              },
-              vendor: {
-                connect: {
-                  id: item.vendorId,
-                },
-              },
+              productId: item.productId,
+              vendorId: item.vendorId,
+              ...auditCreate(uid),
               // historyCost: {
               //   create: {
               //     value: item.cost,
@@ -288,6 +295,7 @@ export const createMultipleStockIn = async ({
           stockInPending: {
             increment: item.count,
           },
+          ...auditUpdate(uid),
         },
         where: {
           id: item.productId,
@@ -341,10 +349,15 @@ type StockInLineComparable = CommonStockLineComparable & {
 export const updateStockIn = async ({
   params,
   body,
-}: {
+  user,
+}: AuthContext & {
   params: UpdateId;
   body: MultipleStockInBody;
 }) => {
+  if (!user) {
+    return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
+  }
+  const uid = auditUserId(user);
   // 查询已有数据
   const existedRecord = await prisma.productJoinStockIn.findMany({
     where: {
@@ -406,6 +419,7 @@ export const updateStockIn = async ({
         totalCost,
         submittedAt,
         remark,
+        ...auditUpdateConnect(uid),
       },
     }),
     // 新增中间表记录
@@ -414,21 +428,10 @@ export const updateStockIn = async ({
         data: {
           cost: item.cost,
           count: item.count,
-          vendor: {
-            connect: {
-              id: item.vendorId,
-            },
-          },
-          product: {
-            connect: {
-              id: item.productId,
-            },
-          },
-          stockIn: {
-            connect: {
-              id: params.id,
-            },
-          },
+          productId: item.productId,
+          vendorId: item.vendorId,
+          stockInId: params.id,
+          ...auditCreate(uid),
         },
       });
     }),
@@ -444,6 +447,7 @@ export const updateStockIn = async ({
         data: {
           cost: item.cost,
           count: item.count,
+          ...auditUpdateConnect(uid),
         },
       });
     }),
@@ -470,6 +474,7 @@ export const updateStockIn = async ({
           stockInPending: {
             increment: item.count,
           },
+          ...auditUpdate(uid),
         },
       });
     }),
@@ -483,6 +488,7 @@ export const updateStockIn = async ({
           stockInPending: {
             increment: item.count - existedInfoMap[item.productId].count,
           },
+          ...auditUpdate(uid),
         },
       });
     }),
@@ -496,6 +502,7 @@ export const updateStockIn = async ({
           stockInPending: {
             increment: -1 * existedInfoMap[item.productId].count,
           },
+          ...auditUpdate(uid),
         },
       });
     }),
@@ -507,10 +514,15 @@ export const updateStockIn = async ({
 export const confirmCompleted = async ({
   params,
   body,
-}: {
+  user,
+}: AuthContext & {
   params: UpdateId;
   body: CompletedAt;
 }) => {
+  if (!user) {
+    return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
+  }
+  const uid = auditUserId(user);
   const relatedProducts = await prisma.productJoinStockIn.findMany({
     where: {
       stockInId: params.id,
@@ -527,6 +539,7 @@ export const confirmCompleted = async ({
       data: {
         status: "COMPLETED",
         completedAt,
+        ...auditUpdateConnect(uid),
       },
     }),
     // 改产品表，把待进货加到库存数中
@@ -546,6 +559,7 @@ export const confirmCompleted = async ({
             increment: -1 * item.count,
           },
           latestCost: item.cost,
+          ...auditUpdate(uid),
         },
       });
     }),
@@ -556,16 +570,7 @@ export const confirmCompleted = async ({
           value: item.cost,
           productId: item.productId,
           stockInId: params.id,
-          // product: {
-          //   connect: {
-          //     id: item.productId,
-          //   },
-          // },
-          // stockIn: {
-          //   connect: {
-          //     id: params.id,
-          //   },
-          // },
+          ...auditCreate(uid),
         },
       });
     }),
@@ -631,9 +636,14 @@ async function getValidsAndPendingCount(
 
 export const batchDeleteStockIn = async ({
   query,
-}: {
+  user,
+}: AuthContext & {
   query: BatchDeleteStockInQuery;
 }) => {
+  if (!user) {
+    return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
+  }
+  const uid = auditUserId(user);
   const ids = query.id as number[];
 
   if (!ids || ids.length === 0) {
@@ -657,7 +667,7 @@ export const batchDeleteStockIn = async ({
         },
       },
       data: {
-        deletedAt: now,
+        ...auditSoftDelete(uid, now),
       },
     }),
     // 软删除中间表记录
@@ -669,7 +679,7 @@ export const batchDeleteStockIn = async ({
         deletedAt: null,
       },
       data: {
-        deletedAt: now,
+        ...auditSoftDelete(uid, now),
       },
     }),
     // 扣减对应商品的 stockInPending
@@ -682,6 +692,7 @@ export const batchDeleteStockIn = async ({
           stockInPending: {
             decrement: totalCount,
           },
+          ...auditUpdate(uid),
         },
       }),
     ),
@@ -690,7 +701,14 @@ export const batchDeleteStockIn = async ({
   return new SuccessResponse(txResults, "进货单批量删除成功");
 };
 
-export const restoreDeletedStockIn = async ({ body }: { body: IdArray }) => {
+export const restoreDeletedStockIn = async ({
+  body,
+  user,
+}: AuthContext & { body: IdArray }) => {
+  if (!user) {
+    return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
+  }
+  const uid = auditUserId(user);
   const ids = body.ids;
   if (!ids || ids.length === 0) {
     return new SuccessResponse(null, "没有需要恢复的进货单");
@@ -711,6 +729,7 @@ export const restoreDeletedStockIn = async ({ body }: { body: IdArray }) => {
       },
       data: {
         deletedAt: null,
+        ...auditUpdate(uid),
       },
     }),
     // 软删除中间表记录
@@ -722,6 +741,7 @@ export const restoreDeletedStockIn = async ({ body }: { body: IdArray }) => {
       },
       data: {
         deletedAt: null,
+        ...auditUpdate(uid),
       },
     }),
     // 扣减对应商品的 stockInPending
@@ -734,6 +754,7 @@ export const restoreDeletedStockIn = async ({ body }: { body: IdArray }) => {
           stockInPending: {
             increment: totalCount,
           },
+          ...auditUpdate(uid),
         },
       }),
     ),

@@ -27,6 +27,7 @@ import {
   ParamEmailExisted,
   ParamEmailNotExisted,
 } from "../validators/merchantCommonValidator";
+import { auditCreate, auditUserId } from "../utils/auditUser";
 
 export type JwtPayload = {
   userId: number;
@@ -197,7 +198,14 @@ export const logoutUser = async ({ headers }: Context) => {
   return new SuccessResponse(null, "用户登出成功");
 };
 
-export const uploadFile = async ({ body }: { body: UploadFileBody }) => {
+export const uploadFile = async ({
+  body,
+  user,
+}: AuthContext & { body: UploadFileBody }) => {
+  if (!user) {
+    return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
+  }
+  const uid = auditUserId(user);
   const { hash, file } = body;
 
   const { ext } = sanitizeFilename(file.name);
@@ -220,6 +228,7 @@ export const uploadFile = async ({ body }: { body: UploadFileBody }) => {
     data: {
       hash,
       filePath: path.join("/public/uploads", storageFileName),
+      ...auditCreate(uid),
     },
   });
   return new SuccessResponse(

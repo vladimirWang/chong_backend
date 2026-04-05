@@ -3,6 +3,8 @@ import { jwt } from "@elysiajs/jwt";
 import { z, ZodError } from "zod";
 import prisma from "../utils/prisma";
 import { errorCode, ErrorResponse, SuccessResponse } from "../models/Response";
+import type { AuthContext } from "../controllers/userController";
+import { auditCreate, auditUpdate, auditUserId } from "../utils/auditUser";
 import { getPaginationValues, getWhereValues } from "../utils/db";
 import {
   getVendors,
@@ -45,12 +47,17 @@ export const vendorRouter = new Elysia({ prefix: "/vendor" })
   // POST /nodejs_api/posts - 创建供应商
   .post(
     "/",
-    async ({ body }) => {
+    async ({ body, user }: AuthContext & { body: { name: string; remark?: string } }) => {
+      if (!user) {
+        return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
+      }
+      const uid = auditUserId(user);
       const { name, remark } = body;
       const vendor = await prisma.vendor.create({
         data: {
           name,
           remark,
+          ...auditCreate(uid),
         },
       });
       return new SuccessResponse(vendor, "供应商创建成功");
@@ -129,7 +136,18 @@ export const vendorRouter = new Elysia({ prefix: "/vendor" })
   })
   .put(
     "/:id",
-    async ({ params, body }) => {
+    async ({
+      params,
+      body,
+      user,
+    }: AuthContext & {
+      params: { id: number };
+      body: { name?: string; remark?: string };
+    }) => {
+      if (!user) {
+        return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
+      }
+      const uid = auditUserId(user);
       const { name, remark } = body;
       const updatedVendor = await prisma.vendor.update({
         where: {
@@ -138,6 +156,7 @@ export const vendorRouter = new Elysia({ prefix: "/vendor" })
         data: {
           name,
           remark,
+          ...auditUpdate(uid),
         },
       });
       return JSON.stringify(

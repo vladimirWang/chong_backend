@@ -2,6 +2,13 @@ import { errorCode, ErrorResponse, SuccessResponse } from "../models/Response";
 import { getPaginationValues } from "../utils/db";
 import { sendEmail } from "../utils/mailer";
 import prisma from "../utils/prisma";
+import type { AuthContext } from "./userController";
+import {
+  auditCreate,
+  auditUpdate,
+  auditUserId,
+  systemAuditUserId,
+} from "../utils/auditUser";
 import { Pagination, ParamEmail } from "../validators/commonValidator";
 import { ParamEmailNotExisted } from "../validators/merchantCommonValidator";
 import { CheckInviteCodeBody } from "../validators/userValidator";
@@ -18,7 +25,7 @@ export const sendInviteCode = async ({
   await prisma.applicant.create({
     data: {
       email,
-      // inviteCode: rndCode,
+      ...auditCreate(systemAuditUserId()),
     },
   });
 
@@ -81,9 +88,14 @@ export const getApplicants = async ({ query }: { query: Pagination }) => {
 // 审核申请人
 export const approveApplication = async ({
   body,
-}: {
+  user,
+}: AuthContext & {
   body: ApproveApplicationBody;
 }) => {
+  if (!user) {
+    return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
+  }
+  const uid = auditUserId(user);
   const { id, applicant } = body;
   // const applicant = await prisma.applicant.findUnique({
   //   where: { id },
@@ -106,7 +118,11 @@ export const approveApplication = async ({
       async (tx) => {
         await tx.applicant.update({
           where: { id },
-          data: { status: "APPROVED", inviteCode },
+          data: {
+            status: "APPROVED",
+            inviteCode,
+            ...auditUpdate(uid),
+          },
         });
         await sendEmail(
           applicant.email,

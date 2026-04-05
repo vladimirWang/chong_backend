@@ -1,5 +1,7 @@
 import prisma from "../utils/prisma";
-import { SuccessResponse } from "../models/Response";
+import { errorCode, ErrorResponse, SuccessResponse } from "../models/Response";
+import type { AuthContext } from "./userController";
+import { auditCreate, auditUpdate, auditUserId } from "../utils/auditUser";
 import {
   CreateClientBody,
   ClientQuery,
@@ -30,10 +32,17 @@ export const getClients = async ({ query }: { query: ClientQuery }) => {
   );
 };
 
-export const createClient = async ({ body }: { body: CreateClientBody }) => {
+export const createClient = async ({
+  body,
+  user,
+}: AuthContext & { body: CreateClientBody }) => {
+  if (!user) {
+    return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
+  }
+  const uid = auditUserId(user);
   const { name, tel, address, remark } = body;
   const client = await prisma.client.create({
-    data: { name, tel, address, remark },
+    data: { name, tel, address, remark, ...auditCreate(uid) },
   });
   return new SuccessResponse(client, "客户创建成功");
 };
@@ -41,14 +50,19 @@ export const createClient = async ({ body }: { body: CreateClientBody }) => {
 export const patchClient = async ({
   body,
   params,
-}: {
+  user,
+}: AuthContext & {
   body: PatchClientBody;
   params: UpdateId;
 }) => {
+  if (!user) {
+    return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
+  }
+  const uid = auditUserId(user);
   const { name, tel, address, remark } = body;
   const client = await prisma.client.update({
     where: { id: params.id },
-    data: { name, tel, address, remark },
+    data: { name, tel, address, remark, ...auditUpdate(uid) },
   });
   return new SuccessResponse(client, "客户更新成功");
 };
