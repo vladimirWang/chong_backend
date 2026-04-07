@@ -23,9 +23,8 @@ import {
   isValidNonce,
 } from "../utils/algo";
 import { sendEmail } from "../utils/mailer";
-import { AuthContext, JwtPayload } from "./userController";
+import type { AuthContext, JwtPayload } from "./userController";
 import { generateInitialPassword } from "../utils/common";
-import { auditCreate, auditUserId } from "../utils/auditUser";
 import { ParamEmail } from "../validators/commonValidator";
 
 export const loginUser = async ({

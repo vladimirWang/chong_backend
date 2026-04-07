@@ -1,7 +1,7 @@
 import prisma from "../utils/prisma";
 import { errorCode, ErrorResponse, SuccessResponse } from "../models/Response";
 import type { AuthContext } from "./userController";
-import { auditCreate, auditUpdate, auditUserId } from "../utils/auditUser";
+import { auditCreate, auditUpdate } from "../utils/auditUser";
 import {
   CreateClientBody,
   ClientQuery,
@@ -39,7 +39,7 @@ export const createClient = async ({
   if (!user) {
     return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
   }
-  const uid = auditUserId(user);
+  const uid = user.userId;
   const { name, tel, address, remark } = body;
   const client = await prisma.client.create({
     data: { name, tel, address, remark, ...auditCreate(uid) },
@@ -58,7 +58,7 @@ export const patchClient = async ({
   if (!user) {
     return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
   }
-  const uid = auditUserId(user);
+  const uid = user.userId;
   const { name, tel, address, remark } = body;
   const client = await prisma.client.update({
     where: { id: params.id },

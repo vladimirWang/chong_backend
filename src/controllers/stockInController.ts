@@ -28,7 +28,6 @@ import {
   auditSoftDelete,
   auditUpdate,
   auditUpdateConnect,
-  auditUserId,
 } from "../utils/auditUser";
 
 export type StockOperationListRow = {
@@ -249,7 +248,7 @@ export const createMultipleStockIn = async ({
   if (!user) {
     return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
   }
-  const uid = auditUserId(user);
+  const uid = user.userId;
   const { productJoinStockIn, submittedAt, remark } = body;
 
   // const totalCost = productJoinStockIn.reduce((a, c) => {
@@ -357,7 +356,7 @@ export const updateStockIn = async ({
   if (!user) {
     return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
   }
-  const uid = auditUserId(user);
+  const uid = user.userId;
   // 查询已有数据
   const existedRecord = await prisma.productJoinStockIn.findMany({
     where: {
@@ -522,7 +521,7 @@ export const confirmCompleted = async ({
   if (!user) {
     return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
   }
-  const uid = auditUserId(user);
+  const uid = user.userId;
   const relatedProducts = await prisma.productJoinStockIn.findMany({
     where: {
       stockInId: params.id,
@@ -643,7 +642,7 @@ export const batchDeleteStockIn = async ({
   if (!user) {
     return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
   }
-  const uid = auditUserId(user);
+  const uid = user.userId;
   const ids = query.id as number[];
 
   if (!ids || ids.length === 0) {
@@ -708,7 +707,7 @@ export const restoreDeletedStockIn = async ({
   if (!user) {
     return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
   }
-  const uid = auditUserId(user);
+  const uid = user.userId;
   const ids = body.ids;
   if (!ids || ids.length === 0) {
     return new SuccessResponse(null, "没有需要恢复的进货单");

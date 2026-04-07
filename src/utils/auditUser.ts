@@ -1,28 +1,13 @@
 import type { JwtPayload } from "../controllers/userController";
 
-/**
- * 无登录上下文时的审计用户（如公开申请接口），须为 `User` 表中存在的 id（历史迁移曾用 3 回填）。
- */
-export function systemAuditUserId(): number {
-  const v = process.env.SYSTEM_AUDIT_USER_ID;
-  if (v !== undefined && v !== "") return Number(v);
-  return 3;
-}
-
-/**
- * 管理端 JWT 的 userId 对应 AdminUser；审计外键挂在 User 表时，映射到业务侧商户用户 id。
- */
-export function adminAuditMerchantUserId(): number {
-  const v = process.env.ADMIN_AUDIT_MERCHANT_USER_ID;
-  if (v !== undefined && v !== "") return Number(v);
-  return systemAuditUserId();
-}
-
-export function auditUserId(user: JwtPayload | undefined): number {
-  if (!user) return systemAuditUserId();
-  if (user.role === "merchant") return user.userId;
-  return adminAuditMerchantUserId();
-}
+// /**
+//  * 无登录上下文时的审计用户（如公开申请接口），须为 `User` 表中存在的 id（历史迁移曾用 3 回填）。
+//  */
+// export function systemAuditUserId(): number {
+//   const v = process.env.SYSTEM_AUDIT_USER_ID;
+//   if (v !== undefined && v !== "") return Number(v);
+//   return 3;
+// }
 
 export function auditCreate(userId: number) {
   return {

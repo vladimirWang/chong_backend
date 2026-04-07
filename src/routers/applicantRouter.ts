@@ -13,20 +13,26 @@ import {
   paramEmailSchema,
 } from "../validators/commonValidator";
 import { approveApplicationBodySchema } from "../validators/applicantValidator";
+import { authService } from "../macro/auth.macro";
 
 export const applicantRouter = new Elysia({ prefix: "/applicant" })
+  .use(authService)
   .post("/sendInviteCode", sendInviteCode, {
     body: paramEmailNotExistedSchema,
   })
   .post("/checkInviteCode", checkInviteCode, {
     body: checkInviteCodeBodySchema,
   })
-  .get("/", getApplicants, {
-    query: paginationSchema,
-  })
-  .post("/approve", approveApplication, {
-    body: approveApplicationBodySchema,
-  })
   .get("/checkApplicantExisted/:email", checkApplicantExisted, {
     params: paramEmailSchema,
   });
+
+applicantRouter.guard({ isSignIn: true }, (app) =>
+  app
+    .get("/", getApplicants, {
+      query: paginationSchema,
+    })
+    .post("/approve", approveApplication, {
+      body: approveApplicationBodySchema,
+    }),
+);

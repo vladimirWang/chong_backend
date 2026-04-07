@@ -6,8 +6,7 @@ import type { AuthContext } from "./userController";
 import {
   auditCreate,
   auditUpdate,
-  auditUserId,
-  systemAuditUserId,
+  // systemAuditUserId,
 } from "../utils/auditUser";
 import { Pagination, ParamEmail } from "../validators/commonValidator";
 import { ParamEmailNotExisted } from "../validators/merchantCommonValidator";
@@ -25,7 +24,7 @@ export const sendInviteCode = async ({
   await prisma.applicant.create({
     data: {
       email,
-      ...auditCreate(systemAuditUserId()),
+      ...auditCreate(0),
     },
   });
 
@@ -92,10 +91,6 @@ export const approveApplication = async ({
 }: AuthContext & {
   body: ApproveApplicationBody;
 }) => {
-  if (!user) {
-    return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
-  }
-  const uid = auditUserId(user);
   const { id, applicant } = body;
   // const applicant = await prisma.applicant.findUnique({
   //   where: { id },
@@ -121,7 +116,7 @@ export const approveApplication = async ({
           data: {
             status: "APPROVED",
             inviteCode,
-            ...auditUpdate(uid),
+            ...auditUpdate(user.userId),
           },
         });
         await sendEmail(

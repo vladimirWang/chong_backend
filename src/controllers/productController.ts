@@ -1,7 +1,7 @@
 import prisma from "../utils/prisma";
 import { errorCode, ErrorResponse, SuccessResponse } from "../models/Response";
 import type { AuthContext } from "./userController";
-import { auditCreate, auditUpdate, auditUserId } from "../utils/auditUser";
+import { auditCreate, auditUpdate } from "../utils/auditUser";
 import { getPaginationValues, getWhereValues } from "../utils/db";
 import {
   ProductQuery,
@@ -81,11 +81,8 @@ export const createProduct = async ({
   if (!user) {
     return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
   }
-  const uid = auditUserId(user);
+  const uid = user.userId;
   const { name, remark, vendorId, salePrice, img, desc } = body;
-  logger.info(
-    `createProduct request body: name: ${name}, remark: ${remark}, vendorId: ${vendorId}, desc: ${desc}, img: ${img}`,
-  );
   const product = await prisma.product.create({
     data: {
       name,
@@ -112,7 +109,7 @@ export const updateProduct = async ({
   if (!user) {
     return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
   }
-  const uid = auditUserId(user);
+  const uid = user.userId;
   const { salePrice, name, remark, img, desc } = body;
   logger.info(
     `updateProduct request body: id: ${params.id}, name: ${name}, remark: ${remark}, salePrice: ${salePrice}, img: ${img}`,

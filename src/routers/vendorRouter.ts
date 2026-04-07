@@ -4,8 +4,9 @@ import { z, ZodError } from "zod";
 import prisma from "../utils/prisma";
 import { errorCode, ErrorResponse, SuccessResponse } from "../models/Response";
 import type { AuthContext } from "../controllers/userController";
-import { auditCreate, auditUpdate, auditUserId } from "../utils/auditUser";
+import { auditCreate, auditUpdate } from "../utils/auditUser";
 import { getPaginationValues, getWhereValues } from "../utils/db";
+import { authService } from "../macro/auth.macro";
 import {
   getVendors,
   deleteVendor,
@@ -22,152 +23,152 @@ const { JWT_SECRET } = process.env;
 
 // 供应商相关路由模块
 export const vendorRouter = new Elysia({ prefix: "/vendor" })
-  .get("/", getVendors, {
-    query: vendorQuerySchema,
-  })
-  // GET /nodejs_api/posts/:id - 获取单个文章
-  .get(
-    "/:id",
-    async ({ params, status, cookie: { auth } }) => {
-      const vendor = await prisma.vendor.findUnique({
-        where: {
-          id: params.id,
-        },
-      });
-      if (!vendor) {
-        const result = new ErrorResponse(10006, "没有查到供应商信息");
-        return status(404, JSON.stringify(result));
-      }
-      return new SuccessResponse(vendor, "供应商获取成功");
-    },
-    {
-      params: updateIdSchema,
-    },
-  )
-  // POST /nodejs_api/posts - 创建供应商
-  .post(
-    "/",
-    async ({ body, user }: AuthContext & { body: { name: string; remark?: string } }) => {
-      if (!user) {
-        return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
-      }
-      const uid = auditUserId(user);
-      const { name, remark } = body;
-      const vendor = await prisma.vendor.create({
-        data: {
-          name,
-          remark,
-          ...auditCreate(uid),
-        },
-      });
-      return new SuccessResponse(vendor, "供应商创建成功");
-    },
-    {
-      body: z.object({
-        name: z.string().min(2),
-        remark: z.string().optional(),
-      }),
-      beforeHandle: async ({ body }) => {
-        // 检查品牌是否已存在
-        const userExisted = await prisma.vendor.findFirst({
-          where: {
-            name: body.name,
-            // password: body.password
-          },
-        });
-
-        if (userExisted) {
-          // 抛出 zod 异常，使用自定义错误消息
-          throw new ZodError([
-            {
-              code: "custom",
-              path: ["name"],
-              message: "品牌名已存在",
+  .use(authService)
+  .guard({ isSignIn: true }, (app) =>
+    app
+      .get("/", getVendors, {
+        query: vendorQuerySchema,
+      })
+      // GET /nodejs_api/posts/:id - 获取单个文章
+      .get(
+        "/:id",
+        async ({ params, status, cookie: { auth } }) => {
+          const vendor = await prisma.vendor.findUnique({
+            where: {
+              id: params.id,
             },
-          ]);
-        }
-      },
-    },
-  )
-  // PUT /nodejs_api/posts/:id - 更新文章
-  .get(
-    "/byId/:id",
-    async ({ params, body }) => {
-      const vendor = await prisma.vendor.findUnique({
-        where: {
-          id: params.id,
+          });
+          if (!vendor) {
+            const result = new ErrorResponse(10006, "没有查到供应商信息");
+            return status(404, JSON.stringify(result));
+          }
+          return new SuccessResponse(vendor, "供应商获取成功");
         },
-        include: {
-          products: true,
+        {
+          params: updateIdSchema,
         },
-      });
-      return new SuccessResponse<string>(vendor, "供应商获取成功");
-      // return {
-      //     message: `文章 ${params.id} 更新成功`,
-      //     post: { id: params.id, ...(body as Record<string, any>) }
-      // };
-    },
-    {
-      params: updateIdSchema,
-    },
-  )
-  // DELETE /nodejs_api/vendor/:id - 删除供应商
-  .delete("/:id", deleteVendor, {
-    params: updateIdSchema,
-    beforeHandle: async ({ params }) => {
-      const vendor = await prisma.vendor.findUnique({
-        where: {
-          id: params.id,
+      )
+      // POST /nodejs_api/posts - 创建供应商
+      .post(
+        "/",
+        async ({
+          body,
+          user,
+        }: AuthContext & { body: { name: string; remark?: string } }) => {
+          if (!user) {
+            return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
+          }
+          const uid = user.userId;
+          const { name, remark } = body;
+          const vendor = await prisma.vendor.create({
+            data: {
+              name,
+              remark,
+              ...auditCreate(uid),
+            },
+          });
+          return new SuccessResponse(vendor, "供应商创建成功");
         },
-      });
-      if (!vendor) {
-        throw new ZodError([
-          {
-            code: "custom",
-            path: ["id"],
-            message: "供应商不存在",
+        {
+          body: z.object({
+            name: z.string().min(2),
+            remark: z.string().optional(),
+          }),
+          beforeHandle: async ({ body }) => {
+            // 检查品牌是否已存在
+            const userExisted = await prisma.vendor.findFirst({
+              where: {
+                name: body.name,
+                // password: body.password
+              },
+            });
+
+            if (userExisted) {
+              // 抛出 zod 异常，使用自定义错误消息
+              throw new ZodError([
+                {
+                  code: "custom",
+                  path: ["name"],
+                  message: "品牌名已存在",
+                },
+              ]);
+            }
           },
-        ]);
-      }
-    },
-  })
-  .delete("/batch", batchDeleteVendor, {
-    body: vendorBatchDeleteSchema,
-  })
-  .put(
-    "/:id",
-    async ({
-      params,
-      body,
-      user,
-    }: AuthContext & {
-      params: { id: number };
-      body: { name?: string; remark?: string };
-    }) => {
-      if (!user) {
-        return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
-      }
-      const uid = auditUserId(user);
-      const { name, remark } = body;
-      const updatedVendor = await prisma.vendor.update({
-        where: {
-          id: params.id,
         },
-        data: {
-          name,
-          remark,
-          ...auditUpdate(uid),
+      )
+      // PUT /nodejs_api/posts/:id - 更新文章
+      .get(
+        "/byId/:id",
+        async ({ params, body }) => {
+          const vendor = await prisma.vendor.findUnique({
+            where: {
+              id: params.id,
+            },
+            include: {
+              products: true,
+            },
+          });
+          return new SuccessResponse(vendor, "供应商获取成功");
+          // return {
+          //     message: `文章 ${params.id} 更新成功`,
+          //     post: { id: params.id, ...(body as Record<string, any>) }
+          // };
         },
-      });
-      return JSON.stringify(
-        new SuccessResponse<string>(updatedVendor, "供应商更新成功"),
-      );
-    },
-    {
-      params: updateIdSchema,
-      body: z.object({
-        name: z.string().min(2).optional(),
-        remark: z.string().optional(),
-      }),
-    },
+        {
+          params: updateIdSchema,
+        },
+      )
+      // DELETE /nodejs_api/vendor/:id - 删除供应商
+      .delete("/:id", deleteVendor, {
+        params: updateIdSchema,
+        beforeHandle: async ({ params }) => {
+          const vendor = await prisma.vendor.findUnique({
+            where: {
+              id: params.id,
+            },
+          });
+          if (!vendor) {
+            throw new ZodError([
+              {
+                code: "custom",
+                path: ["id"],
+                message: "供应商不存在",
+              },
+            ]);
+          }
+        },
+      })
+      .delete("/batch", batchDeleteVendor, {
+        body: vendorBatchDeleteSchema,
+      })
+      .put(
+        "/:id",
+        async ({ params, body, user }: any) => {
+          if (!user) {
+            return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
+          }
+          const uid = user.userId;
+          const { name, remark } = body;
+          const updatedVendor = await prisma.vendor.update({
+            where: {
+              id: params.id,
+            },
+            data: {
+              name,
+              remark,
+              ...auditUpdate(uid),
+            },
+          });
+          return JSON.stringify(
+            new SuccessResponse(updatedVendor, "供应商更新成功"),
+          );
+        },
+        {
+          params: updateIdSchema,
+          body: z.object({
+            name: z.string().min(2).optional(),
+            remark: z.string().optional(),
+          }),
+        },
+      ),
   );

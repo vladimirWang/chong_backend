@@ -27,7 +27,7 @@ import {
   ParamEmailExisted,
   ParamEmailNotExisted,
 } from "../validators/merchantCommonValidator";
-import { auditCreate, auditUserId } from "../utils/auditUser";
+import { auditCreate } from "../utils/auditUser";
 
 export type JwtPayload = {
   userId: number;
@@ -38,7 +38,7 @@ export type JwtPayload = {
 };
 
 /** isSignIn 宏注入 user；与 Context 交叉后 handler 才能接住完整 context，并赋给 InlineHandler */
-export type AuthContext = Context & { user?: JwtPayload };
+export type AuthContext = Context & { user: JwtPayload };
 
 export const loginUser = async ({
   body,
@@ -205,7 +205,7 @@ export const uploadFile = async ({
   if (!user) {
     return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
   }
-  const uid = auditUserId(user);
+  const uid = user.userId;
   const { hash, file } = body;
 
   const { ext } = sanitizeFilename(file.name);

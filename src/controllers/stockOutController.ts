@@ -27,7 +27,6 @@ import {
   auditSoftDelete,
   auditUpdate,
   auditUpdateConnect,
-  auditUserId,
 } from "../utils/auditUser";
 
 const { PUBLIC_BASE_URL } = process.env;
@@ -277,7 +276,7 @@ export const createMultipleStockOut = async ({
   if (!user) {
     return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
   }
-  const uid = auditUserId(user);
+  const uid = user.userId;
   const {
     productJoinStockOut,
     remark,
@@ -361,7 +360,7 @@ export const confirmStockOutCompleted = async ({
   if (!user) {
     return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
   }
-  const uid = auditUserId(user);
+  const uid = user.userId;
   const productsInRecord = await prisma.productJoinStockOut.findMany({
     where: {
       stockOutId: params.id,
@@ -416,7 +415,7 @@ export const updateStockOut = async ({
   if (!user) {
     return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
   }
-  const uid = auditUserId(user);
+  const uid = user.userId;
   const {
     productJoinStockOut,
     remark,
@@ -720,7 +719,7 @@ export const batchDeleteStockOut = async ({
   if (!user) {
     return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
   }
-  const uid = auditUserId(user);
+  const uid = user.userId;
   const ids = query.id as number[];
 
   if (!ids || ids.length === 0) {
@@ -792,7 +791,7 @@ export const restoreDeletedStockOut = async ({
   if (!user) {
     return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
   }
-  const uid = auditUserId(user);
+  const uid = user.userId;
   const ids = body.ids;
   if (!ids || ids.length === 0) {
     return new SuccessResponse(null, "没有需要恢复的出货单");
