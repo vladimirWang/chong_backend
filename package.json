@@ -10,7 +10,9 @@
     "migrate:dev": "bunx dotenv -e .env.development -- prisma migrate dev",
     "generate:dev": "bunx dotenv -e .env.development -- prisma generate",
     "reset:dev": "bunx dotenv -e .env.development -- prisma migrate reset",
-    "migrate:dev1": "bunx dotenv -e .env.development -- prisma migrate dev --create-only --name add_col_submittedAt"
+    "seed:dev": "bunx dotenv -e .env.development -- prisma db seed",
+    "seed:test": "bunx dotenv -e .env.test -- prisma db seed",
+    "seed:prod": "bunx dotenv -e .env.production -- prisma db seed"
   },
   "dependencies": {
     "@elysiajs/cron": "^1.4.1",
