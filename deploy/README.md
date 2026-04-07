@@ -59,6 +59,13 @@
 - 生产目录需：`/.env.production`（含 `DATABASE_PASSWORD` 等，供 compose 与容器使用）
 - 测试目录需：`/.env.test`（`DATABASE_URL` 指向 `gallery_test`、`PORT=3001` 等）
 
+### GitHub 登录（商户 OAuth）
+
+- 后端在仓库 `.env.example` 中已写明生产用 **`GITHUB_REDIRECT_URI=https://hetou.vip/api/auth/github/callback`**（须与 GitHub OAuth App 里 **Authorization callback URL** 一致）。
+- 在服务器上的 **`.env.production`** 填写 **`GITHUB_CLIENT_ID`**、**`GITHUB_CLIENT_SECRET`**（仅服务器/密钥管理，勿提交仓库），并设置 **`FRONTEND_URL`**（如 `https://hetou.vip`）。
+- Nginx 需将 **`/api/`** 反代到 Bun 后端（仓库 `nginx/nginx.conf` 已包含）；改配置后需重载 Nginx。
+- 前端构建若希望「开始授权」走 `/api/auth/github`，可设置 **`VITE_GITHUB_OAUTH_START_URL=https://hetou.vip/api/auth/github`**。
+
 ### 常见问题：`./start.sh test` 却提示缺少 `.env.production`
 
 说明脚本**没有进入测试分支**，仍走了生产栈。请依次检查：

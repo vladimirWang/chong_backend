@@ -13,6 +13,11 @@ import {
   // checkEmailNotExisted,
 } from "../controllers/userController";
 import {
+  startGithubOAuth,
+  callbackGithubOAuth,
+  exchangeGithubOAuth,
+} from "../controllers/githubOAuthController";
+import {
   registerUserBodySchema,
   loginUserBodySchema,
   uploadFileBodySchema,
@@ -42,6 +47,17 @@ export const userRouter = new Elysia({ prefix: "/user" })
   .post("/login", loginUser, {
     body: loginUserBodySchema,
   })
+  .get("/oauth/github/callback", ({ query, jwt }) => callbackGithubOAuth({ query, jwt }))
+  .get("/oauth/github", ({ query }) => startGithubOAuth({ query }))
+  .post(
+    "/oauth/github/exchange",
+    ({ body }) => exchangeGithubOAuth({ body }),
+    {
+      body: t.Object({
+        exchange: t.String({ minLength: 1 }),
+      }),
+    },
+  )
   // PUT /nodejs_api/users/:id - 更新用户
   .put("/:id", async ({ params, body }) => {
     return {

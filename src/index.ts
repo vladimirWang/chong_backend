@@ -4,6 +4,7 @@ import { existsSync } from "fs";
 import { logger } from "./utils/logger";
 import { staticPlugin } from "@elysiajs/static";
 import { apiRouter } from "./routers";
+import { githubApiAuthRouter } from "./routers/githubApiAuthRouter";
 import { loggerPlugin } from "./plugins/loggerPlugin";
 import { uploadFile, uploadExcelFile } from "./controllers/uploadController";
 import { ErrorResponse, errorCode } from "./models/Response";
@@ -166,6 +167,7 @@ export const app = new Elysia()
     );
     throw error;
   })
+  .use(githubApiAuthRouter)
   .use(apiRouter)
   .listen(Number(process.env.PORT) || 3000);
 

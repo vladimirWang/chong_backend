@@ -124,6 +124,7 @@ model User {
   password                   String
   avatar                     String?
   salt                       String
+  githubId                   String?               @unique
   vendorsCreated             Vendor[]              @relation("VendorCreatedBy")
   vendorsUpdated             Vendor[]              @relation("VendorUpdatedBy")
   vendorsDeleted             Vendor[]              @relation("VendorDeletedBy")

@@ -15,6 +15,9 @@ export const authService = new Elysia({ name: "Auth.Service" }).macro({
         `${prefix}/user/checkEmailNotExisted/:email`,
         `${prefix}/user/getSalt/:email`,
         `${prefix}/user/resetPassword`,
+        `${prefix}/user/oauth/github`,
+        `${prefix}/user/oauth/github/callback`,
+        `${prefix}/user/oauth/github/exchange`,
 
         `${prefix}/admin/user/login`,
         `${prefix}/admin/user/register`,
