@@ -1,14 +1,59 @@
-# 测试目录栈：仅测试后端 :3001，加入生产栈创建的共享网络 gallery_internal
-# 必须先在生产目录启动 deploy/prod（创建网络与 MySQL/Redis）
+# 测试目录栈：独立运行（MySQL + Redis + Nginx(8080/8443) + 测试后端 3001）
 # 在仓库根目录执行: ./deploy/test/start.sh
 name: fullstack-test
 
 networks:
-  gallery_net:
-    external: true
-    name: gallery_internal
+  gallery_test_net:
+    name: gallery_test_internal
+    driver: bridge
 
 services:
+  mysql-test:
+    image: mysql:8.0
+    container_name: fullstack-mysql-test
+    restart: unless-stopped
+    networks:
+      - gallery_test_net
+    environment:
+      MYSQL_ROOT_PASSWORD: "${DATABASE_PASSWORD}"
+      MYSQL_DATABASE: gallery_test
+    ports:
+      - "3308:3306"
+    volumes:
+      - mysql_test_data:/var/lib/mysql
+      - ../../mysql/init:/docker-entrypoint-initdb.d:ro
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-uroot",
+          "-p${DATABASE_PASSWORD}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis-test:
+    image: redis:7-alpine
+    container_name: fullstack-redis-test
+    restart: unless-stopped
+    networks:
+      - gallery_test_net
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_test_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   bun-backend-test:
     build:
       context: ../..
@@ -16,7 +61,7 @@ services:
     container_name: fullstack-bun-test
     restart: unless-stopped
     networks:
-      - gallery_net
+      - gallery_test_net
     ports:
       - "3001:3001"
     env_file:
@@ -24,3 +69,30 @@ services:
     volumes:
       - "${HOST_LOG_DIR:-/var/log/galleryrepo}:${LOG_DIR:-/var/log/galleryrepo}"
       - ../../public:/app/public
+    depends_on:
+      mysql-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+
+  nginx-test:
+    build:
+      context: ../..
+      dockerfile: nginx/Dockerfile
+    container_name: fullstack-nginx-test
+    restart: unless-stopped
+    networks:
+      - gallery_test_net
+    ports:
+      - "8080:8080"
+      - "8443:8443"
+    volumes:
+      - ../../nginx/nginx.test.conf:/etc/nginx/nginx.conf:ro
+      - "${FRONTEND_DIST_TEST:-/root/gallery/test/frontend-dist}:/usr/share/nginx/html-test:ro"
+      - "/etc/ssl/cert:/etc/ssl/cert:ro"
+    depends_on:
+      - bun-backend-test
+
+volumes:
+  mysql_test_data:
+  redis_test_data:

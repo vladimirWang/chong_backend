@@ -7,15 +7,17 @@
 | `main` / `master` | `/root/galleryrepo_server/chong_backend_prod` | 生产代码 + **全套** Docker（MySQL、Redis、Nginx、后端 **3000**） |
 | `test` | `/root/galleryrepo_server/chong_backend_test` | 测试代码 + **仅**测试后端 Docker（**3001**） |
 
-## 网络与接口
+## 网络与接口（两栈独立运行）
 
-- 生产栈创建固定 Docker 网络 **`gallery_internal`**，Nginx 与 `bun-backend-prod` 在此网络内。
-- 测试栈的 `bun-backend-test` **加入同一网络**，Nginx（在生产栈里）通过 `bun-backend-test:3001` 转发 `test.hetou.vip` 的 API。
-- 宿主机直连调试：`http://服务器IP:3000`（生产）、`http://服务器IP:3001`（测试）。
+- 生产栈使用网络 **`gallery_internal`**，包含：MySQL、Redis、Nginx(80/443)、后端 **3000**。
+- 测试栈使用网络 **`gallery_test_internal`**，包含：MySQL(3308)、Redis(6380)、Nginx(8080/8443)、后端 **3001**。
+- 同一台机器上 **80/443 只能被一个栈占用**。因此测试栈默认使用 **8080/8443**；如果你希望 `test.hetou.vip` 也走 443，需要：
+  - 单独给测试栈一台机器/独立 IP；或
+  - 额外加一层统一入口（反代/LB）在 443 上按域名分发到不同端口。
 
-## 启动顺序
+## 启动
 
-1. **先**在生产目录执行一次：
+1. 在生产目录执行：
 
    ```bash
    cd /path/to/chong_backend_prod
@@ -24,7 +26,7 @@
    # ./start.sh production
    ```
 
-2. **再**在测试目录执行：
+2. 在测试目录执行（可与生产无关单独启动）：
 
    ```bash
    cd /path/to/chong_backend_test
@@ -78,7 +80,8 @@
 
 ## 前端静态资源
 
-Nginx 仍从生产栈挂载 `FRONTEND_DIST_PROD`、`FRONTEND_DIST_TEST`（默认相对仓库根的 `frontend-dist-prod` / `frontend-dist-test`，可在启动前 `export` 覆盖）。
+- 生产栈挂载 `FRONTEND_DIST_PROD`（默认 `/root/gallery/production/frontend-dist`）。
+- 测试栈挂载 `FRONTEND_DIST_TEST`（默认 `/root/gallery/test/frontend-dist`）。
 
 ## CI
 
