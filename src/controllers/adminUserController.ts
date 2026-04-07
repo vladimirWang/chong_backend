@@ -14,10 +14,7 @@ import { logger } from "../utils/logger";
 import { sanitizeFilename, UPLOAD_DIR } from "../utils/file";
 import path from "node:path";
 import fs from "node:fs";
-import {
-  ParamEmailExisted,
-  ParamEmailNotExisted,
-} from "../validators/adminCommonValidator";
+import { ParamAdminEmailExistedTransform } from "../validators/adminCommonValidator";
 import { emailVerificationTag } from "./utilController";
 import {
   generateFixedSalt,
@@ -29,6 +26,7 @@ import { sendEmail } from "../utils/mailer";
 import { AuthContext, JwtPayload } from "./userController";
 import { generateInitialPassword } from "../utils/common";
 import { auditCreate, auditUserId } from "../utils/auditUser";
+import { ParamEmail } from "../validators/commonValidator";
 
 export const loginUser = async ({
   body,
@@ -173,48 +171,6 @@ export const registerUser = async ({ body }: { body: RegisterUserBody }) => {
   return result;
 };
 
-export const uploadFile = async ({
-  body,
-  user,
-}: AuthContext & { body: UploadFileBody }) => {
-  if (!user) {
-    return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
-  }
-  const uid = auditUserId(user);
-  const { hash, file } = body;
-
-  const { ext } = sanitizeFilename(file.name);
-  const storageFileName = uuidv4() + ext;
-
-  console.log(
-    "---uploadFile---: ",
-    UPLOAD_DIR,
-    hash,
-    file.name,
-    ext,
-    storageFileName,
-  );
-
-  const savePath = path.join(UPLOAD_DIR, storageFileName);
-
-  await Bun.write(savePath, file);
-
-  await prisma.fileInfo.create({
-    data: {
-      hash,
-      filePath: path.join("/public/uploads", storageFileName),
-      ...auditCreate(uid),
-    },
-  });
-  return new SuccessResponse(
-    {
-      filePath: path.join("/public/uploads", storageFileName),
-      baseUrl: process.env.PUBLIC_BASE_URL,
-    },
-    "文件保存成功",
-  );
-};
-
 export const checkFileExistedByHash = async ({
   params,
 }: {
@@ -245,17 +201,22 @@ export const checkFileExistedByHash = async ({
   }
 };
 
-export const checkEmailExisted = async (_ctx: {
-  params: ParamEmailExisted;
-}) => {
-  return new SuccessResponse(true, "邮箱已存在");
+export const checkEmailExisted = async ({ params }: { params: ParamEmail }) => {
+  const { email } = params;
+  const user = await prisma.adminUser.findUnique({
+    where: {
+      email,
+    },
+  });
+  return new SuccessResponse(Boolean(user), "邮箱已存在");
 };
 
 export const getUserSaltByEmail = async ({
   params,
 }: {
-  params: ParamEmailExisted;
+  params: ParamAdminEmailExistedTransform;
 }) => {
+  // 由 paramAdminEmailExistedTransformSchema 预查询并注入 user（含 salt）
   return new SuccessResponse(params.user.salt, "获取salt成功");
 };
 
@@ -295,7 +256,11 @@ export const updatePassword = async ({
   return new SuccessResponse(null, "密码修改成功");
 };
 
-export const resetPassword = async ({ body }: { body: ParamEmailExisted }) => {
+export const resetPassword = async ({
+  body,
+}: {
+  body: ParamAdminEmailExistedTransform;
+}) => {
   const { user: userMatched } = body;
   const initialPassword = generateInitialPassword(6);
 
@@ -314,12 +279,4 @@ export const resetPassword = async ({ body }: { body: ParamEmailExisted }) => {
     `您的初始密码为：${initialPassword}`,
   );
   return new SuccessResponse(null, "密码重置成功，初始密码已发送至您的邮箱");
-};
-
-export const checkEmailNotExisted = async ({
-  params,
-}: {
-  params: ParamEmailNotExisted;
-}) => {
-  return new SuccessResponse(true, "邮箱不存在");
 };

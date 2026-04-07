@@ -2,13 +2,11 @@ import { Elysia, t } from "elysia";
 import {
   loginUser,
   registerUser,
-  uploadFile,
   checkFileExistedByHash,
   checkEmailExisted,
   getUserSaltByEmail,
   updatePassword,
   resetPassword,
-  checkEmailNotExisted,
 } from "../controllers/adminUserController";
 import {
   registerUserBodySchema,
@@ -17,9 +15,10 @@ import {
   updatePasswordBodySchema,
 } from "../validators/userValidator";
 import {
-  paramEmailExistedSchema,
-  paramEmailNotExistedSchema,
+  paramAdminEmailExistedTransformSchema,
+  // paramEmailNotExistedSchema,
 } from "../validators/adminCommonValidator";
+import { paramEmailSchema } from "../validators/commonValidator";
 
 // 使用 group 创建用户相关的路由组
 export const adminUserRouter = new Elysia({ prefix: "/admin/user" })
@@ -30,10 +29,6 @@ export const adminUserRouter = new Elysia({ prefix: "/admin/user" })
         { id: 2, name: "李四" },
       ],
     };
-  })
-  // POST /nodejs_api/users/register - 注册用户（需要 email 和 password）
-  .post("/register", registerUser, {
-    body: registerUserBodySchema.extend(paramEmailNotExistedSchema.shape),
   })
   .post("/login", loginUser, {
     body: loginUserBodySchema,
@@ -51,27 +46,20 @@ export const adminUserRouter = new Elysia({ prefix: "/admin/user" })
       message: `用户 ${params.id} 删除成功`,
     };
   })
-  .post("/upload", uploadFile, {
-    type: "multipart/form-data",
-    body: uploadFileBodySchema,
-  })
   .get("/checkFileExisted/:hash", checkFileExistedByHash, {
     params: t.Object({
       hash: t.String(),
     }),
   })
   .get("/checkEmailExisted/:email", checkEmailExisted, {
-    params: paramEmailExistedSchema,
-  })
-  .get("/checkEmailNotExisted/:email", checkEmailNotExisted, {
-    params: paramEmailNotExistedSchema,
+    params: paramEmailSchema,
   })
   .get("/getSalt/:email", getUserSaltByEmail, {
-    params: paramEmailExistedSchema, // 复用已有的邮箱参数校验规则
+    params: paramAdminEmailExistedTransformSchema, // 复用已有的邮箱参数校验规则
   })
   .post("/updatePassword", updatePassword, {
     body: updatePasswordBodySchema,
   })
   .post("/resetPassword", resetPassword, {
-    body: paramEmailExistedSchema,
+    body: paramAdminEmailExistedTransformSchema,
   });

@@ -1,0 +1,42 @@
+@base=http://localhost:3000/nodejs_api/applicant
+@token =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImVtYWlsIjoiYWFjaGVuMjAxMkBvdXRsb29rLmNvbSIsInVzZXJuYW1lIjoibWlrZSIsImV4cCI6MTc3MTQ4NDI5NywiaWF0IjoxNzcxMzk3ODk3fQ.JRvm5-qU0dHxa0IzYceaxxhhYqJk_JfDvpLjcd-36_8
+
+### brand list
+POST {{base}}/approve
+Authorization: Bearer {{token}}
+content-type: application/json
+
+{
+    "id": 11
+}
+
+### create brand
+POST {{base}}
+Content-Type: application/json
+Authorization: {{token}}
+
+{
+    "name": "nike3"
+}
+
+### get data by id
+GET {{base}}/byId/1
+Authorization: Bearer {{token}}
+
+
+### token test
+GET http://localhost:3000/hi
+Authorization: {{token}}
+
+### token test
+DELETE http://localhost:3000/nodejs_api/vendor/1
+Authorization: {{token}}
+
+### 批量删除供应商
+DELETE http://localhost:3000/nodejs_api/vendor/batch
+Authorization: {{token}}
+Content-Type: application/json
+
+{
+    "id": [4]
+}

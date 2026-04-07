@@ -2,9 +2,9 @@ import { z, ZodError } from "zod";
 import prisma from "../utils/prisma";
 
 /** 邮箱已存在校验：一次查询，解析结果含 user，供 handler 复用 */
-export const paramEmailExistedSchema = z
+export const paramAdminEmailExistedTransformSchema = z
   .object({
-    email: z.string().email(),
+    email: z.email(),
   })
   .transform(async (data) => {
     const user = await prisma.adminUser.findFirst({
@@ -18,23 +18,6 @@ export const paramEmailExistedSchema = z
     }
     return { email: data.email, user };
   });
-export type ParamEmailExisted = z.infer<typeof paramEmailExistedSchema>;
-
-export const paramEmailNotExistedSchema = z.object({
-  email: z
-    .string()
-    .email()
-    .refine(
-      async (email) => {
-        const existed = await prisma.adminUser.findFirst({
-          where: {
-            email,
-          },
-        });
-        console.log("paramEmailNotExistedSchema refine result: ", existed);
-        return !existed;
-      },
-      { message: "邮箱已注册" },
-    ),
-});
-export type ParamEmailNotExisted = z.infer<typeof paramEmailNotExistedSchema>;
+export type ParamAdminEmailExistedTransform = z.infer<
+  typeof paramAdminEmailExistedTransformSchema
+>;
