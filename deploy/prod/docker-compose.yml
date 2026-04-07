@@ -18,6 +18,8 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: "${DATABASE_PASSWORD}"
       MYSQL_DATABASE: gallery
+      # 允许从 Docker 网段（如 172.x）用 root 连接；仅空数据目录首次初始化时生效
+      MYSQL_ROOT_HOST: "%"
     ports:
       - "3307:3306"
     volumes:

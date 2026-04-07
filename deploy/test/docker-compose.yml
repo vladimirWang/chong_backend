@@ -17,6 +17,7 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: "${DATABASE_PASSWORD}"
       MYSQL_DATABASE: gallery_test
+      MYSQL_ROOT_HOST: "%"
     ports:
       - "3308:3306"
     volumes:
