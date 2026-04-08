@@ -7,14 +7,16 @@ async function main() {
     where: { email: ANONYMOUS_EMAIL },
     create: {
       email: ANONYMOUS_EMAIL,
-      username: "anonymous",
-      password: "password",
-      salt: "salt",
+      username: "admin",
+      password:
+        "61d591f1e485b0b7dd2165b7a25c160ea9a6a475532306c693d9f7abe456a590",
+      salt: "19c38f179287f151dba6e7ce37fa3cf8",
     },
     update: {
-      username: "anonymous",
-      password: "password",
-      salt: "salt",
+      username: "admin",
+      password:
+        "61d591f1e485b0b7dd2165b7a25c160ea9a6a475532306c693d9f7abe456a590",
+      salt: "19c38f179287f151dba6e7ce37fa3cf8",
     },
   });
 }
