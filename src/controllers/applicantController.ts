@@ -12,6 +12,9 @@ import { Pagination, ParamEmail } from "../validators/commonValidator";
 import { ParamEmailNotExisted } from "../validators/merchantCommonValidator";
 import { CheckInviteCodeBody } from "../validators/userValidator";
 import { ApproveApplicationBody } from "../validators/applicantValidator";
+import { randomBytes } from "node:crypto";
+import dayjs from "dayjs";
+import { ApplicationStatus } from "@prisma/client";
 
 // 获取邀请码
 export const sendInviteCode = async ({
@@ -52,12 +55,12 @@ export const checkInviteCode = async ({
       "未收到系统权限申请",
     );
   }
-  if (application.inviteCode !== inviteCode) {
-    return new ErrorResponse(
-      errorCode.INVITE_CODE_INVALID,
-      "邀请码不正确或已过期",
-    );
-  }
+  // if (application.inviteCode !== inviteCode) {
+  //   return new ErrorResponse(
+  //     errorCode.INVITE_CODE_INVALID,
+  //     "邀请码不正确或已过期",
+  //   );
+  // }
   return new SuccessResponse(null, "邀请码验证通过");
 };
 
@@ -92,37 +95,48 @@ export const approveApplication = async ({
   body: ApproveApplicationBody;
 }) => {
   const { id, applicant } = body;
-  // const applicant = await prisma.applicant.findUnique({
-  //   where: { id },
-  // });
-  // if (!applicant) {
-  //   return new ErrorResponse(errorCode.APPLICATION_NOT_FOUND, "申请人不存在");
+
+  // // 发送邀请码到邮箱
+  // // await sendEmail(email, "邀请码", `您的邀请码为：${rndCode}, 请尽快使用。`);
+  // let inviteCode;
+  // try {
+  //   inviteCode = generateRndCode();
+  // } catch (error) {
+  //   return new ErrorResponse(errorCode.SYSTEM_ERROR, "生成邀请码失败");
   // }
 
-  // 发送邀请码到邮箱
-  // await sendEmail(email, "邀请码", `您的邀请码为：${rndCode}, 请尽快使用。`);
-  let inviteCode;
-  try {
-    inviteCode = generateRndCode();
-  } catch (error) {
-    return new ErrorResponse(errorCode.SYSTEM_ERROR, "生成邀请码失败");
-  }
   try {
     // 交互式事务：update 与 sendEmail 同属一次事务边界；任一步抛错则整笔回滚（含已执行的 update）
     await prisma.$transaction(
       async (tx) => {
+        // 生成激活链接
+        const token = randomBytes(32).toString("hex");
+        await tx.applicantActivationToken.create({
+          data: {
+            applicantId: id,
+            tokenHash: token,
+            expiresAt: dayjs().add(7, "day").toDate(),
+            // applicant: {
+            //   connect: {
+            //     id,
+            //   },
+            // },
+            ...auditCreate(user.userId),
+          },
+        });
         await tx.applicant.update({
           where: { id },
           data: {
-            status: "APPROVED",
-            inviteCode,
+            status: ApplicationStatus.APPROVED,
+            // inviteCode,
             ...auditUpdate(user.userId),
           },
         });
+        const activatedLink = `${process.env.APP_URL}/applicant/activate?token=${token}`;
         await sendEmail(
           applicant.email,
-          "邀请码",
-          `您的邀请码为：${inviteCode}, 请尽快使用。`,
+          "库存系统激活链接",
+          `激活链接为：${activatedLink}, 请尽快使用。`,
         );
         // await new Promise((r, r2) => {
         //   setTimeout(r2, 3000);
@@ -135,6 +149,7 @@ export const approveApplication = async ({
       },
     );
   } catch (error) {
+    console.error("approveApplication error: ", error);
     return new ErrorResponse(
       errorCode.SYSTEM_ERROR,
       "审核失败：数据库更新或发送邮件出错，已回滚",
