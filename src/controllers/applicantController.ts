@@ -24,7 +24,7 @@ export const sendInviteCode = async ({
   await prisma.applicant.create({
     data: {
       email,
-      ...auditCreate(0),
+      ...auditCreate(1),
     },
   });
 
