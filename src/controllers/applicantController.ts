@@ -24,10 +24,25 @@ export const sendInviteCode = async ({
 }) => {
   const { email } = body;
 
+  const adminUser = await prisma.adminUser.findFirst({
+    orderBy: {
+      id: "asc",
+    },
+    select: {
+      id: true,
+    },
+  });
+  if (!adminUser) {
+    return new ErrorResponse(
+      errorCode.ADMIN_USER_NOT_FOUND,
+      "管理员用户不存在",
+    );
+  }
+
   await prisma.applicant.create({
     data: {
       email,
-      ...auditCreate(1),
+      ...auditCreate(adminUser.id),
     },
   });
 
