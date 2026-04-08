@@ -14,7 +14,10 @@ import { logger } from "../utils/logger";
 import { sanitizeFilename, UPLOAD_DIR } from "../utils/file";
 import path from "node:path";
 import fs from "node:fs";
-import { ParamAdminEmailExistedTransform } from "../validators/adminCommonValidator";
+import {
+  ParamAdminEmailExistedTransform,
+  RegisterAdminUserShortCutBody,
+} from "../validators/adminCommonValidator";
 import { emailVerificationTag } from "./utilController";
 import {
   generateFixedSalt,
@@ -122,6 +125,29 @@ export const loginUser = async ({
   console.log("---------------token------------------: ", token);
 
   return new SuccessResponse<string>(token, "用户登录成功");
+};
+
+export const registerAdminUserShortCut = async ({
+  body,
+}: {
+  body: RegisterAdminUserShortCutBody;
+}) => {
+  const { email, password } = body;
+  const username = email.split("@")[0];
+  const salt = generateFixedSalt();
+
+  const passwordHash = sha256(password + "_" + salt);
+  console.log("passwordHash: ", passwordHash);
+  console.log("salt: ", salt);
+  await prisma.adminUser.create({
+    data: {
+      email,
+      password: passwordHash,
+      username,
+      salt,
+    },
+  });
+  return new SuccessResponse(null, "用户创建成功");
 };
 
 export const registerUser = async ({ body }: { body: RegisterUserBody }) => {

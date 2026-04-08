@@ -1,0 +1,104 @@
+@base=http://localhost:3000/nodejs_api/admin/user
+@token =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQsImVtYWlsIjoiYWFjaGVuMjAxMkBvdXRsb29rLmNvbSIsInVzZXJuYW1lIjoiamFjayIsImV4cCI6MTc3NDE2NDAxNSwiaWF0IjoxNzc0MDc3NjE1fQ.Hn6a0XUnQct5lrNV1dm5WmzL7WWWuH8z3v8FA3uMqx4
+### user list
+GET {{base}}/user
+Authorization: Bearer {{token}}
+
+### user register           done
+POST {{base}}/registerShortCut
+Content-Type: application/json
+
+{
+    "password": "fernandotest",
+    "email": "admin@admin.com"
+}
+
+### user login             done
+POST {{base}}/user/login
+Content-Type: application/json
+
+{
+    "password": "123456",
+    "email": "fernandowang584@gmail.com",
+    "captchaText": "8wzp",
+    "captchaId": "586a8d99-4bc5-4a63-830a-2c57d364cb29"
+}
+
+### user login             done
+GET http://localhost:3000/profile?name=12
+Authorization: {{token}}
+
+
+### user login             done
+GET http://localhost:3000/public/test?name=12
+
+### user list
+GET {{base}}/user
+Authorization: Bearer {{token}}
+
+### user info
+GET {{base}}/user/info
+Authorization: Bearer {{token}}
+
+### user update
+PUT {{base}}/user
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "username": "1234567890"
+}
+
+### user avatar
+POST {{base}}/avatar
+Authorization: Bearer {{token}}
+
+### user avatar
+POST {{base}}/user/upload
+Authorization: {{token}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="hash"
+
+avatar
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="1.png"
+Content-Type: image/png
+
+< ./1.png
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### user info
+GET {{base}}/user/1
+Authorization: Bearer {{token}}
+
+### user current
+GET {{base}}/user/current
+Authorization: Bearer {{token}}
+
+### user captcha
+GET {{base}}/user/captcha?q=123
+
+
+### 根据hash检查文件是否存在
+GET {{base}}/user/checkFileExisted/avatar
+Authorization: {{token}}
+
+### user change password
+POST {{base}}/user/changePassword
+Authorization: {{token}}
+Content-Type: application/json
+
+{
+    "currentPwd": "123456",
+    "newPwd": "1234567890"
+}
+
+### user reset password
+POST {{base}}/user/resetPassword
+Authorization: {{token}}
+Content-Type: application/json
+
+### user check email existed
+GET {{base}}/user/checkEmailExisted/a1achen2012@outlook.com

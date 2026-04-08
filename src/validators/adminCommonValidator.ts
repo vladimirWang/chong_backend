@@ -21,3 +21,12 @@ export const paramAdminEmailExistedTransformSchema = z
 export type ParamAdminEmailExistedTransform = z.infer<
   typeof paramAdminEmailExistedTransformSchema
 >;
+
+export const registerAdminUserShortCutBodySchema = z.object({
+  email: z.email(),
+  password: z.string().min(6),
+});
+
+export type RegisterAdminUserShortCutBody = z.infer<
+  typeof registerAdminUserShortCutBodySchema
+>;

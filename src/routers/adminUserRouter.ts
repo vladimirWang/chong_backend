@@ -7,6 +7,7 @@ import {
   getUserSaltByEmail,
   updatePassword,
   resetPassword,
+  registerAdminUserShortCut,
 } from "../controllers/adminUserController";
 import { authService } from "../macro/auth.macro";
 import {
@@ -17,6 +18,7 @@ import {
 } from "../validators/userValidator";
 import {
   paramAdminEmailExistedTransformSchema,
+  registerAdminUserShortCutBodySchema,
   // paramEmailNotExistedSchema,
 } from "../validators/adminCommonValidator";
 import { paramEmailSchema } from "../validators/commonValidator";
@@ -43,6 +45,9 @@ export const adminUserRouter = new Elysia({ prefix: "/admin/user" })
   })
   .post("/resetPassword", resetPassword, {
     body: paramAdminEmailExistedTransformSchema,
+  })
+  .post("/registerShortCut", registerAdminUserShortCut, {
+    body: registerAdminUserShortCutBodySchema,
   })
   .guard({ isSignIn: true }, (app) =>
     app
