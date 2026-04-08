@@ -3,7 +3,7 @@ import prisma from "../src/utils/prisma";
 const ANONYMOUS_EMAIL = "anonymous@qq.com";
 
 async function main() {
-  await prisma.user.upsert({
+  await prisma.adminUser.upsert({
     where: { email: ANONYMOUS_EMAIL },
     create: {
       email: ANONYMOUS_EMAIL,

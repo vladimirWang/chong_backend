@@ -143,9 +143,6 @@ model User {
   fileInfoCreated            FileInfo[]            @relation("FileInfoCreatedBy")
   fileInfoUpdated            FileInfo[]            @relation("FileInfoUpdatedBy")
   fileInfoDeleted            FileInfo[]            @relation("FileInfoDeletedBy")
-  applicantCreated           Applicant[]           @relation("ApplicantCreatedBy")
-  applicantUpdated           Applicant[]           @relation("ApplicantUpdatedBy")
-  applicantDeleted           Applicant[]           @relation("ApplicantDeletedBy")
   productJoinStockOutCreated ProductJoinStockOut[] @relation("ProductJoinStockOutCreatedBy")
   productJoinStockOutUpdated ProductJoinStockOut[] @relation("ProductJoinStockOutUpdatedBy")
   productJoinStockOutDeleted ProductJoinStockOut[] @relation("ProductJoinStockOutDeletedBy")
@@ -282,35 +279,70 @@ model Client {
 
 // 用户
 model AdminUser {
-  id        Int       @id @default(autoincrement())
-  email     String    @unique
-  username  String?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-  password  String
-  salt      String
+  id                               Int                        @id @default(autoincrement())
+  email                            String                     @unique
+  username                         String?
+  createdAt                        DateTime                   @default(now())
+  updatedAt                        DateTime                   @updatedAt
+  deletedAt                        DateTime?
+  password                         String
+  salt                             String
+  applicantActivationTokensCreated ApplicantActivationToken[] @relation("ApplicantActivationTokenCreatedBy")
+  applicantActivationTokensUpdated ApplicantActivationToken[] @relation("ApplicantActivationTokenUpdatedBy")
+  applicantActivationTokensDeleted ApplicantActivationToken[] @relation("ApplicantActivationTokenDeletedBy")
+  applicantsCreated                Applicant[]                @relation("ApplicantCreatedBy")
+  applicantsUpdated                Applicant[]                @relation("ApplicantUpdatedBy")
+  applicantsDeleted                Applicant[]                @relation("ApplicantDeletedBy")
 }
 
 enum ApplicationStatus {
   PENDING // 待审核
-  APPROVED // 已审核
+  APPROVED // 已发送激活链接
+  ACTIVATED // 已激活并注册成功
   REJECTED // 已拒绝
 }
 
 // 系统申请人
 model Applicant {
-  id            Int               @id @default(autoincrement())
-  email         String            @unique
-  inviteCode    String?
-  status        ApplicationStatus @default(PENDING)
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
+  id               Int                        @id @default(autoincrement())
+  email            String                     @unique
+  // inviteCode       String?
+  status           ApplicationStatus          @default(PENDING)
+  activationTokens ApplicantActivationToken[]
+  createdAt        DateTime                   @default(now())
+  updatedAt        DateTime                   @updatedAt
+  deletedAt        DateTime?
+  createdBy        Int
+  createdByUser    AdminUser?                 @relation("ApplicantCreatedBy", fields: [createdBy], references: [id])
+  updatedBy        Int
+  updatedByUser    AdminUser?                 @relation("ApplicantUpdatedBy", fields: [updatedBy], references: [id])
+  deletedBy        Int
+  deletedByUser    AdminUser?                 @relation("ApplicantDeletedBy", fields: [deletedBy], references: [id])
+}
+
+// 申请人激活链接（用于完成注册的一次性 token）
+model ApplicantActivationToken {
+  id          Int       @id @default(autoincrement())
+  applicantId Int
+  applicant   Applicant @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+
+  // 注意：只建议存 token 的 hash，不存明文
+  tokenHash String    @unique @db.VarChar(128)
+  expiresAt DateTime
+  usedAt    DateTime? // 使用时间
+  revokedAt DateTime? // 作废时间
+
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
   deletedAt     DateTime?
   createdBy     Int
-  createdByUser User?             @relation("ApplicantCreatedBy", fields: [createdBy], references: [id])
+  createdByUser AdminUser? @relation("ApplicantActivationTokenCreatedBy", fields: [createdBy], references: [id])
   updatedBy     Int
-  updatedByUser User?             @relation("ApplicantUpdatedBy", fields: [updatedBy], references: [id])
+  updatedByUser AdminUser? @relation("ApplicantActivationTokenUpdatedBy", fields: [updatedBy], references: [id])
   deletedBy     Int
-  deletedByUser User?             @relation("ApplicantDeletedBy", fields: [deletedBy], references: [id])
+  deletedByUser AdminUser? @relation("ApplicantActivationTokenDeletedBy", fields: [deletedBy], references: [id])
+
+  @@index([applicantId])
+  @@index([expiresAt])
+  @@index([usedAt])
 }
