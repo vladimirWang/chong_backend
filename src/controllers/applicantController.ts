@@ -147,11 +147,12 @@ export const approveApplication = async ({
             ...auditUpdate(user.userId),
           },
         });
-        const activatedLink = `${process.env.APP_URL}/applicant/activate?token=${token}`;
+        const activatedLink = `${process.env.FRONTEND_URL}/#/applicant/activate?token=${token}`;
+        // const activatedLink = "https://www.iqiyi.com/u/record";
         await sendEmail(
           applicant.email,
           "库存系统激活链接",
-          `激活链接为：${activatedLink}, 请尽快使用。`,
+          `<p>激活链接为：<a href="${activatedLink}" target="_blank">前往填写用户信息</a>, 请尽快使用。</p>`,
         );
         // await new Promise((r, r2) => {
         //   setTimeout(r2, 3000);
