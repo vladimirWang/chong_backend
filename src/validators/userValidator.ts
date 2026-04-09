@@ -1,4 +1,5 @@
-import { z } from "zod";
+import { z, ZodError } from "zod";
+import prisma from "../utils/prisma";
 
 // 注册用户 Body Schema
 export const registerUserBodySchema = z.object({
@@ -9,6 +10,36 @@ export const registerUserBodySchema = z.object({
 });
 
 export type RegisterUserBody = z.infer<typeof registerUserBodySchema>;
+
+export const registerUserByTokenBodySchema = z
+  .object({
+    password: z.string().min(6),
+    username: z.string().max(8),
+    token: z.string(),
+  })
+  .transform(async (data) => {
+    const token = await prisma.applicantActivationToken.findFirst({
+      where: {
+        tokenHash: data.token,
+      },
+      include: {
+        applicant: true,
+      },
+    });
+    if (!token) {
+      throw new ZodError([
+        { code: "custom", path: ["token"], message: "token 不存在" },
+      ]);
+    }
+    return {
+      ...data,
+      applicant: token.applicant,
+    };
+  });
+
+export type RegisterUserByTokenBody = z.infer<
+  typeof registerUserByTokenBodySchema
+>;
 
 // 登录用户 Body Schema
 export const loginUserBodySchema = z.object({

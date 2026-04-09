@@ -15,34 +15,22 @@ import { ApproveApplicationBody } from "../validators/applicantValidator";
 import { randomBytes } from "node:crypto";
 import dayjs from "dayjs";
 import { ApplicationStatus } from "@prisma/client";
+import type { AppElysiaStore } from "../types/elysiaAppStore";
 
 // 获取邀请码
 export const sendInviteCode = async ({
   body,
+  store,
 }: {
   body: ParamEmailNotExisted;
+  store: AppElysiaStore;
 }) => {
   const { email } = body;
-
-  const adminUser = await prisma.adminUser.findFirst({
-    orderBy: {
-      id: "asc",
-    },
-    select: {
-      id: true,
-    },
-  });
-  if (!adminUser) {
-    return new ErrorResponse(
-      errorCode.ADMIN_USER_NOT_FOUND,
-      "管理员用户不存在",
-    );
-  }
 
   await prisma.applicant.create({
     data: {
       email,
-      ...auditCreate(adminUser.id),
+      ...auditCreate(store.anonymousUserId),
     },
   });
 

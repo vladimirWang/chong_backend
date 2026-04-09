@@ -1,24 +1,54 @@
 import prisma from "../src/utils/prisma";
 
-const ANONYMOUS_EMAIL = "anonymous@qq.com";
+const ANONYMOUS_EMAIL = process.env.ANONYMOUS_EMAIL;
+const ANONYMOUS_USERNAME = process.env.ANONYMOUS_USERNAME;
+const ANONYMOUS_PASSWORD = process.env.ANONYMOUS_PASSWORD;
+const ANONYMOUS_SALT = process.env.ANONYMOUS_SALT;
 
-async function main() {
-  await prisma.adminUser.upsert({
-    where: { email: ANONYMOUS_EMAIL },
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+const ADMIN_SALT = process.env.ADMIN_SALT;
+
+async function upsertAdminUser(data: {
+  email: string;
+  username: string;
+  password: string;
+  salt: string;
+}) {
+  return prisma.adminUser.upsert({
+    where: { email: data.email },
     create: {
-      email: ANONYMOUS_EMAIL,
-      username: "admin",
-      password:
-        "61d591f1e485b0b7dd2165b7a25c160ea9a6a475532306c693d9f7abe456a590",
-      salt: "19c38f179287f151dba6e7ce37fa3cf8",
+      email: data.email,
+      username: data.username,
+      password: data.password,
+      salt: data.salt,
     },
     update: {
-      username: "admin",
-      password:
-        "61d591f1e485b0b7dd2165b7a25c160ea9a6a475532306c693d9f7abe456a590",
-      salt: "19c38f179287f151dba6e7ce37fa3cf8",
+      username: data.username,
+      password: data.password,
+      salt: data.salt,
     },
   });
+}
+
+async function main() {
+  return Promise.all(
+    [
+      {
+        email: ANONYMOUS_EMAIL!,
+        username: ANONYMOUS_USERNAME!,
+        password: ANONYMOUS_PASSWORD!,
+        salt: ANONYMOUS_SALT!,
+      },
+      {
+        email: ADMIN_EMAIL!,
+        username: ADMIN_USERNAME!,
+        password: ADMIN_PASSWORD!,
+        salt: ADMIN_SALT!,
+      },
+    ].map(upsertAdminUser),
+  );
 }
 
 main()

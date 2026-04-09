@@ -5,6 +5,7 @@ import {
   RegisterUserBody,
   UploadFileBody,
   UpdatePasswordBody,
+  RegisterUserByTokenBody,
 } from "../validators/userValidator";
 import prisma from "../utils/prisma";
 import { redisClient } from "../utils/redis";
@@ -27,7 +28,9 @@ import {
   ParamEmailExisted,
   ParamEmailNotExisted,
 } from "../validators/merchantCommonValidator";
-import { auditCreate } from "../utils/auditUser";
+import { auditCreate, auditUpdate } from "../utils/auditUser";
+import { ApplicationStatus } from "@prisma/client";
+import { AppElysiaStore } from "../types/elysiaAppStore";
 
 export type JwtPayload = {
   userId: number;
@@ -365,3 +368,34 @@ export const resetPassword = async ({ body }: { body: ParamEmailExisted }) => {
 //   });
 //   return new SuccessResponse(Boolean(!user), `邮箱${user ? "存在" : "不存在"}`);
 // };
+
+export const registerUserByToken = async ({
+  body,
+  store,
+}: {
+  body: RegisterUserByTokenBody;
+  store: AppElysiaStore;
+}) => {
+  const { password, username, applicant } = body;
+  const salt = generateFixedSalt();
+  const passwordHash = sha256(password + "_" + salt);
+  await prisma.$transaction([
+    prisma.applicant.update({
+      where: {
+        id: applicant.id,
+      },
+      data: {
+        status: ApplicationStatus.ACTIVATED,
+      },
+    }),
+    prisma.user.create({
+      data: {
+        email: applicant.email,
+        password: passwordHash,
+        username: username,
+        salt,
+      },
+    }),
+  ]);
+  return new SuccessResponse(null, "用户注册成功");
+};

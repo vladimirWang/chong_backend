@@ -25,3 +25,25 @@ export const initServiceCode = async () => {
     console.error("initServiceCode error: ", error);
   }
 };
+
+export const getAnonymousUser = async () => {
+  return prisma.adminUser.findFirst({
+    where: {
+      email: process.env.ANONYMOUS_EMAIL!,
+    },
+  });
+};
+
+/** 启动时由 index 写入；供嵌套路由等无法继承根 app `store` 类型的 handler 使用 */
+let anonymousAdminUserId: number | null = null;
+
+export const setAnonymousAdminUserId = (id: number) => {
+  anonymousAdminUserId = id;
+};
+
+export const getAnonymousAdminUserId = (): number => {
+  if (anonymousAdminUserId === null) {
+    throw new Error("Anonymous admin user id not initialized");
+  }
+  return anonymousAdminUserId;
+};

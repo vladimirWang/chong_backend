@@ -10,6 +10,7 @@ import {
   getCurrentUser,
   updatePassword,
   resetPassword,
+  registerUserByToken,
   // checkEmailNotExisted,
 } from "../controllers/userController";
 import {
@@ -22,6 +23,7 @@ import {
   loginUserBodySchema,
   uploadFileBodySchema,
   updatePasswordBodySchema,
+  registerUserByTokenBodySchema,
 } from "../validators/userValidator";
 import {
   paramEmailExistedSchema,
@@ -29,9 +31,11 @@ import {
 } from "../validators/merchantCommonValidator";
 import { paramEmailSchema } from "../validators/commonValidator";
 import { authService } from "../macro/auth.macro";
+import { applicantStoreShape } from "./applicantRouter";
 
 // 使用 group 创建用户相关的路由组
 export const userRouter = new Elysia({ prefix: "/user" })
+  .use(applicantStoreShape)
   .use(authService)
   // POST /nodejs_api/users/register - 注册用户（需要 email 和 password）
   .post("/register", registerUser, {
@@ -40,17 +44,15 @@ export const userRouter = new Elysia({ prefix: "/user" })
   .post("/login", loginUser, {
     body: loginUserBodySchema,
   })
-  .get("/oauth/github/callback", ({ query, jwt }) => callbackGithubOAuth({ query, jwt }))
-  .get("/oauth/github", ({ query }) => startGithubOAuth({ query }))
-  .post(
-    "/oauth/github/exchange",
-    ({ body }) => exchangeGithubOAuth({ body }),
-    {
-      body: t.Object({
-        exchange: t.String({ minLength: 1 }),
-      }),
-    },
+  .get("/oauth/github/callback", ({ query, jwt }) =>
+    callbackGithubOAuth({ query, jwt }),
   )
+  .get("/oauth/github", ({ query }) => startGithubOAuth({ query }))
+  .post("/oauth/github/exchange", ({ body }) => exchangeGithubOAuth({ body }), {
+    body: t.Object({
+      exchange: t.String({ minLength: 1 }),
+    }),
+  })
   .get("/checkEmailExisted/:email", checkEmailExisted, {
     params: paramEmailSchema,
   })
@@ -62,6 +64,9 @@ export const userRouter = new Elysia({ prefix: "/user" })
   })
   .post("/resetPassword", resetPassword, {
     body: paramEmailExistedSchema,
+  })
+  .post("/registerByToken", registerUserByToken, {
+    body: registerUserByTokenBodySchema,
   });
 
 userRouter.guard({ isSignIn: true }, (app) =>

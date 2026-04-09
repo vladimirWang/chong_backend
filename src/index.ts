@@ -1,4 +1,4 @@
-import { Elysia, t } from "elysia";
+import { Elysia } from "elysia";
 import { config } from "dotenv";
 import { existsSync } from "fs";
 import { logger } from "./utils/logger";
@@ -21,7 +21,11 @@ import { connectRedis } from "./utils/redis";
 import path from "node:path";
 import { ensureDirExists, UPLOAD_DIR } from "./utils/file";
 import { createDailyUserInsertJob } from "./plugins/dailyUserInsertJob";
-import { initServiceCode } from "./init";
+import {
+  getAnonymousUser,
+  initServiceCode,
+  setAnonymousAdminUserId,
+} from "./init";
 
 // 开发环境使用 .env.development；生产/测试可由 ENV_FILE 指定（与 docker-compose env_file 一致）
 const envFile =
@@ -41,12 +45,19 @@ ensureDirExists(UPLOAD_DIR);
 
 await connectRedis();
 await initServiceCode();
+const anonymousUser = await getAnonymousUser();
+console.log("anonymousUser: ", anonymousUser);
+if (!anonymousUser) {
+  throw new Error("Anonymous user not found");
+}
+setAnonymousAdminUserId(anonymousUser.id);
 
 // dayjs.tz.setDefault("Asia/Shanghai");
 // dayjs.tz.setDefault("Europe/London");
 
 // 创建主应用并注册所有路由模块
 export const app = new Elysia()
+  .state("anonymousUserId", anonymousUser.id)
   .use(
     staticPlugin({
       // 使用绝对路径：相对路径在 Docker/生产环境中 process.cwd() 可能不是项目根目录，导致静态资源 404
@@ -70,7 +81,7 @@ export const app = new Elysia()
   // .use(authService)
   .get("/", () => "Hello Elysia")
   // 全局错误处理 - 拦截 zod 校验异常
-  .onError(({ code, error, url }) => {
+  .onError(({ code, error, path }) => {
     // 直接处理 ZodError（包括在 beforeHandle 中抛出的）
     if (error instanceof ZodError) {
       const errorMessages = error.issues.map((issue) => issue.message);
@@ -152,7 +163,7 @@ export const app = new Elysia()
     if (code === "NOT_FOUND") {
       const result = new ErrorResponse(
         errorCode.NOT_FOUND,
-        "路由不存在: " + url,
+        "路由不存在: " + path,
       );
       return new Response(JSON.stringify(result), {
         status: 404,
@@ -161,8 +172,12 @@ export const app = new Elysia()
     }
 
     // 未捕获错误记录后继续抛出
+    const errForLog =
+      error instanceof Error
+        ? { message: error.message, stack: error.stack }
+        : { message: String(error), stack: undefined as string | undefined };
     logger.error(
-      { error: error?.message, stack: error?.stack, url },
+      { error: errForLog.message, stack: errForLog.stack, path },
       "未捕获异常",
     );
     throw error;
