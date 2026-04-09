@@ -33,22 +33,20 @@ async function upsertAdminUser(data: {
 }
 
 async function main() {
-  return Promise.all(
-    [
-      {
-        email: ANONYMOUS_EMAIL!,
-        username: ANONYMOUS_USERNAME!,
-        password: ANONYMOUS_PASSWORD!,
-        salt: ANONYMOUS_SALT!,
-      },
-      {
-        email: ADMIN_EMAIL!,
-        username: ADMIN_USERNAME!,
-        password: ADMIN_PASSWORD!,
-        salt: ADMIN_SALT!,
-      },
-    ].map(upsertAdminUser),
-  );
+  await prisma.$connect();
+  // 顺序执行，避免两个 upsert 同时抢连接池导致 @prisma/adapter-mariadb 在刚建连时超时
+  await upsertAdminUser({
+    email: ANONYMOUS_EMAIL!,
+    username: ANONYMOUS_USERNAME!,
+    password: ANONYMOUS_PASSWORD!,
+    salt: ANONYMOUS_SALT!,
+  });
+  await upsertAdminUser({
+    email: ADMIN_EMAIL!,
+    username: ADMIN_USERNAME!,
+    password: ADMIN_PASSWORD!,
+    salt: ADMIN_SALT!,
+  });
 }
 
 main()
