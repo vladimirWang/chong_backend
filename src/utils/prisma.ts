@@ -61,8 +61,10 @@ const adapter = new PrismaMariaDb(getDatabaseConfig());
 function createPrismaClient() {
   const basePrisma = new PrismaClient({
     adapter,
-    // log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
-    log: ["query", "error", "warn"],
+    log:
+      process.env.NODE_ENV === "development"
+        ? ["query", "error", "warn"]
+        : ["error", "warn"],
   });
 
   // 使用 $extends 添加软删除过滤逻辑
