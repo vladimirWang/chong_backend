@@ -13,8 +13,9 @@ fi
 
 COMPOSE=(docker compose -f deploy/test/docker-compose.yml --env-file "$ENV_FILE")
 
-export LOG_DIR="${LOG_DIR:-/var/log/galleryrepo}"
-export HOST_LOG_DIR="${HOST_LOG_DIR:-${REPO_ROOT}/logs/galleryrepo}"
+# 与生产栈区分宿主机日志目录，避免 compose 插值与 env_file 混用同一路径
+export LOG_DIR="${LOG_DIR:-/var/log/galleryrepo_test}"
+export HOST_LOG_DIR="${HOST_LOG_DIR:-${REPO_ROOT}/logs/galleryrepo_test}"
 export FRONTEND_DIST_TEST="${FRONTEND_DIST_TEST:-/root/gallery/test/frontend-dist}"
 
 ensure_frontend_dist() {
@@ -74,7 +75,8 @@ case "${1:-}" in
 
     echo ""
     sleep 2
-    docker ps -a --filter "name=fullstack-" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" 2>/dev/null || true
+    echo "当前测试栈容器:"
+    "${COMPOSE[@]}" ps -a 2>/dev/null || true
     echo ""
     echo "查看日志: ./deploy/test/start.sh logs"
     echo "停止: ./deploy/test/start.sh stop"

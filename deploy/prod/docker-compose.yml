@@ -1,5 +1,5 @@
 # 生产目录栈：MySQL + Redis + Nginx(80/443) + 生产后端 :3000
-# 与测试栈通过固定网络名 gallery_internal 互通（测试目录仅起 3001 后端）
+# 测试栈为独立 compose 项目（fullstack-test / gallery_test_internal），与本栈无网络依赖
 # 在仓库根目录执行: ./deploy/prod/start.sh
 name: fullstack-prod
 

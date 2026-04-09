@@ -13,7 +13,10 @@ services:
     container_name: fullstack-mysql-test
     # restart: unless-stopped  # 排查崩溃循环时暂时关闭自动重启
     networks:
-      - gallery_test_net
+      gallery_test_net:
+        aliases:
+          # 与 .env.test 中 DATABASE_HOST=mysql、DATABASE_URL 主机名一致
+          - mysql
     environment:
       MYSQL_ROOT_PASSWORD: "${DATABASE_PASSWORD}"
       MYSQL_DATABASE: gallery_test
@@ -44,7 +47,9 @@ services:
     container_name: fullstack-redis-test
     # restart: unless-stopped  # 排查崩溃循环时暂时关闭自动重启
     networks:
-      - gallery_test_net
+      gallery_test_net:
+        aliases:
+          - redis
     ports:
       - "6380:6379"
     volumes:

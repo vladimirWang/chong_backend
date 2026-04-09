@@ -85,10 +85,10 @@ case "${1:-}" in
 
     echo ""
     sleep 3
-    echo "当前容器状态:"
-    docker ps -a --filter "name=fullstack-" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" 2>/dev/null || true
+    echo "当前生产栈容器（不含测试栈；测试栈请用 ./start.sh test 单独管理）:"
+    "${COMPOSE[@]}" ps -a 2>/dev/null || true
     echo ""
-    echo "测试栈请在「测试目录」执行: ./start.sh test（或 ./deploy/test/start.sh）"
+    echo "测试栈: ./start.sh test（或 ./deploy/test/start.sh）"
     echo "查看日志: ./start.sh production logs"
     echo "停止: ./stop.sh production"
     ;;

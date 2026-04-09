@@ -6,7 +6,7 @@
 #   ./start.sh                    # 默认生产栈（等同 ./start.sh production）
 #   ./start.sh production         # 生产栈：MySQL + Redis + Nginx + 后端 3000
 #   ./start.sh prod               # 同上（别名）
-#   ./start.sh test               # 测试栈：仅后端 3001（需先有生产栈创建 gallery_internal）
+#   ./start.sh test               # 测试栈：独立网络与数据卷（与生产栈并行互不影响）
 #   ./start.sh production stop    ./start.sh test stop
 #   ./start.sh production logs    ./start.sh test logs
 #   ./start.sh production debug   ./start.sh test debug

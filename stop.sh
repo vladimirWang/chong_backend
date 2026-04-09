@@ -35,7 +35,7 @@ case "$MODE" in
   production)
     echo "🛑 停止生产栈..."
     docker compose -f deploy/prod/docker-compose.yml --env-file .env.production down 2>/dev/null || true
-    docker compose down 2>/dev/null || true
+    docker compose -f docker-compose.yml --env-file .env.production down 2>/dev/null || true
     for c in fullstack-mysql fullstack-redis fullstack-bun fullstack-bun-prod fullstack-nginx; do
       rm_container_if_exists "$c"
     done
@@ -49,10 +49,10 @@ case "$MODE" in
     ;;
   all)
     echo "🛑 停止生产栈与测试栈..."
-    CONTAINERS="fullstack-mysql fullstack-redis fullstack-bun fullstack-bun-prod fullstack-bun-test fullstack-nginx"
+    CONTAINERS="fullstack-mysql fullstack-redis fullstack-bun fullstack-bun-prod fullstack-nginx fullstack-mysql-test fullstack-redis-test fullstack-bun-test fullstack-nginx-test"
     docker compose -f deploy/prod/docker-compose.yml --env-file .env.production down 2>/dev/null || true
     docker compose -f deploy/test/docker-compose.yml --env-file .env.test down 2>/dev/null || true
-    docker compose down 2>/dev/null || true
+    docker compose -f docker-compose.yml --env-file .env.production down 2>/dev/null || true
     for c in $CONTAINERS; do
       rm_container_if_exists "$c"
     done
