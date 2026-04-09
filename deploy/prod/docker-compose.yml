@@ -12,7 +12,7 @@ services:
   mysql:
     image: mysql:8.0
     container_name: fullstack-mysql
-    restart: unless-stopped
+    # restart: unless-stopped  # 排查崩溃循环时暂时关闭自动重启
     networks:
       - gallery_net
     environment:
@@ -44,7 +44,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: fullstack-redis
-    restart: unless-stopped
+    # restart: unless-stopped  # 排查崩溃循环时暂时关闭自动重启
     networks:
       - gallery_net
     ports:
@@ -62,7 +62,7 @@ services:
       context: ../..
       dockerfile: Dockerfile
     container_name: fullstack-bun-prod
-    restart: unless-stopped
+    # restart: unless-stopped  # 排查崩溃循环时暂时关闭自动重启
     networks:
       - gallery_net
     ports:
@@ -83,7 +83,7 @@ services:
       context: ../..
       dockerfile: nginx/Dockerfile
     container_name: fullstack-nginx
-    restart: unless-stopped
+    # restart: unless-stopped  # 排查崩溃循环时暂时关闭自动重启
     networks:
       - gallery_net
     ports:
