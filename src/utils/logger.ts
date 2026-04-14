@@ -1,7 +1,7 @@
 /**
  * 统一日志工具
  * - development: 输出到控制台，便于调试
- * - production/staging: 输出到文件 logs/app.log
+ * - prod/staging: 输出到文件 logs/app.log
  */
 
 import pino from "pino";

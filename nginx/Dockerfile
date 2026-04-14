@@ -1,3 +1,8 @@
-# Nginx 仅使用配置，前端静态文件通过数据卷挂载（手动打包上传）
 FROM nginx:alpine
-COPY nginx/nginx.conf /etc/nginx/nginx.conf
+
+# prod = www.hetou.vip；test = test.hetou.vip（对应 conf.d 下文件名）
+ARG NGINX_SITE=prod
+COPY ./nginx.conf /etc/nginx/nginx.conf
+COPY ./conf.d/${NGINX_SITE}.conf /etc/nginx/conf.d/site.conf
+
+# COPY ssl /etc/ssl/cert

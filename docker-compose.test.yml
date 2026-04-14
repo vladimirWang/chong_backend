@@ -1,15 +1,19 @@
+# 与 docker-compose.yml 并行运行：须配合 start-test.sh 的 -p step9-test
+# 宿主机端口与生产错开：HTTP 8080、HTTPS 8443、MySQL 3307、Redis 6380
+# --env-file ./server/.env.test：与 .env.prod 同字段，供 mysql 与变量替换
+
 services:
   nginx:
     build:
       context: ../nginx
       args:
-        NGINX_SITE: prod
+        NGINX_SITE: test
     volumes:
       - ../nginx/html/dist:/usr/share/nginx/html:ro
       - ../nginx/ssl:/etc/ssl/cert:ro
     ports:
-      - "80:80"
-      - "443:443"
+      - "8080:80"
+      - "8443:443"
     depends_on:
       - server
 
@@ -19,7 +23,7 @@ services:
     expose:
       - "4000"
     env_file:
-      - ../server/.env.prod
+      - ../server/.env.test
     depends_on:
       mysql:
         condition: service_healthy
@@ -29,7 +33,7 @@ services:
   mysql:
     image: mysql:8.0
     ports:
-      - "3306:3306"
+      - "3307:3306"
     environment:
       MYSQL_ROOT_PASSWORD: "${DATABASE_PASSWORD}"
       MYSQL_DATABASE: "${DATABASE_NAME}"
@@ -45,7 +49,7 @@ services:
   redis:
     image: redis:7.0-alpine
     ports:
-      - "6379:6379"
+      - "6380:6379"
     command:
       ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec"]
     volumes:

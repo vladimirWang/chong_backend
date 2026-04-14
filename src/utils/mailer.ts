@@ -1,7 +1,7 @@
 import nodemailer from "nodemailer";
 
 // Create a transporter using Ethereal test credentials.
-// For production, replace with your actual SMTP server details.
+// For prod, replace with your actual SMTP server details.
 const mailer = nodemailer.createTransport({
   host: "smtp.qq.com",
   port: 465,

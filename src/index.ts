@@ -31,7 +31,7 @@ import {
 const envFile =
   process.env.NODE_ENV === "development"
     ? ".env.development"
-    : process.env.ENV_FILE || ".env.production";
+    : process.env.ENV_FILE || ".env.prod";
 if (existsSync(envFile)) {
   config({ path: envFile });
 }
@@ -184,7 +184,7 @@ export const app = new Elysia()
   })
   .use(githubApiAuthRouter)
   .use(apiRouter)
-  .listen(Number(process.env.PORT) || 3000);
+  .listen(4000);
 
 logger.info(
   {
