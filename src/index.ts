@@ -183,7 +183,7 @@ export const app = new Elysia()
     throw error;
   })
   // .use(githubApiAuthRouter)
-  // .use(apiRouter)
+  .use(apiRouter)
   .listen(4000);
 
 logger.info(
