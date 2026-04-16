@@ -21,43 +21,43 @@ import { connectRedis } from "./utils/redis";
 import path from "node:path";
 import { ensureDirExists, UPLOAD_DIR } from "./utils/file";
 import { createDailyUserInsertJob } from "./plugins/dailyUserInsertJob";
-import {
-  getAnonymousUser,
-  initServiceCode,
-  setAnonymousAdminUserId,
-} from "./init";
+// import {
+//   getAnonymousUser,
+//   initServiceCode,
+//   setAnonymousAdminUserId,
+// } from "./init";
 
-// 开发环境使用 .env.development；生产/测试可由 ENV_FILE 指定（与 docker-compose env_file 一致）
-const envFile =
-  process.env.NODE_ENV === "development"
-    ? ".env.dev"
-    : process.env.ENV_FILE || ".env.prod";
-if (existsSync(envFile)) {
-  config({ path: envFile });
-}
-const { JWT_SECRET } = process.env;
+// // 开发环境使用 .env.development；生产/测试可由 ENV_FILE 指定（与 docker-compose env_file 一致）
+// const envFile =
+//   process.env.NODE_ENV === "development"
+//     ? ".env.dev"
+//     : process.env.ENV_FILE || ".env.prod";
+// if (existsSync(envFile)) {
+//   config({ path: envFile });
+// }
+// const { JWT_SECRET } = process.env;
 
-ensureDirExists(UPLOAD_DIR);
+// ensureDirExists(UPLOAD_DIR);
 
-// // 注册插件
-// dayjs.extend(utc);
-// dayjs.extend(timezone);
+// // // 注册插件
+// // dayjs.extend(utc);
+// // dayjs.extend(timezone);
 
-await connectRedis();
-await initServiceCode();
-const anonymousUser = await getAnonymousUser();
-console.log("anonymousUser: ", anonymousUser);
-if (!anonymousUser) {
-  throw new Error("Anonymous user not found");
-}
-setAnonymousAdminUserId(anonymousUser.id);
+// await connectRedis();
+// await initServiceCode();
+// const anonymousUser = await getAnonymousUser();
+// console.log("anonymousUser: ", anonymousUser);
+// if (!anonymousUser) {
+//   throw new Error("Anonymous user not found");
+// }
+// setAnonymousAdminUserId(anonymousUser.id);
 
 // dayjs.tz.setDefault("Asia/Shanghai");
 // dayjs.tz.setDefault("Europe/London");
 
 // 创建主应用并注册所有路由模块
 export const app = new Elysia()
-  .state("anonymousUserId", anonymousUser.id)
+  // .state("anonymousUserId", anonymousUser.id)
   .use(
     staticPlugin({
       // 使用绝对路径：相对路径在 Docker/生产环境中 process.cwd() 可能不是项目根目录，导致静态资源 404
@@ -71,13 +71,13 @@ export const app = new Elysia()
     }),
   )
   .use(loggerPlugin)
-  .use(createDailyUserInsertJob())
-  .use(
-    jwt({
-      name: "jwt",
-      secret: JWT_SECRET!,
-    }),
-  )
+  // .use(createDailyUserInsertJob())
+  // .use(
+  //   jwt({
+  //     name: "jwt",
+  //     secret: JWT_SECRET!,
+  //   }),
+  // )
   // .use(authService)
   .get("/", () => "Hello Elysia")
   // 全局错误处理 - 拦截 zod 校验异常
@@ -182,8 +182,8 @@ export const app = new Elysia()
     );
     throw error;
   })
-  .use(githubApiAuthRouter)
-  .use(apiRouter)
+  // .use(githubApiAuthRouter)
+  // .use(apiRouter)
   .listen(4000);
 
 logger.info(
