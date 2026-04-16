@@ -46,3 +46,5 @@ package-lock.json
 
 # logs (production 日志目录)
 /logs/
+
+nginx/html
