@@ -27,23 +27,23 @@ import { createDailyUserInsertJob } from "./plugins/dailyUserInsertJob";
 //   setAnonymousAdminUserId,
 // } from "./init";
 
-// // 开发环境使用 .env.development；生产/测试可由 ENV_FILE 指定（与 docker-compose env_file 一致）
-// const envFile =
-//   process.env.NODE_ENV === "development"
-//     ? ".env.dev"
-//     : process.env.ENV_FILE || ".env.prod";
-// if (existsSync(envFile)) {
-//   config({ path: envFile });
-// }
-// const { JWT_SECRET } = process.env;
+// 开发环境使用 .env.development；生产/测试可由 ENV_FILE 指定（与 docker-compose env_file 一致）
+const envFile =
+  process.env.NODE_ENV === "development"
+    ? ".env.dev"
+    : process.env.ENV_FILE || ".env.prod";
+if (existsSync(envFile)) {
+  config({ path: envFile });
+}
+const { JWT_SECRET } = process.env;
 
-// ensureDirExists(UPLOAD_DIR);
+ensureDirExists(UPLOAD_DIR);
 
 // // // 注册插件
 // // dayjs.extend(utc);
 // // dayjs.extend(timezone);
 
-// await connectRedis();
+await connectRedis();
 // await initServiceCode();
 // const anonymousUser = await getAnonymousUser();
 // console.log("anonymousUser: ", anonymousUser);
