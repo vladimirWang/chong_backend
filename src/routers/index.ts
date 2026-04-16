@@ -12,7 +12,7 @@ import { statisticsOutRouter } from "./statisticsOutRouter";
 import { utilRouter } from "./utilRouter";
 import { platformRouter } from "./platformRouter";
 import { clientRouter } from "./clientRouter";
-import { openaiRouter } from "./openaiRouter";
+// import { openaiRouter } from "./openaiRouter";
 import { adminUserRouter } from "./adminUserRouter";
 import { applicantRouter } from "./applicantRouter";
 import { microsoftTodoRouter } from "./microsoftTodoRouter";
@@ -32,19 +32,21 @@ export const apiRouter = new Elysia().use(authService).group(
     },
   },
   (app) => {
-    return app
-      .use(userRouter)
-      .use(vendorRouter)
-      .use(productRouter)
-      .use(stockInRouter)
-      .use(stockOutRouter)
-      .use(statisticsOutRouter)
-      .use(utilRouter)
-      .use(platformRouter)
-      .use(clientRouter)
-      .use(openaiRouter)
-      .use(adminUserRouter)
-      .use(applicantRouter)
-      .use(microsoftTodoRouter);
+    return (
+      app
+        .use(userRouter)
+        .use(vendorRouter)
+        .use(productRouter)
+        .use(stockInRouter)
+        .use(stockOutRouter)
+        .use(statisticsOutRouter)
+        .use(utilRouter)
+        .use(platformRouter)
+        .use(clientRouter)
+        // .use(openaiRouter)
+        .use(adminUserRouter)
+        .use(applicantRouter)
+        .use(microsoftTodoRouter)
+    );
   },
 );
