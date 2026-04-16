@@ -7,7 +7,7 @@ import { existsSync } from "fs";
 
 const envFile =
   process.env.NODE_ENV === "development"
-    ? ".env.development"
+    ? ".env.dev"
     : process.env.ENV_FILE || ".env.prod";
 if (existsSync(envFile)) {
   config({ path: envFile });

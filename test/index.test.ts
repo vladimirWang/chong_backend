@@ -3,7 +3,7 @@ import { treaty } from "@elysiajs/eden";
 
 // 加载测试环境变量
 import { config } from "dotenv";
-config({ path: ".env.development" });
+config({ path: ".env.dev" });
 
 // 在环境变量加载后再导入 app
 const { app } = await import("../src/index");
