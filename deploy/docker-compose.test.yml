@@ -39,7 +39,7 @@ services:
       MYSQL_ROOT_PASSWORD: "${DATABASE_PASSWORD}"
       MYSQL_DATABASE: "${DATABASE_NAME}"
     volumes:
-      - mysql_data:/var/lib/mysql
+      - mysql_data_test:/var/lib/mysql
     healthcheck:
       test:
         [
@@ -58,8 +58,8 @@ services:
     command:
       ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec"]
     volumes:
-      - redis_data:/data
+      - redis_data_test:/data
 
 volumes:
-  mysql_data:
-  redis_data:
+  mysql_data_test:
+  redis_data_test:
