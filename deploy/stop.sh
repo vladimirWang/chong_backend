@@ -1,1 +1,1 @@
-docker compose -p step13-prod --env-file ../.env.prod down
+docker compose -p repo-prod --env-file ../.env.prod down
