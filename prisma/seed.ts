@@ -51,12 +51,10 @@ async function main() {
 
 main()
   .then(() => {
-    console.log("Seed: anonymous user ok");
+    await prisma.$disconnect();
+    process.exit(0);
   })
   .catch((e) => {
-    console.error(e);
+    await prisma.$disconnect();
     process.exit(1);
   })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
