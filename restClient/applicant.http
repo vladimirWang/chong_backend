@@ -1,5 +1,5 @@
-@base=http://localhost:3000/nodejs_api/applicant
-@token =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImVtYWlsIjoiYWFjaGVuMjAxMkBvdXRsb29rLmNvbSIsInVzZXJuYW1lIjoibWlrZSIsImV4cCI6MTc3MTQ4NDI5NywiaWF0IjoxNzcxMzk3ODk3fQ.JRvm5-qU0dHxa0IzYceaxxhhYqJk_JfDvpLjcd-36_8
+@base=http://localhost:4000/nodejs_api/applicant
+@token =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjIsImVtYWlsIjoiZmVybmFuZG93YW5nNTg0QGdtYWlsLmNvbSIsInVzZXJuYW1lIjoiYWRtaW4iLCJyb2xlIjoiYWRtaW4iLCJleHAiOjE3NzY0Nzg4MzUsImlhdCI6MTc3NjM5MjQzNX0.qbVBDmwj5lmSbMWGAhlLiynqpwAdSoOM_sJJNJs4ZHY
 
 ### brand list
 POST {{base}}/approve
@@ -40,3 +40,12 @@ Content-Type: application/json
 {
     "id": [4]
 }
+
+
+### 发送系统申请
+POST {{base}}/nodejs_api/applicant/sendInviteCode
+Content-Type: application/json
+Authorization: {{token}}
+
+{
+    "email": "123132"

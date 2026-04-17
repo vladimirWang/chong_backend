@@ -280,7 +280,8 @@ export const checkEmailExisted = async ({ params }: { params: ParamEmail }) => {
       email,
     },
   });
-  return new SuccessResponse(Boolean(user), "邮箱已存在");
+  const existed = Boolean(user);
+  return new SuccessResponse(existed, existed ? "邮箱已存在" : "邮箱不存在");
 };
 
 export const getUserSaltByEmail = async ({
