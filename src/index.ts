@@ -81,6 +81,7 @@ export const app = new Elysia()
   .get("/", () => "Hello Elysia")
   // 全局错误处理 - 拦截 zod 校验异常
   .onError(({ code, error, path }) => {
+    console.error("--------Error occurred at path:---------", path, "with error:", error);
     // 直接处理 ZodError（包括在 beforeHandle 中抛出的）
     if (error instanceof ZodError) {
       const errorMessages = error.issues.map((issue) => issue.message);
@@ -111,41 +112,77 @@ export const app = new Elysia()
         if (validationError.all && Array.isArray(validationError.all)) {
           const errorMessages = validationError.all
             .map((err: any) => {
-              const currentParam = `path: ${JSON.stringify(err.value)}`;
-              // 提取错误消息，可能在不同的属性中
-              if (err.message)
-                return err.message + `; currentParam: ${currentParam}`;
-              if (typeof err === "string")
-                return err + `; currentParam: ${currentParam}`;
-              if (err.value !== undefined) {
-                // 可能是格式化的错误对象
-                return `${err.path || ""}: ${err.message || "校验失败"}`;
-              }
-              return "校验失败";
+              if (!err) return undefined;
+              if (typeof err === "string") return err;
+
+              const msg =
+                err.message ??
+                err.summary ??
+                err.error?.message ??
+                err.validator?.message;
+              const p = Array.isArray(err.path)
+                ? err.path.join(".")
+                : typeof err.path === "string"
+                  ? err.path
+                  : undefined;
+
+              if (msg && p) return `${p}: ${msg}`;
+              if (msg) return String(msg);
+
+              return undefined;
             })
-            .filter((msg: string) => msg && msg !== "校验失败");
+            .filter(Boolean) as string[];
 
           if (errorMessages.length > 0) {
             errorMessage = errorMessages.join(", ");
           }
-        } else if (validationError.validator?.Error) {
-          // 尝试从 validator.Error 中提取 zod 错误信息
-          const zodError = validationError.validator.Error;
-          if (
-            zodError.issues &&
-            Array.isArray(zodError.issues) &&
-            zodError.issues.length > 0
-          ) {
-            errorMessage = zodError.issues
-              .map((issue: any) => issue.message)
-              .join(", ");
-          }
+        }
+
+        const zodErrorCandidate =
+          validationError.validator?.Error ??
+          validationError.error ??
+          validationError.cause;
+        if (
+          zodErrorCandidate?.issues &&
+          Array.isArray(zodErrorCandidate.issues) &&
+          zodErrorCandidate.issues.length > 0
+        ) {
+          errorMessage = zodErrorCandidate.issues
+            .map((issue: any) => issue.message)
+            .join(", ");
         } else if (validationError.message) {
           errorMessage = validationError.message;
         }
       } else if (error instanceof Error) {
         // 如果是普通 Error 对象，直接使用 message
         errorMessage = error.message;
+      }
+
+      // Elysia 有时会把结构化校验信息序列化成 JSON 字符串塞进 message
+      if (typeof errorMessage === "string") {
+        const trimmed = errorMessage.trim();
+        if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+          try {
+            const parsed = JSON.parse(trimmed) as any;
+            const prop =
+              typeof parsed?.property === "string" ? parsed.property : undefined;
+            const msg =
+              typeof parsed?.message === "string" ? parsed.message : undefined;
+            if (msg) {
+              errorMessage = prop ? `${prop}: ${msg}` : msg;
+            }
+          } catch {
+            // ignore JSON parse failure, fall back to original message
+          }
+        }
+
+        // 常见英文校验消息本地化
+        if (errorMessage.includes("Invalid email address")) {
+          errorMessage = errorMessage.replace(
+            "Invalid email address",
+            "邮箱格式不正确",
+          );
+        }
       }
 
       const result = new ErrorResponse(

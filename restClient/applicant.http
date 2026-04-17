@@ -43,9 +43,10 @@ Content-Type: application/json
 
 
 ### 发送系统申请
-POST {{base}}/nodejs_api/applicant/sendInviteCode
+POST {{base}}/sendInviteCode
 Content-Type: application/json
 Authorization: {{token}}
 
 {
-    "email": "123132"
+    "email": "123132@hello.com"
+}
