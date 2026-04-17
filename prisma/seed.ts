@@ -49,12 +49,13 @@ async function main() {
   });
 }
 
-main()
-  .then(() => {
+async function run() {
+  try {
+    await main();
     await prisma.$disconnect();
     process.exit(0);
-  })
-  .catch((e) => {
+  } catch {
     await prisma.$disconnect();
     process.exit(1);
-  })
+  }
+}();
