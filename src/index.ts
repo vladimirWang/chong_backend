@@ -72,13 +72,12 @@ export const app = new Elysia()
   )
   .use(loggerPlugin)
   // .use(createDailyUserInsertJob())
-  // .use(
-  //   jwt({
-  //     name: "jwt",
-  //     secret: JWT_SECRET!,
-  //   }),
-  // )
-  // .use(authService)
+  .use(
+    jwt({
+      name: "jwt",
+      secret: JWT_SECRET!,
+    }),
+  )
   .get("/", () => "Hello Elysia")
   // 全局错误处理 - 拦截 zod 校验异常
   .onError(({ code, error, path }) => {
