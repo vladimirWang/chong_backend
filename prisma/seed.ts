@@ -31,22 +31,37 @@ async function upsertAdminUser(data: {
     },
   });
 }
+async function upsertPlatform(data: { name: string }) {
+  return prisma.platform.upsert({
+    where: { name: data.name },
+    create: { name: data.name },
+    update: { name: data.name },
+  });
+}
 
 async function main() {
   await prisma.$connect();
   // 顺序执行，避免两个 upsert 同时抢连接池导致 @prisma/adapter-mariadb 在刚建连时超时
-  await upsertAdminUser({
+  const task1 = upsertAdminUser({
     email: ANONYMOUS_EMAIL!,
     username: ANONYMOUS_USERNAME!,
     password: ANONYMOUS_PASSWORD!,
     salt: ANONYMOUS_SALT!,
   });
-  await upsertAdminUser({
+  const task2 = upsertAdminUser({
     email: ADMIN_EMAIL!,
     username: ADMIN_USERNAME!,
     password: ADMIN_PASSWORD!,
     salt: ADMIN_SALT!,
   });
+  const task3 = prisma.platform.upsert({
+    where: { id: 1 },
+    create: { name: "实体店", id: 1 },
+    update: { name: "实体店" },
+  });
+  const task4 = upsertPlatform({ name: "拼多多" });
+  const task5 = upsertPlatform({ name: "闲鱼" });
+  return Promise.all([task1, task2, task3, task4, task5]);
 }
 
 async function run() {

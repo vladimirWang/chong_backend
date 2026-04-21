@@ -131,9 +131,6 @@ model User {
   productCreated             Product[]             @relation("ProductCreatedBy")
   productUpdated             Product[]             @relation("ProductUpdatedBy")
   productDeleted             Product[]             @relation("ProductDeletedBy")
-  platformCreated            Platform[]            @relation("PlatformCreatedBy")
-  platformUpdated            Platform[]            @relation("PlatformUpdatedBy")
-  platformDeleted            Platform[]            @relation("PlatformDeletedBy")
   stockInCreated             StockIn[]             @relation("StockInCreatedBy")
   stockInUpdated             StockIn[]             @relation("StockInUpdatedBy")
   stockInDeleted             StockIn[]             @relation("StockInDeletedBy")
@@ -244,18 +241,12 @@ model FileInfo {
 
 // 平台
 model Platform {
-  id            Int        @id @default(autoincrement())
-  name          String     @unique
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  deletedAt     DateTime?
-  stockOuts     StockOut[]
-  createdBy     Int
-  createdByUser User?      @relation("PlatformCreatedBy", fields: [createdBy], references: [id])
-  updatedBy     Int
-  updatedByUser User?      @relation("PlatformUpdatedBy", fields: [updatedBy], references: [id])
-  deletedBy     Int
-  deletedByUser User?      @relation("PlatformDeletedBy", fields: [deletedBy], references: [id])
+  id        Int        @id @default(autoincrement())
+  name      String     @unique
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  deletedAt DateTime?
+  stockOuts StockOut[]
 }
 
 // 客户
