@@ -41,6 +41,19 @@ type StockOutInfo = {
   price: number;
 };
 
+export type StockOutListRow = StockOperationListRow & {
+  totalPrice: number;
+  productId: number;
+  productName: string;
+  cost: number;
+  count: number;
+  platformOrderNo?: string;
+  platformId: number;
+  serviceCode: string;
+  docs?: string[];
+  price: number;
+};
+
 export const getStockOuts = async ({ query }: { query: StockOutQuery }) => {
   const {
     pagination = true,
@@ -120,19 +133,6 @@ export const getStockOuts = async ({ query }: { query: StockOutQuery }) => {
   );
 
   const total = Number(countRows[0]?.cnt ?? 0);
-
-  type StockOutListRow = StockOperationListRow & {
-    totalPrice: number;
-    productId: number;
-    productName: string;
-    cost: number;
-    count: number;
-    platformOrderNo?: string;
-    platformId: number;
-    serviceCode: string;
-    docs?: string[];
-    price: number;
-  };
 
   let list: Array<
     StockOperationListRow & {

@@ -23,7 +23,8 @@ import { ensureDirExists, UPLOAD_DIR } from "./utils/file";
 import { createDailyUserInsertJob } from "./plugins/dailyUserInsertJob";
 import {
   getAnonymousUser,
-  initServiceCode,
+  initStockInServiceCode,
+  initStockOutServiceCode,
   setAnonymousAdminUserId,
 } from "./init";
 
@@ -44,7 +45,8 @@ ensureDirExists(UPLOAD_DIR);
 // // dayjs.extend(timezone);
 
 await connectRedis();
-// await initServiceCode();
+await initStockInServiceCode();
+await initStockOutServiceCode();
 const anonymousUser = await getAnonymousUser();
 console.log("anonymousUser: ", anonymousUser);
 if (!anonymousUser) {
