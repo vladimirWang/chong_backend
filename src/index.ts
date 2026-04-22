@@ -218,7 +218,14 @@ export const app = new Elysia()
       { error: errForLog.message, stack: errForLog.stack, path },
       "未捕获异常",
     );
-    throw error;
+    const result = new ErrorResponse(
+      errorCode.INTERNAL_ERROR,
+      "服务器内部错误",
+    );
+    return new Response(JSON.stringify(result), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   })
   // .use(githubApiAuthRouter)
   .use(apiRouter)
