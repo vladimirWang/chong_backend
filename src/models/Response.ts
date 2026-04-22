@@ -39,4 +39,5 @@ export const errorCode = {
   FAILED_TO_CREATE_STOCK_OUT: 10016, // 创建出货单失败
   PRODUCT_NOT_FOUND: 10017, // 产品不存在
   ADMIN_USER_NOT_FOUND: 10018, // 管理员用户不存在
+  INTERNAL_ERROR: 10019, // 服务器内部错误
 };

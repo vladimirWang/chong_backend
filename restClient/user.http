@@ -103,3 +103,6 @@ Content-Type: application/json
 
 ### user check email existed
 GET {{base}}/user/checkEmailExisted/a1achen2012@outlook.com
+
+### user get salt
+GET {{base}}/user/getSalt/12312@qq.com

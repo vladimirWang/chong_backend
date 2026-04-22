@@ -7,6 +7,7 @@ import {
   UpdatePasswordBody,
   RegisterUserByTokenBody,
 } from "../validators/userValidator";
+import type { User } from "@prisma/client";
 import prisma from "../utils/prisma";
 import { redisClient } from "../utils/redis";
 import { v4 as uuidv4 } from "uuid";
@@ -284,12 +285,8 @@ export const checkEmailExisted = async ({ params }: { params: ParamEmail }) => {
   return new SuccessResponse(existed, existed ? "邮箱已存在" : "邮箱不存在");
 };
 
-export const getUserSaltByEmail = async ({
-  params,
-}: {
-  params: ParamEmailExisted;
-}) => {
-  return new SuccessResponse(params.user.salt, "获取salt成功");
+export const getUserSaltByEmail = async ({ user }: { user: User }) => {
+  return new SuccessResponse(user?.salt, "获取salt成功");
 };
 
 // 修改密码
@@ -335,8 +332,8 @@ export const updatePassword = async ({
   return new SuccessResponse(null, "密码修改成功");
 };
 
-export const resetPassword = async ({ body }: { body: ParamEmailExisted }) => {
-  const { user: userMatched } = body;
+export const resetPassword = async ({ user }: { user: User }) => {
+  const userMatched = user;
   const initialPassword = generateInitialPassword(6);
 
   const passwordHash = sha256(initialPassword + "_" + userMatched.salt);

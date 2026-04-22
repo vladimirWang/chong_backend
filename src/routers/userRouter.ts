@@ -29,9 +29,13 @@ import {
   paramEmailExistedSchema,
   paramEmailNotExistedSchema,
 } from "../validators/merchantCommonValidator";
-import { paramEmailSchema } from "../validators/commonValidator";
+import {
+  paramEmailSchema,
+  type ParamEmail,
+} from "../validators/commonValidator";
 import { authService } from "../macro/auth.macro";
 import { applicantStoreShape } from "./applicantRouter";
+import { resolveUserByEmail } from "../resolver/userResolver";
 
 // 使用 group 创建用户相关的路由组
 export const userRouter = new Elysia({ prefix: "/user" })
@@ -44,8 +48,8 @@ export const userRouter = new Elysia({ prefix: "/user" })
   .post("/login", loginUser, {
     body: loginUserBodySchema,
   })
-  .get("/oauth/github/callback", ({ query, jwt }) =>
-    callbackGithubOAuth({ query, jwt }),
+  .get("/oauth/github/callback", (ctx) =>
+    callbackGithubOAuth({ query: ctx.query, jwt: (ctx as any).jwt }),
   )
   .get("/oauth/github", ({ query }) => startGithubOAuth({ query }))
   .post("/oauth/github/exchange", ({ body }) => exchangeGithubOAuth({ body }), {
@@ -59,11 +63,17 @@ export const userRouter = new Elysia({ prefix: "/user" })
   // .get("/checkEmailNotExisted/:email", checkEmailNotExisted, {
   //   params: paramEmailSchema,
   // })
-  .get("/getSalt/:email", getUserSaltByEmail, {
-    params: paramEmailExistedSchema, // 复用已有的邮箱参数校验规则
-  })
-  .post("/resetPassword", resetPassword, {
-    body: paramEmailExistedSchema,
+  .get(
+    "/getSalt/:email",
+    (ctx: any) => getUserSaltByEmail({ user: ctx.user }),
+    {
+      params: paramEmailSchema, // 复用已有的邮箱参数校验规则
+      resolve: resolveUserByEmail,
+    },
+  )
+  .post("/resetPassword", (ctx: any) => resetPassword({ user: ctx.user }), {
+    body: paramEmailSchema,
+    resolve: resolveUserByEmail,
   })
   .post("/registerByToken", registerUserByToken, {
     body: registerUserByTokenBodySchema,
