@@ -40,3 +40,11 @@ export const productByVendorParamsSchema = z.object({
 });
 
 export type ProductByVendorParams = z.infer<typeof productByVendorParamsSchema>;
+
+export const productAmountQuerySchema = z.object({
+  amount: z.coerce.number(),
+  moreThan: z.coerce.boolean(),
+  desc: z.coerce.boolean().optional(),
+});
+
+export type ProductAmountQuery = z.infer<typeof productAmountQuerySchema>;

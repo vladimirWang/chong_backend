@@ -9,6 +9,7 @@ import {
   createProductBodySchema,
   updateProductBodySchema,
   productByVendorParamsSchema,
+  productAmountQuerySchema
 } from "../validators/productValidator";
 import {
   updateIdSchema,
@@ -23,6 +24,7 @@ import {
   getProductsByVendorId,
   getLatestSalePriceByProductId,
   checkProductNameExistedInVendor,
+  getProductsByAmount
 } from "../controllers/productController";
 const { JWT_SECRET } = process.env;
 
@@ -113,5 +115,8 @@ export const productRouter = new Elysia({
           params: vendorIdSchema,
           query: productNameStringSchema,
         },
-      ),
+      )
+      .get("/getProductsByAmount", getProductsByAmount, {
+        query: productAmountQuerySchema,
+      })
   );

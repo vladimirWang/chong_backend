@@ -8,6 +8,7 @@ import {
   CreateProductBody,
   UpdateProductBody,
   ProductByVendorParams,
+  ProductAmountQuery
 } from "../validators/productValidator";
 import {
   UpdateId,
@@ -193,3 +194,20 @@ export const checkProductNameExistedInVendor = async ({
   });
   return new SuccessResponse(existed, "产品最近一次建议零售价获取成功");
 };
+
+export const getProductsByAmount = async({query}: {query: ProductAmountQuery}) => {
+  const { amount, moreThan, desc = true } = query;
+  const results = await prisma.product.findMany({
+    where: {
+      balance: moreThan ? {
+        gt: amount,
+      } : {
+        lt: amount,
+      },
+    },
+    orderBy: {
+      balance: desc ? "desc" : "asc",
+    },
+  });
+  return new SuccessResponse({ list: results }, "产品列表获取成功");
+}
