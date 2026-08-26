@@ -54,11 +54,11 @@ async function main() {
     password: ADMIN_PASSWORD!,
     salt: ADMIN_SALT!,
   });
-  const task3 = prisma.platform.upsert({
-    where: { id: 1 },
-    create: { name: "实体店", id: 1 },
-    update: { name: "实体店" },
-  });
+  // 用原生 SQL 固定 id=1，绕过 Prisma upsert 对主键处理的兼容性问题
+  const task3 = prisma.$executeRaw`
+    INSERT INTO Platform (id, name) VALUES (1, '实体店')
+    ON DUPLICATE KEY UPDATE name = '实体店'
+  `;
   const task4 = upsertPlatform({ name: "拼多多" });
   const task5 = upsertPlatform({ name: "闲鱼" });
   return Promise.all([task1, task2, task3, task4, task5]);
