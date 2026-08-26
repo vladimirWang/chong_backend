@@ -50,3 +50,4 @@ package-lock.json
 /logs/
 
 nginx/html
+nginx/ssl
