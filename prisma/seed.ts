@@ -56,7 +56,7 @@ async function main() {
   });
   // 用原生 SQL 固定 id=1，绕过 Prisma upsert 对主键处理的兼容性问题
   const task3 = prisma.$executeRaw`
-    INSERT INTO Platform (id, name) VALUES (1, '实体店')
+    INSERT INTO Platform (id, name, updatedAt) VALUES (1, '实体店', NOW())
     ON DUPLICATE KEY UPDATE name = '实体店'
   `;
   const task4 = upsertPlatform({ name: "拼多多" });
