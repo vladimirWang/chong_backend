@@ -28,30 +28,16 @@
             "noDebug": false
         },
         {
-            "name": "Debug Bun Server (Node Adapter)",
-            "type": "node",
+            "name": "Debug Bun Server (with .env.devLocal)",
+            "type": "bun",
             "request": "launch",
-            "runtimeExecutable": "bun",
-            "runtimeArgs": [
-                "--inspect-wait",
-                "run",
-                "src/index.ts"
-            ],
+            "runtimeArgs": ["--env-file", ".env.devLocal"],
+            "program": "${workspaceFolder}/src/index.ts",
             "cwd": "${workspaceFolder}",
-            "env": {
-                "NODE_ENV": "development"
-            },
-            "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
-            "skipFiles": [
-                "<node_internals>/**"
-            ],
-            "sourceMaps": true,
-            "outputCapture": "std",
-            "resolveSourceMapLocations": [
-                "${workspaceFolder}/**",
-                "!**/node_modules/**"
-            ]
+            "stopOnEntry": false,
+            "watchMode": true,
+            "noDebug": false
         }
     ]
 }

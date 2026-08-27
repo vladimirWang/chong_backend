@@ -28,14 +28,15 @@ import {
   setAnonymousAdminUserId,
 } from "./init";
 
-// 开发环境使用 .env.development；生产/测试可由 ENV_FILE 指定（与 docker-compose env_file 一致）
-const envFile =
-  process.env.NODE_ENV === "development"
-    ? ".env.dev"
-    : process.env.ENV_FILE || ".env.prod";
-if (existsSync(envFile)) {
-  config({ path: envFile });
-}
+// // 开发环境使用 .env.development；生产/测试可由 ENV_FILE 指定（与 docker-compose env_file 一致）
+// let envFile = '.env.devLocal'
+// if (process.env.NODE_ENV === "production") {
+//   envFile = ".env.prod";
+// }
+
+// if (existsSync(envFile)) {
+//   config({ path: envFile });
+// }
 const { JWT_SECRET } = process.env;
 
 ensureDirExists(UPLOAD_DIR);
