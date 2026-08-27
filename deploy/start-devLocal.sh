@@ -1,0 +1,1 @@
+docker compose -p repo-dev -f docker-compose.devLocal.yml --env-file ../.env.devDocker up -d --build
