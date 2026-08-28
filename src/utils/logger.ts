@@ -48,6 +48,8 @@ function createLogger() {
         stream: errorStream,
         level: "error",
       },
+      // Docker 环境：同时输出到 stdout，方便 docker logs 查看
+      { stream: pino.destination(1) },
     ]),
   );
 

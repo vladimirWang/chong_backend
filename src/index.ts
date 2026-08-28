@@ -73,7 +73,7 @@ export const app = new Elysia()
       alwaysStatic: false,
     }),
   )
-  .use(loggerPlugin)
+  // .use(loggerPlugin)
   // .use(createDailyUserInsertJob())
   .use(
     jwt({
@@ -231,13 +231,13 @@ export const app = new Elysia()
   // // .use(githubApiAuthRouter)
   // .use(apiRouter)
   .listen(4000);
-
-logger.info(
-  {
-    msg: "服务启动",
-    host: app.server?.hostname,
-    port: app.server?.port,
-    env: process.env.NODE_ENV,
-  },
-  `Elysia 已启动 http://${app.server?.hostname}:${app.server?.port}`,
-);
+console.log("app.server: ", app.server);
+// logger.info(
+//   {
+//     msg: "服务启动",
+//     host: app.server?.hostname,
+//     port: app.server?.port,
+//     env: process.env.NODE_ENV,
+//   },
+//   `Elysia 已启动 http://${app.server?.hostname}:${app.server?.port}`,
+// );
