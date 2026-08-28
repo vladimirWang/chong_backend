@@ -8,28 +8,12 @@ services:
     expose:
       - "4000"
     env_file:
-      - ../.env.dev
-    depends_on:
-      redis:
-        condition: service_started
+      - ../.env.devDocker
     volumes:
       - /var/log/docker-study:/app/logs:rw
     networks:
       - mac_docker_network
-
-  redis:
-    image: redis:7.0-alpine
-    ports:
-      - "6379:6379"
-    command:
-      ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec"]
-    volumes:
-      - redis_data_prod:/data
-    networks:
-      - mac_docker_network
-
-volumes:
-  redis_data_prod:
+      - default
 
 networks:
   mac_docker_network:
