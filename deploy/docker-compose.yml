@@ -12,6 +12,8 @@ services:
       - "443:443"
     depends_on:
       - server
+    networks:
+      - default
 
   server:
     build:
@@ -23,27 +25,23 @@ services:
       - "4000:4000"
     env_file:
       - ../.env.prod
-    depends_on:
-      redis:
-        condition: service_started
     volumes:
       - /var/log/docker-study:/app/logs:rw
     networks:
       - mac_docker_network
       - default
 
-  redis:
-    image: redis:7.0-alpine
-    ports:
-      - "6379:6379"
-    command:
-      ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec"]
-    volumes:
-      - redis_data_prod:/data
+  # redis:
+  #   image: redis:7.0-alpine
+  #   ports:
+  #     - "6379:6379"
+  #   command:
+  #     ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec"]
+  #   volumes:
+  #     - redis_data_prod:/data
 
-volumes:
-  mysql_data_prod:
-  redis_data_prod:
+# volumes:
+  # redis_data_prod:
 
 networks:
   mac_docker_network:
