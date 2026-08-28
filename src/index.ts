@@ -48,12 +48,12 @@ ensureDirExists(UPLOAD_DIR);
 // await connectRedis();
 // await initStockInServiceCode();
 // await initStockOutServiceCode();
-const anonymousUser = await getAnonymousUser();
-console.log("anonymousUser: ", anonymousUser);
-if (!anonymousUser) {
-  throw new Error("Anonymous user not found");
-}
-setAnonymousAdminUserId(anonymousUser.id);
+// const anonymousUser = await getAnonymousUser();
+// console.log("anonymousUser: ", anonymousUser);
+// if (!anonymousUser) {
+//   throw new Error("Anonymous user not found");
+// }
+// setAnonymousAdminUserId(anonymousUser.id);
 
 // dayjs.tz.setDefault("Asia/Shanghai");
 // dayjs.tz.setDefault("Europe/London");
