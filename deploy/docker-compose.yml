@@ -22,32 +22,12 @@ services:
     env_file:
       - ../.env.prod
     depends_on:
-      mysql:
-        condition: service_healthy
       redis:
         condition: service_started
     volumes:
       - /var/log/docker-study:/app/logs:rw
-
-  mysql:
-    image: mysql:8.0
-    ports:
-      - "3306:3306"
-    environment:
-      MYSQL_ROOT_PASSWORD: "${DATABASE_PASSWORD}"
-      MYSQL_DATABASE: "${DATABASE_NAME}"
-    volumes:
-      - mysql_data_prod:/var/lib/mysql
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          'mysqladmin ping -h 127.0.0.1 -p"$$MYSQL_ROOT_PASSWORD" >/dev/null',
-        ]
-      interval: 5s
-      timeout: 5s
-      retries: 30
-      start_period: 40s
+    networks:
+      - mac_docker_network
 
   redis:
     image: redis:7.0-alpine
@@ -61,3 +41,7 @@ services:
 volumes:
   mysql_data_prod:
   redis_data_prod:
+
+networks:
+  mac_docker_network:
+    external: true
