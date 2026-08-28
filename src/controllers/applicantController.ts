@@ -149,7 +149,7 @@ export const approveApplication = async ({
             to: applicant.email
           }
         })
-        const conn = await amqp.connect('amqp://root:1234@127.0.0.1:5672')
+        const conn = await amqp.connect(process.env.RABBITMQ_URL!)
         const channel = await conn.createChannel()
         await channel.assertExchange(exchangeName, 'topic', {
           durable: true,

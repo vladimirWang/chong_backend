@@ -5,7 +5,7 @@ import {sendEmail, mailFrom} from './utils/mailer'
 export const exchangeName = 'repo.applicant'
 export const queueName = 'application.approve'
 async function startWorker() {
-    const url = 'amqp://root:1234@127.0.0.1:5672'
+    const url = process.env.RABBITMQ_URL!
     const conn = await amqp.connect(url)
     const channel = await conn.createChannel()
     await channel.assertExchange(exchangeName, 'topic', {
