@@ -337,3 +337,22 @@ model ApplicantActivationToken {
   @@index([expiresAt])
   @@index([usedAt])
 }
+
+enum MailStatus {
+  PENDING // 待发送
+  SENT // 已发送
+  FAILED // 发送失败
+}
+model Mail {
+  id Int @id @default(autoincrement())
+  title String
+  content String
+  sendAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  to String
+  from String
+  failCount Int @default(0) @db.UnsignedSmallInt
+  status MailStatus @default(PENDING)
+}

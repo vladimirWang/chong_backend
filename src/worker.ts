@@ -1,0 +1,58 @@
+import amqp from 'amqplib'
+import prisma from './utils/prisma'
+import {sendEmail, mailFrom} from './utils/mailer'
+
+export const exchangeName = 'repo.applicant'
+export const queueName = 'application.approve'
+async function startWorker() {
+    const url = 'amqp://root:1234@127.0.0.1:5672'
+    const conn = await amqp.connect(url)
+    const channel = await conn.createChannel()
+    await channel.assertExchange(exchangeName, 'topic', {
+      durable: true,
+    })
+    // 声明队列并绑定到 exchange 的 routing key，保证队列存在且能收到消息
+    await channel.assertQueue(queueName, { durable: true })
+    await channel.bindQueue(queueName, exchangeName, 'application.approve')
+
+    await channel.prefetch(1) // 一次只处理一条，处理完 ack 后再取
+    await channel.consume(queueName, async msg => {
+        if (!msg) return
+        const deliveryTag = msg.fields.deliveryTag
+        try {
+            const value = msg.content.toString()
+            console.log('[worker] Received message:', value)
+            let parsed
+            try {
+                parsed = JSON.parse(value)
+            } catch {
+                throw new Error('消息格式错误：非 JSON')
+            }
+            if (!parsed?.mailId) throw new Error('消息缺少 mailId')
+
+            const mail = await prisma.mail.findUnique({ where: { id: parsed.mailId } })
+            if (!mail) throw new Error(`邮件记录不存在: ${parsed.mailId}`)
+            if (!mail.to || !mail.from || !mail.content || !mail.title) {
+                throw new Error(`邮件信息不完整: id=${mail.id}`)
+            }
+
+            await sendEmail(mail.to, mail.title, mail.content)
+            await prisma.mail.update({
+                where: { id: parsed.mailId },
+                data: { sendAt: new Date() }
+            })
+            console.log(`[worker] 邮件发送成功: id=${mail.id}, to=${mail.to}`)
+            channel.ack(msg) // 成功确认
+        } catch (err: any) {
+            prisma.mail.update({
+                where: { id: parsed.mailId },
+                data: { failCount: { increment: 1 } }
+            })
+            console.error('[worker] 消费失败:', err?.message)
+            // 失败后 requeue，让消息重新入队等待重试
+            channel.nack(deliveryTag, false, true)
+        }
+    })
+}
+
+startWorker()

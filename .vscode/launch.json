@@ -15,20 +15,19 @@
             "noDebug": false
         },
         {
-            "name": "Debug Bun Server (Watch Mode)",
+            "name": "Debug Bun worker (with .env.devLocal)",
             "type": "bun",
             "request": "launch",
-            "program": "${workspaceFolder}/src/index.ts",
+            "runtimeArgs": ["--env-file", ".env.devLocal"],
+            "program": "${workspaceFolder}/src/worker.ts",
             "cwd": "${workspaceFolder}",
-            "env": {
-                "NODE_ENV": "development"
-            },
+            "internalConsoleOptions": "neverOpen",
             "stopOnEntry": false,
             "watchMode": true,
             "noDebug": false
         },
         {
-            "name": "Debug Bun Server (with .env.devLocal)",
+            "name": "Debug Bun master (with .env.devLocal)",
             "type": "bun",
             "request": "launch",
             "runtimeArgs": ["--env-file", ".env.devLocal"],

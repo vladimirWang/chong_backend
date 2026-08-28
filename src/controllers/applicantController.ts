@@ -1,8 +1,10 @@
 import { errorCode, ErrorResponse, SuccessResponse } from "../models/Response";
 import { getPaginationValues } from "../utils/db";
-import { sendEmail } from "../utils/mailer";
+import { sendEmail, sendFrom } from "../utils/mailer";
 import prisma from "../utils/prisma";
 import type { AuthContext } from "./userController";
+import amqp from 'amqplib'
+import { exchangeName } from '../worker'
 import {
   auditCreate,
   auditUpdate,
@@ -17,6 +19,7 @@ import dayjs from "dayjs";
 import { ApplicationStatus } from "@prisma/client";
 import type { AppElysiaStore } from "../types/elysiaAppStore";
 
+// export const exchangeName = 'repo.applicant'
 // 获取邀请码
 export const sendInviteCode = async ({
   body,
@@ -128,7 +131,9 @@ export const approveApplication = async ({
           },
         });
         await tx.applicant.update({
-          where: { id },
+          where: { id, status: {
+            not: ApplicationStatus.APPROVED
+          } },
           data: {
             status: ApplicationStatus.APPROVED,
             // inviteCode,
@@ -136,12 +141,29 @@ export const approveApplication = async ({
           },
         });
         const activatedLink = `${process.env.FRONTEND_URL}/#/applicant/activate?token=${token}`;
+        const insertMail = await tx.mail.create({
+          data: {
+            title: "库存系统激活链接",
+            content: `<p>激活链接为：<a href="${activatedLink}" target="_blank">前往填写用户信息</a>, 请尽快使用。</p>`,
+            from: sendFrom,
+            to: applicant.email
+          }
+        })
+        const conn = await amqp.connect('amqp://root:1234@127.0.0.1:5672')
+        const channel = await conn.createChannel()
+        await channel.assertExchange(exchangeName, 'topic', {
+          durable: true,
+        })
+        console.log("insertMail.id: ", insertMail.id, '; mail: ', insertMail.id)
+        const buf = JSON.stringify({mailId: insertMail.id})
+        await channel.publish(exchangeName, 'application.approve', Buffer.from(buf), {persistent: true})
+        console.log("publish success mailId: ", insertMail.id)
         // const activatedLink = "https://www.iqiyi.com/u/record";
-        await sendEmail(
-          applicant.email,
-          "库存系统激活链接",
-          `<p>激活链接为：<a href="${activatedLink}" target="_blank">前往填写用户信息</a>, 请尽快使用。</p>`,
-        );
+        // await sendEmail(
+        //   applicant.email,
+        //   "库存系统激活链接",
+        //   `<p>激活链接为：<a href="${activatedLink}" target="_blank">前往填写用户信息</a>, 请尽快使用。</p>`,
+        // );
         // await new Promise((r, r2) => {
         //   setTimeout(r2, 3000);
         // });

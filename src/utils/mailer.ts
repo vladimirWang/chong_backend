@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 
+export const sendFrom = "413114463@qq.com"
 // Create a transporter using Ethereal test credentials.
 // For prod, replace with your actual SMTP server details.
 const mailer = nodemailer.createTransport({
@@ -7,12 +8,12 @@ const mailer = nodemailer.createTransport({
   port: 465,
   secure: true, // Use true for port 465, false for port 587
   auth: {
-    user: "413114463@qq.com",
+    user: sendFrom,
     pass: process.env.QQ_EMAIL_PASSWORD,
   },
 });
 
-const mailFrom = '"仓库系统" <413114463@qq.com>';
+export const mailFrom = `"仓库系统" <${sendFrom}>`;
 
 export const sendEmail = async (
   to: string,
