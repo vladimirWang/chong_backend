@@ -19,6 +19,8 @@ services:
       dockerfile: deploy/Dockerfile
     expose:
       - "4000"
+    ports:
+      - "4000:4000"
     env_file:
       - ../.env.prod
     depends_on:
@@ -28,6 +30,7 @@ services:
       - /var/log/docker-study:/app/logs:rw
     networks:
       - mac_docker_network
+      - default
 
   redis:
     image: redis:7.0-alpine
