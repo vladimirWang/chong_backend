@@ -60,7 +60,7 @@ ensureDirExists(UPLOAD_DIR);
 
 // 创建主应用并注册所有路由模块
 export const app = new Elysia()
-  .state("anonymousUserId", anonymousUser.id)
+  // .state("anonymousUserId", anonymousUser.id)
   .use(
     staticPlugin({
       // 使用绝对路径：相对路径在 Docker/生产环境中 process.cwd() 可能不是项目根目录，导致静态资源 404
@@ -73,7 +73,7 @@ export const app = new Elysia()
       alwaysStatic: false,
     }),
   )
-  // .use(loggerPlugin)
+  .use(loggerPlugin)
   // .use(createDailyUserInsertJob())
   .use(
     jwt({
@@ -231,13 +231,13 @@ export const app = new Elysia()
   // // .use(githubApiAuthRouter)
   // .use(apiRouter)
   .listen(4000);
-console.log("app.server: ", app.server);
-// logger.info(
-//   {
-//     msg: "服务启动",
-//     host: app.server?.hostname,
-//     port: app.server?.port,
-//     env: process.env.NODE_ENV,
-//   },
-//   `Elysia 已启动 http://${app.server?.hostname}:${app.server?.port}`,
-// );
+console.log("app.server: ", app.server?.port);
+logger.info(
+  {
+    msg: "服务启动",
+    host: app.server?.hostname,
+    port: app.server?.port,
+    env: process.env.NODE_ENV,
+  },
+  `Elysia 已启动 http://${app.server?.hostname}:${app.server?.port}`,
+);
