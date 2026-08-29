@@ -46,12 +46,12 @@ ensureDirExists(UPLOAD_DIR);
 // // dayjs.extend(timezone);
 
 await connectRedis();
-// await initStockInServiceCode();
-// await initStockOutServiceCode();
+await initStockInServiceCode();
+await initStockOutServiceCode();
 const anonymousUser = await getAnonymousUser();
 console.log("anonymousUser: ", anonymousUser);
 if (!anonymousUser) {
-  throw new Error("Anonymous user not found");
+      	throw new Error("Anonymous user not found");
 }
 setAnonymousAdminUserId(anonymousUser.id);
 
