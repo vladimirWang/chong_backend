@@ -4,7 +4,7 @@ import { sendEmail, sendFrom } from "../utils/mailer";
 import prisma from "../utils/prisma";
 import type { AuthContext } from "./userController";
 import amqp from 'amqplib'
-import { exchangeName } from '../worker'
+import {applicantExchange} from '../config/rabbitmq'
 import {
   auditCreate,
   auditUpdate,
@@ -19,7 +19,6 @@ import dayjs from "dayjs";
 import { ApplicationStatus } from "@prisma/client";
 import type { AppElysiaStore } from "../types/elysiaAppStore";
 
-// export const exchangeName = 'repo.applicant'
 // 获取邀请码
 export const sendInviteCode = async ({
   body,
@@ -151,12 +150,12 @@ export const approveApplication = async ({
         })
         const conn = await amqp.connect(process.env.RABBITMQ_URL!)
         const channel = await conn.createChannel()
-        await channel.assertExchange(exchangeName, 'topic', {
+        await channel.assertExchange(applicantExchange, 'topic', {
           durable: true,
         })
         console.log("insertMail.id: ", insertMail.id, '; mail: ', insertMail.id)
         const buf = JSON.stringify({mailId: insertMail.id})
-        await channel.publish(exchangeName, 'application.approve', Buffer.from(buf), {persistent: true})
+        await channel.publish(applicantExchange, 'application.approve', Buffer.from(buf), {persistent: true})
         console.log("publish success mailId: ", insertMail.id)
         // const activatedLink = "https://www.iqiyi.com/u/record";
         // await sendEmail(

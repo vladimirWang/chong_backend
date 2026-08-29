@@ -81,7 +81,7 @@ export const app = new Elysia()
       secret: JWT_SECRET!,
     }),
   )
-  .get("/", () => "Hello Elysia3")
+  .get("/", () => "Hello Elysia")
   // 全局错误处理 - 拦截 zod 校验异常
   .onError(({ code, error, path }) => {
     console.error("--------Error occurred at path:---------", path, "with error:", error);
@@ -229,7 +229,7 @@ export const app = new Elysia()
     });
   })
   // .use(githubApiAuthRouter)
-  // .use(apiRouter)
+  .use(apiRouter)
   .listen(4000);
 console.log("app.server: ", app.server?.port);
 logger.info(

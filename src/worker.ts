@@ -1,22 +1,22 @@
 import amqp from 'amqplib'
 import prisma from './utils/prisma'
 import {sendEmail, mailFrom} from './utils/mailer'
+import {applicantExchange, applicationApproveQueue, applicationApproveRoutingKey} from './config/rabbitmq'
 
-export const exchangeName = 'repo.applicant'
-export const queueName = 'application.approve'
+
 async function startWorker() {
     const url = process.env.RABBITMQ_URL!
     const conn = await amqp.connect(url)
     const channel = await conn.createChannel()
-    await channel.assertExchange(exchangeName, 'topic', {
+    await channel.assertExchange(applicantExchange, 'topic', {
       durable: true,
     })
     // 声明队列并绑定到 exchange 的 routing key，保证队列存在且能收到消息
-    await channel.assertQueue(queueName, { durable: true })
-    await channel.bindQueue(queueName, exchangeName, 'application.approve')
+    await channel.assertQueue(applicationApproveQueue, { durable: true })
+    await channel.bindQueue(applicationApproveQueue, applicantExchange, applicationApproveRoutingKey)
 
     await channel.prefetch(1) // 一次只处理一条，处理完 ack 后再取
-    await channel.consume(queueName, async msg => {
+    await channel.consume(applicationApproveQueue, async msg => {
         if (!msg) return
         const deliveryTag = msg.fields.deliveryTag
         try {
