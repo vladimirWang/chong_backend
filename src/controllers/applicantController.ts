@@ -3,8 +3,8 @@ import { getPaginationValues } from "../utils/db";
 import { sendEmail, sendFrom } from "../utils/mailer";
 import prisma from "../utils/prisma";
 import type { AuthContext } from "./userController";
-import amqp from 'amqplib'
-import {applicantExchange} from '../config/rabbitmq'
+import {applicantExchange, applicationApproveRoutingKey} from '../config/rabbitmq'
+import {getRabbitChannel} from '../utils/rabbitmq'
 import {
   auditCreate,
   auditUpdate,
@@ -148,14 +148,14 @@ export const approveApplication = async ({
             to: applicant.email
           }
         })
-        const conn = await amqp.connect(process.env.RABBITMQ_URL!)
-        const channel = await conn.createChannel()
+        // 共享连接：DNS/建连只在首次发生，断线后自动懒重建
+        const channel = await getRabbitChannel()
         await channel.assertExchange(applicantExchange, 'topic', {
           durable: true,
         })
         console.log("insertMail.id: ", insertMail.id, '; mail: ', insertMail.id)
         const buf = JSON.stringify({mailId: insertMail.id})
-        await channel.publish(applicantExchange, 'application.approve', Buffer.from(buf), {persistent: true})
+        channel.publish(applicantExchange, applicationApproveRoutingKey, Buffer.from(buf), {persistent: true})
         console.log("publish success mailId: ", insertMail.id)
         // const activatedLink = "https://www.iqiyi.com/u/record";
         // await sendEmail(

@@ -44,10 +44,13 @@ async function startWorker() {
             console.log(`[worker] 邮件发送成功: id=${mail.id}, to=${mail.to}`)
             channel.ack(msg) // 成功确认
         } catch (err: any) {
-            prisma.mail.update({
-                where: { id: parsed.mailId },
-                data: { failCount: { increment: 1 } }
-            })
+            if (typeof parsed.mailId === 'number' && !isNaN(parsed.mailId)) {
+                prisma.mail.update({
+                    where: { id: parsed.mailId },
+                    data: { failCount: { increment: 1 } }
+                })
+            }
+
             console.error('[worker] 消费失败:', err?.message)
             // 失败后 requeue，让消息重新入队等待重试
             channel.nack(deliveryTag, false, true)
