@@ -19,6 +19,8 @@ services:
     build:
       context: ..
       dockerfile: deploy/Dockerfile
+    # 固定镜像名，worker 复用同一镜像，避免重复构建
+    image: repo-backend:latest
     expose:
       - "4000"
     ports:
@@ -27,6 +29,19 @@ services:
       - ../.env.prod
     volumes:
       - /var/log/galleryrepo:/var/log/galleryrepo:rw
+    networks:
+      - mac_docker_network
+      - default
+
+  # RabbitMQ 消费者：与 server 共用同一镜像，仅覆盖启动命令
+  worker:
+    image: repo-backend:latest
+    command: bun run src/worker.ts
+    env_file:
+      - ../.env.prod
+    depends_on:
+      - server
+    restart: unless-stopped
     networks:
       - mac_docker_network
       - default
