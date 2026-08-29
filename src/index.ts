@@ -83,152 +83,152 @@ export const app = new Elysia()
   )
   .get("/", () => "Hello Elysia3")
   // 全局错误处理 - 拦截 zod 校验异常
-  // .onError(({ code, error, path }) => {
-  //   console.error("--------Error occurred at path:---------", path, "with error:", error);
-  //   // 直接处理 ZodError（包括在 beforeHandle 中抛出的）
-  //   if (error instanceof ZodError) {
-  //     const errorMessages = error.issues.map((issue) => issue.message);
-  //     const errorMessage =
-  //       errorMessages.length > 0 ? errorMessages.join(", ") : "校验失败";
+  .onError(({ code, error, path }) => {
+    console.error("--------Error occurred at path:---------", path, "with error:", error);
+    // 直接处理 ZodError（包括在 beforeHandle 中抛出的）
+    if (error instanceof ZodError) {
+      const errorMessages = error.issues.map((issue) => issue.message);
+      const errorMessage =
+        errorMessages.length > 0 ? errorMessages.join(", ") : "校验失败";
 
-  //     const result = new ErrorResponse(
-  //       errorCode.VALIDATION_ERROR,
-  //       errorMessage,
-  //     );
-  //     return new Response(JSON.stringify(result), {
-  //       status: 400,
-  //       headers: { "Content-Type": "application/json" },
-  //     });
-  //   }
+      const result = new ErrorResponse(
+        errorCode.VALIDATION_ERROR,
+        errorMessage,
+      );
+      return new Response(JSON.stringify(result), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
 
-  //   // 处理 Elysia 的 VALIDATION 错误（zod schema 校验失败）
-  //   if (code === "VALIDATION") {
-  //     // 提取 zod 错误信息
-  //     let errorMessage = "校验失败";
+    // 处理 Elysia 的 VALIDATION 错误（zod schema 校验失败）
+    if (code === "VALIDATION") {
+      // 提取 zod 错误信息
+      let errorMessage = "校验失败";
 
-  //     // 尝试从错误中提取详细信息
-  //     // 检查是否是 ValidationError 类型
-  //     if (error instanceof ValidationError) {
-  //       const validationError = error as any;
+      // 尝试从错误中提取详细信息
+      // 检查是否是 ValidationError 类型
+      if (error instanceof ValidationError) {
+        const validationError = error as any;
 
-  //       // Elysia 的 ValidationError 通常包含 all 属性，包含所有校验错误
-  //       if (validationError.all && Array.isArray(validationError.all)) {
-  //         const errorMessages = validationError.all
-  //           .map((err: any) => {
-  //             if (!err) return undefined;
-  //             if (typeof err === "string") return err;
+        // Elysia 的 ValidationError 通常包含 all 属性，包含所有校验错误
+        if (validationError.all && Array.isArray(validationError.all)) {
+          const errorMessages = validationError.all
+            .map((err: any) => {
+              if (!err) return undefined;
+              if (typeof err === "string") return err;
 
-  //             const msg =
-  //               err.message ??
-  //               err.summary ??
-  //               err.error?.message ??
-  //               err.validator?.message;
-  //             const p = Array.isArray(err.path)
-  //               ? err.path.join(".")
-  //               : typeof err.path === "string"
-  //                 ? err.path
-  //                 : undefined;
+              const msg =
+                err.message ??
+                err.summary ??
+                err.error?.message ??
+                err.validator?.message;
+              const p = Array.isArray(err.path)
+                ? err.path.join(".")
+                : typeof err.path === "string"
+                  ? err.path
+                  : undefined;
 
-  //             if (msg && p) return `${p}: ${msg}`;
-  //             if (msg) return String(msg);
+              if (msg && p) return `${p}: ${msg}`;
+              if (msg) return String(msg);
 
-  //             return undefined;
-  //           })
-  //           .filter(Boolean) as string[];
+              return undefined;
+            })
+            .filter(Boolean) as string[];
 
-  //         if (errorMessages.length > 0) {
-  //           errorMessage = errorMessages.join(", ");
-  //         }
-  //       }
+          if (errorMessages.length > 0) {
+            errorMessage = errorMessages.join(", ");
+          }
+        }
 
-  //       const zodErrorCandidate =
-  //         validationError.validator?.Error ??
-  //         validationError.error ??
-  //         validationError.cause;
-  //       if (
-  //         zodErrorCandidate?.issues &&
-  //         Array.isArray(zodErrorCandidate.issues) &&
-  //         zodErrorCandidate.issues.length > 0
-  //       ) {
-  //         errorMessage = zodErrorCandidate.issues
-  //           .map((issue: any) => issue.message)
-  //           .join(", ");
-  //       } else if (validationError.message) {
-  //         errorMessage = validationError.message;
-  //       }
-  //     } else if (error instanceof Error) {
-  //       // 如果是普通 Error 对象，直接使用 message
-  //       errorMessage = error.message;
-  //     }
+        const zodErrorCandidate =
+          validationError.validator?.Error ??
+          validationError.error ??
+          validationError.cause;
+        if (
+          zodErrorCandidate?.issues &&
+          Array.isArray(zodErrorCandidate.issues) &&
+          zodErrorCandidate.issues.length > 0
+        ) {
+          errorMessage = zodErrorCandidate.issues
+            .map((issue: any) => issue.message)
+            .join(", ");
+        } else if (validationError.message) {
+          errorMessage = validationError.message;
+        }
+      } else if (error instanceof Error) {
+        // 如果是普通 Error 对象，直接使用 message
+        errorMessage = error.message;
+      }
 
-  //     // Elysia 有时会把结构化校验信息序列化成 JSON 字符串塞进 message
-  //     if (typeof errorMessage === "string") {
-  //       const trimmed = errorMessage.trim();
-  //       if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
-  //         try {
-  //           const parsed = JSON.parse(trimmed) as any;
-  //           const prop =
-  //             typeof parsed?.property === "string" ? parsed.property : undefined;
-  //           const msg =
-  //             typeof parsed?.message === "string" ? parsed.message : undefined;
-  //           if (msg) {
-  //             errorMessage = prop ? `${prop}: ${msg}` : msg;
-  //           }
-  //         } catch {
-  //           // ignore JSON parse failure, fall back to original message
-  //         }
-  //       }
+      // Elysia 有时会把结构化校验信息序列化成 JSON 字符串塞进 message
+      if (typeof errorMessage === "string") {
+        const trimmed = errorMessage.trim();
+        if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+          try {
+            const parsed = JSON.parse(trimmed) as any;
+            const prop =
+              typeof parsed?.property === "string" ? parsed.property : undefined;
+            const msg =
+              typeof parsed?.message === "string" ? parsed.message : undefined;
+            if (msg) {
+              errorMessage = prop ? `${prop}: ${msg}` : msg;
+            }
+          } catch {
+            // ignore JSON parse failure, fall back to original message
+          }
+        }
 
-  //       // 常见英文校验消息本地化
-  //       if (errorMessage.includes("Invalid email address")) {
-  //         errorMessage = errorMessage.replace(
-  //           "Invalid email address",
-  //           "邮箱格式不正确",
-  //         );
-  //       }
-  //     }
+        // 常见英文校验消息本地化
+        if (errorMessage.includes("Invalid email address")) {
+          errorMessage = errorMessage.replace(
+            "Invalid email address",
+            "邮箱格式不正确",
+          );
+        }
+      }
 
-  //     const result = new ErrorResponse(
-  //       errorCode.VALIDATION_ERROR,
-  //       errorMessage,
-  //     );
-  //     return new Response(JSON.stringify(result), {
-  //       status: 400,
-  //       headers: { "Content-Type": "application/json" },
-  //     });
-  //   }
+      const result = new ErrorResponse(
+        errorCode.VALIDATION_ERROR,
+        errorMessage,
+      );
+      return new Response(JSON.stringify(result), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
 
-  //   // 处理 404 错误（路由不存在）
-  //   if (code === "NOT_FOUND") {
-  //     const result = new ErrorResponse(
-  //       errorCode.NOT_FOUND,
-  //       "路由不存在: " + path,
-  //     );
-  //     return new Response(JSON.stringify(result), {
-  //       status: 404,
-  //       headers: { "Content-Type": "application/json" },
-  //     });
-  //   }
+    // 处理 404 错误（路由不存在）
+    if (code === "NOT_FOUND") {
+      const result = new ErrorResponse(
+        errorCode.NOT_FOUND,
+        "路由不存在: " + path,
+      );
+      return new Response(JSON.stringify(result), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
 
-  //   // 未捕获错误记录后继续抛出
-  //   const errForLog =
-  //     error instanceof Error
-  //       ? { message: error.message, stack: error.stack }
-  //       : { message: String(error), stack: undefined as string | undefined };
-  //   logger.error(
-  //     { error: errForLog.message, stack: errForLog.stack, path },
-  //     "未捕获异常",
-  //   );
-  //   const result = new ErrorResponse(
-  //     errorCode.INTERNAL_ERROR,
-  //     "服务器内部错误",
-  //   );
-  //   return new Response(JSON.stringify(result), {
-  //     status: 500,
-  //     headers: { "Content-Type": "application/json" },
-  //   });
-  // })
-  // // .use(githubApiAuthRouter)
+    // 未捕获错误记录后继续抛出
+    const errForLog =
+      error instanceof Error
+        ? { message: error.message, stack: error.stack }
+        : { message: String(error), stack: undefined as string | undefined };
+    logger.error(
+      { error: errForLog.message, stack: errForLog.stack, path },
+      "未捕获异常",
+    );
+    const result = new ErrorResponse(
+      errorCode.INTERNAL_ERROR,
+      "服务器内部错误",
+    );
+    return new Response(JSON.stringify(result), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  })
+  // .use(githubApiAuthRouter)
   // .use(apiRouter)
   .listen(4000);
 console.log("app.server: ", app.server?.port);
