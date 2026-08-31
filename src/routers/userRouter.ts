@@ -74,13 +74,13 @@ export const userRouter = new Elysia({ prefix: "/user" })
   .post("/resetPassword", (ctx: any) => resetPassword({ user: ctx.user }), {
     body: paramEmailSchema,
     resolve: resolveUserByEmail,
-  })
-  .post("/registerByToken", registerUserByToken, {
-    body: registerUserByTokenBodySchema,
   });
 
 userRouter.guard({ isSignIn: true }, (app) =>
   app
+    .post("/registerByToken", registerUserByToken, {
+      body: registerUserByTokenBodySchema,
+    })
     .get("/", () => {
       return {
         users: [
