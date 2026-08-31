@@ -21,6 +21,8 @@ services:
       dockerfile: deploy/Dockerfile
     # 固定镜像名，worker 复用同一镜像，避免重复构建
     image: repo-backend:latest
+    # migrate 遇到 mysql 未就绪等瞬时故障时自动重试，避免容器永久退出
+    restart: unless-stopped
     expose:
       - "4000"
     ports:
