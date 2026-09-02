@@ -89,10 +89,29 @@ export const createProduct = async ({
       name,
       remark,
       img,
-      vendorId,
+      vendor: {
+        connect: {
+          id: vendorId,
+        }
+      },
       salePrice,
       desc,
-      ...auditCreate(uid),
+      tenant: {
+        connect: {
+          id: user.tenantId,
+        }
+      },
+      // ...auditCreate(uid),
+      createdByUser: {
+        connect: {
+          id: uid,
+        }
+      },
+      updatedByUser: {
+        connect: {
+          id: uid,
+        }
+      }
     },
   });
   return new SuccessResponse(product, "产品创建成功");

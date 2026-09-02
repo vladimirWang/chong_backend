@@ -73,6 +73,11 @@ export const vendorRouter = new Elysia({ prefix: "/vendor" })
               name,
               remark,
               ...auditCreateConnect(uid),
+              // tenant: {
+              //   connect: {
+              //     id: tenantId,
+              //   }
+              // }
             },
           });
           return new SuccessResponse(vendor, "供应商创建成功");

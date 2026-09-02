@@ -223,21 +223,34 @@ export function createTenantPrisma(
         // —— 写入类：写入/删除/更新 都要限定 tenantId —— //
         async create({ args, query, model }) {
           if (TENANT_MODEL_SET.has(model) && args.data) {
-            (args.data as any).tenantId = tenantId;
+            const d = args.data as any;
+            // Prisma 7：不允许在 create data 里直接写 relation 标量 FK（tenantId）；
+            // 只能通过 relation tenant.connect 赋，否则 Unknown argument 'tenantId'
+            delete d.tenantId;
+            d.tenant = { connect: { id: tenantId } };
           }
           return query(args);
         },
         async createMany({ args, query, model }) {
           if (TENANT_MODEL_SET.has(model) && args.data) {
             const rows = Array.isArray(args.data) ? args.data : [args.data];
-            for (const row of rows) (row as any).tenantId = tenantId;
+            for (const row of rows) {
+              const r = row as any;
+              delete r.tenantId;
+              r.tenant = { connect: { id: tenantId } };
+            }
           }
           return query(args);
         },
         async upsert({ args, query, model }) {
           if (TENANT_MODEL_SET.has(model)) {
             if (args.where) args.where = { ...(args.where as any), tenantId } as any;
-            if (args.create) (args.create as any).tenantId = tenantId;
+            if (args.create) {
+              const c = args.create as any;
+              delete c.tenantId;
+              c.tenant = { connect: { id: tenantId } };
+            }
+            // update 可以走标量字段 set（update data 允许直接写 relation FK）
             if (args.update && typeof args.update === "object") {
               (args.update as any).tenantId = tenantId;
             }

@@ -30,7 +30,7 @@ export function auditCreateConnect(userId: number) {
   return {
     createdByUser: { connect: { id: userId } },
     updatedByUser: { connect: { id: userId } },
-    deletedByUser: { connect: { id: userId } },
+    // deletedByUser: { connect: { id: userId } },
   };
 }
 
