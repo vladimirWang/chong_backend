@@ -8,8 +8,8 @@ services:
       - ../nginx/html/dist:/usr/share/nginx/html:ro
       - ../nginx/ssl:/etc/ssl/cert:ro
     ports:
-      - "80:80"
-      - "443:443"
+      - "6080:80"
+      - "6443:443"
     depends_on:
       - server
     networks:
