@@ -6,10 +6,44 @@ datasource db {
   provider = "mysql"
 }
 
+// ==================== 租户域 ====================
+
+enum TenantStatus {
+  ACTIVE   // 正常
+  SUSPENDED // 暂停使用
+  DISABLED // 已停用
+}
+
+// 租户/组织
+model Tenant {
+  id        Int          @id @default(autoincrement())
+  name      String       @unique// 显示名称
+  code      String       @unique // 机器用唯一编码
+  status    TenantStatus @default(ACTIVE)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  // 业务域子表（1:N）
+  users                User[]
+  vendors              Vendor[]
+  stockIns             StockIn[]
+  productJoinStockIns  ProductJoinStockIn[]
+  products             Product[]
+  historyCosts         HistoryCost[]
+  stockOuts            StockOut[]
+  productJoinStockOuts ProductJoinStockOut[]
+  clients              Client[]
+  applicants           Applicant[] // Applicant.tenantId 可空（加入型必填、创建型为空）
+}
+
+// ==================== 业务域 ====================
+
 // 供应商
 model Vendor {
   id                   Int                   @id @default(autoincrement())
-  name                 String                @unique
+  tenantId             Int
+  tenant               Tenant                @relation(fields: [tenantId], references: [id])
+  name                 String
   remark               String?
   products             Product[]
   createdAt            DateTime              @default(now())
@@ -24,6 +58,9 @@ model Vendor {
   updatedByUser        User?                 @relation("VendorUpdatedBy", fields: [updatedBy], references: [id])
   deletedBy            Int
   deletedByUser        User?                 @relation("VendorDeletedBy", fields: [deletedBy], references: [id])
+
+  @@index([tenantId])
+  @@unique([tenantId, name])
 }
 
 // 进货单的状态
@@ -35,6 +72,8 @@ enum StockInStatus {
 // 进货
 model StockIn {
   id                 Int                  @id @default(autoincrement())
+  tenantId           Int
+  tenant             Tenant               @relation(fields: [tenantId], references: [id])
   remark             String?
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
@@ -52,13 +91,17 @@ model StockIn {
   updatedByUser      User?                @relation("StockInUpdatedBy", fields: [updatedBy], references: [id])
   deletedBy          Int
   deletedByUser      User?                @relation("StockInDeletedBy", fields: [deletedBy], references: [id])
+
+  @@index([tenantId])
 }
 
 // 产品进货单中间表
 model ProductJoinStockIn {
   id            Int       @id @default(autoincrement())
+  tenantId      Int
+  tenant        Tenant    @relation(fields: [tenantId], references: [id])
   stockInId     Int
-  stockIn       StockIn   @relation(fields: [stockInId], references: [id])
+  stockIn       StockIn   @relation(fields: [stockInId], references: [id], onDelete: Cascade)
   productId     Int
   product       Product   @relation(fields: [productId], references: [id])
   cost          Int // 售价
@@ -77,13 +120,16 @@ model ProductJoinStockIn {
   deletedBy     Int
   deletedByUser User?     @relation("ProductJoinStockInDeletedBy", fields: [deletedBy], references: [id])
 
+  @@index([tenantId])
   @@unique([stockInId, productId])
 }
 
 // 商品
 model Product {
   id                  Int                   @id @default(autoincrement())
-  name                String                @unique
+  tenantId            Int
+  tenant              Tenant                @relation(fields: [tenantId], references: [id])
+  name                String
   img                 String?
   vendorId            Int
   remark              String?
@@ -110,12 +156,16 @@ model Product {
   deletedBy           Int
   deletedByUser       User?                 @relation("ProductDeletedBy", fields: [deletedBy], references: [id])
 
+  @@index([tenantId])
   @@index([vendorId], map: "Product_brandId_fkey")
+  @@unique([tenantId, name])
 }
 
 // 用户
 model User {
   id                         Int                   @id @default(autoincrement())
+  tenantId                   Int
+  tenant                     Tenant                @relation(fields: [tenantId], references: [id])
   email                      String                @unique
   username                   String?
   createdAt                  DateTime              @default(now())
@@ -152,11 +202,15 @@ model User {
   historyCostsCreated        HistoryCost[]         @relation("HistoryCostCreatedBy")
   historyCostsUpdated        HistoryCost[]         @relation("HistoryCostUpdatedBy")
   historyCostsDeleted        HistoryCost[]         @relation("HistoryCostDeletedBy")
+
+  @@index([tenantId])
 }
 
 // 历史成本
 model HistoryCost {
   id            Int       @id @default(autoincrement())
+  tenantId      Int
+  tenant        Tenant    @relation(fields: [tenantId], references: [id])
   stockInId     Int
   stockIn       StockIn   @relation(fields: [stockInId], references: [id])
   productId     Int
@@ -171,11 +225,15 @@ model HistoryCost {
   updatedByUser User?     @relation("HistoryCostUpdatedBy", fields: [updatedBy], references: [id])
   deletedBy     Int
   deletedByUser User?     @relation("HistoryCostDeletedBy", fields: [deletedBy], references: [id])
+
+  @@index([tenantId])
 }
 
 // 出货表
 model StockOut {
   id                  Int                   @id @default(autoincrement())
+  tenantId            Int
+  tenant              Tenant                @relation(fields: [tenantId], references: [id])
   createdAt           DateTime              @default(now())
   updatedAt           DateTime              @updatedAt
   deletedAt           DateTime?
@@ -198,11 +256,14 @@ model StockOut {
   deletedBy           Int
   deletedByUser       User?                 @relation("StockOutDeletedBy", fields: [deletedBy], references: [id])
 
-  @@unique([platformId, platformOrderNo])
+  @@index([tenantId])
+  @@unique([tenantId, platformId, platformOrderNo])
 }
 
 model ProductJoinStockOut {
   id            Int       @id @default(autoincrement())
+  tenantId      Int
+  tenant        Tenant    @relation(fields: [tenantId], references: [id])
   productId     Int
   product       Product   @relation(fields: [productId], references: [id])
   stockOutId    Int
@@ -221,6 +282,7 @@ model ProductJoinStockOut {
   deletedBy     Int
   deletedByUser User?     @relation("ProductJoinStockOutDeletedBy", fields: [deletedBy], references: [id])
 
+  @@index([tenantId])
   @@unique([stockOutId, productId])
 }
 
@@ -239,7 +301,7 @@ model FileInfo {
   deletedByUser User?     @relation("FileInfoDeletedBy", fields: [deletedBy], references: [id])
 }
 
-// 平台
+// 平台（全局字典表，不区分租户）
 model Platform {
   id        Int        @id @default(autoincrement())
   name      String     @unique
@@ -252,6 +314,8 @@ model Platform {
 // 客户
 model Client {
   id            Int        @id @default(autoincrement())
+  tenantId      Int
+  tenant        Tenant     @relation(fields: [tenantId], references: [id])
   name          String
   tel           String?
   address       String?
@@ -266,7 +330,11 @@ model Client {
   updatedByUser User?      @relation("ClientUpdatedBy", fields: [updatedBy], references: [id])
   deletedBy     Int
   deletedByUser User?      @relation("ClientDeletedBy", fields: [deletedBy], references: [id])
+
+  @@index([tenantId])
 }
+
+// ==================== 系统/后管域（不加 tenantId）====================
 
 // 用户
 model AdminUser {
@@ -296,6 +364,9 @@ enum ApplicationStatus {
 // 系统申请人
 model Applicant {
   id               Int                        @id @default(autoincrement())
+  tenantId         Int?                       // 可空：加入型必填，创建型为空
+  tenant           Tenant?                    @relation(fields: [tenantId], references: [id])
+  tenantName       String?                    // 可空：创建型场景存新租户名称，激活时据此创建 Tenant
   email            String                     @unique
   // inviteCode       String?
   status           ApplicationStatus          @default(PENDING)
@@ -309,6 +380,8 @@ model Applicant {
   updatedByUser    AdminUser?                 @relation("ApplicantUpdatedBy", fields: [updatedBy], references: [id])
   deletedBy        Int
   deletedByUser    AdminUser?                 @relation("ApplicantDeletedBy", fields: [deletedBy], references: [id])
+
+  @@index([tenantId])
 }
 
 // 申请人激活链接（用于完成注册的一次性 token）

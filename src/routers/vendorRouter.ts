@@ -1,12 +1,12 @@
 import { Elysia } from "elysia";
 import { jwt } from "@elysiajs/jwt";
 import { z, ZodError } from "zod";
-import prisma from "../utils/prisma";
+import prisma, { TenantPrismaClient } from "../utils/prisma";
 import { errorCode, ErrorResponse, SuccessResponse } from "../models/Response";
 import type { AuthContext } from "../controllers/userController";
-import { auditCreate, auditUpdate } from "../utils/auditUser";
+import { auditCreateConnect, auditUpdate } from "../utils/auditUser";
 import { getPaginationValues, getWhereValues } from "../utils/db";
-import { authService } from "../macro/auth.macro";
+import { authService, AuthInject } from "../macro/auth.macro";
 import {
   getVendors,
   deleteVendor,
@@ -21,19 +21,22 @@ import { updateIdSchema } from "../validators/commonValidator";
 
 const { JWT_SECRET } = process.env;
 
+// 供应商路由 handler 可用的完整 ctx：认证宏注入的 user/tenantPrisma/tenantId + Elysia Context
+type VendorAuthCtx = AuthContext & AuthInject;
+
 // 供应商相关路由模块
 export const vendorRouter = new Elysia({ prefix: "/vendor" })
   .use(authService)
   .guard({ isSignIn: true }, (app) =>
     app
-      .get("/", getVendors, {
+      .get("/", getVendors as any, {
         query: vendorQuerySchema,
       })
-      // GET /nodejs_api/posts/:id - 获取单个文章
+      // GET /nodejs_api/vendor/:id
       .get(
         "/:id",
-        async ({ params, status, cookie: { auth } }) => {
-          const vendor = await prisma.vendor.findUnique({
+        async ({ params, status, tenantPrisma }: VendorAuthCtx) => {
+          const vendor = await (tenantPrisma as TenantPrismaClient).vendor.findUnique({
             where: {
               id: params.id,
             },
@@ -48,23 +51,28 @@ export const vendorRouter = new Elysia({ prefix: "/vendor" })
           params: updateIdSchema,
         },
       )
-      // POST /nodejs_api/posts - 创建供应商
+      // POST /nodejs_api/vendor - 创建供应商
       .post(
         "/",
         async ({
           body,
           user,
-        }: AuthContext & { body: { name: string; remark?: string } }) => {
-          if (!user) {
-            return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
-          }
+          tenantPrisma,
+        }: VendorAuthCtx & { body: { name: string; remark?: string } }) => {
           const uid = user.userId;
           const { name, remark } = body;
-          const vendor = await prisma.vendor.create({
+          const tenantId = user.tenantId;
+          if (!tenantId) {
+            return new ErrorResponse(
+              errorCode.VALIDATION_ERROR,
+              "当前用户未绑定租户",
+            );
+          }
+          const vendor = await (tenantPrisma as TenantPrismaClient).vendor.create({
             data: {
               name,
               remark,
-              ...auditCreate(uid),
+              ...auditCreateConnect(uid),
             },
           });
           return new SuccessResponse(vendor, "供应商创建成功");
@@ -74,17 +82,13 @@ export const vendorRouter = new Elysia({ prefix: "/vendor" })
             name: z.string().min(2),
             remark: z.string().optional(),
           }),
-          beforeHandle: async ({ body }) => {
-            // 检查品牌是否已存在
-            const userExisted = await prisma.vendor.findFirst({
+          beforeHandle: async ({ body, user, tenantPrisma }) => {
+            const vendorExisted = await (tenantPrisma as TenantPrismaClient).vendor.findFirst({
               where: {
                 name: body.name,
-                // password: body.password
               },
             });
-
-            if (userExisted) {
-              // 抛出 zod 异常，使用自定义错误消息
+            if (vendorExisted) {
               throw new ZodError([
                 {
                   code: "custom",
@@ -96,11 +100,11 @@ export const vendorRouter = new Elysia({ prefix: "/vendor" })
           },
         },
       )
-      // PUT /nodejs_api/posts/:id - 更新文章
+      // GET /nodejs_api/vendor/byId/:id - 获取供应商及其产品
       .get(
         "/byId/:id",
-        async ({ params, body }) => {
-          const vendor = await prisma.vendor.findUnique({
+        async ({ params, tenantPrisma }: VendorAuthCtx) => {
+          const vendor = await (tenantPrisma as TenantPrismaClient).vendor.findUnique({
             where: {
               id: params.id,
             },
@@ -109,20 +113,16 @@ export const vendorRouter = new Elysia({ prefix: "/vendor" })
             },
           });
           return new SuccessResponse(vendor, "供应商获取成功");
-          // return {
-          //     message: `文章 ${params.id} 更新成功`,
-          //     post: { id: params.id, ...(body as Record<string, any>) }
-          // };
         },
         {
           params: updateIdSchema,
         },
       )
       // DELETE /nodejs_api/vendor/:id - 删除供应商
-      .delete("/:id", deleteVendor, {
+      .delete("/:id", deleteVendor as any, {
         params: updateIdSchema,
-        beforeHandle: async ({ params }) => {
-          const vendor = await prisma.vendor.findUnique({
+        beforeHandle: async ({ params, tenantPrisma }) => {
+          const vendor = await (tenantPrisma as TenantPrismaClient).vendor.findUnique({
             where: {
               id: params.id,
             },
@@ -138,18 +138,18 @@ export const vendorRouter = new Elysia({ prefix: "/vendor" })
           }
         },
       })
-      .delete("/batch", batchDeleteVendor, {
+      .delete("/batch", batchDeleteVendor as any, {
         body: vendorBatchDeleteSchema,
       })
       .put(
         "/:id",
-        async ({ params, body, user }: any) => {
+        async ({ params, body, user, tenantPrisma }: any) => {
           if (!user) {
             return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
           }
           const uid = user.userId;
           const { name, remark } = body;
-          const updatedVendor = await prisma.vendor.update({
+          const updatedVendor = await (tenantPrisma as TenantPrismaClient).vendor.update({
             where: {
               id: params.id,
             },

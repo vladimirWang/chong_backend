@@ -33,5 +33,7 @@ export const paramEmailNotExistedSchema = z.object({
     },
     { message: "邮箱已注册" },
   ),
+  // 创建型场景的新租户名称；为空表示不创建租户
+  tenantName: z.string().optional(),
 });
 export type ParamEmailNotExisted = z.infer<typeof paramEmailNotExistedSchema>;

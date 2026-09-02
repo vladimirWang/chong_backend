@@ -3,6 +3,30 @@ import { jwt } from "@elysiajs/jwt";
 const { JWT_SECRET } = process.env;
 import dayjs from "dayjs";
 import { redisClient } from "../utils/redis";
+import prisma, { createTenantPrisma, TenantPrismaClient } from "../utils/prisma";
+
+/**
+ * 登录态注入的 user 对象结构（来自 Redis 中保存的 JWT payload）
+ * 包含 tenantId，用于创建租户级 prisma 实例
+ */
+export type AuthUser = {
+  userId: number;
+  email: string;
+  username: string;
+  tenantId: number;
+  role?: string;
+  exp?: number | string;
+  [k: string]: any;
+};
+
+/** isSignIn 宏成功后注入 ctx 的字段类型 */
+export type AuthInject = {
+  user: AuthUser;
+  /** 带当前 tenantId 过滤的 prisma 实例（业务表 CRUD 一律用它） */
+  tenantPrisma: TenantPrismaClient;
+  /** 当前租户 ID（等价于 user.tenantId，方便解构） */
+  tenantId: number;
+};
 
 export const authService = new Elysia({ name: "Auth.Service" }).macro({
   isSignIn: {
@@ -58,14 +82,18 @@ export const authService = new Elysia({ name: "Auth.Service" }).macro({
       }
       try {
         // token认证，返回用户信息
-        // const user = await jwt.verify(authorization);
-
-        // const res = start.
-        const user = JSON.parse(userInfoStr!);
+        const user = JSON.parse(userInfoStr!) as AuthUser;
         if (!user) return status(401);
         console.log("----user----: ", user);
+
+        // ⬇️⬇️⬇️ 关键：按当前 tenantId 创建 prisma 扩展实例，注入到 ctx
+        const tenantId = user.tenantId;
+        const tenantPrisma = createTenantPrisma(prisma, tenantId);
+
         return {
           user,
+          tenantPrisma,
+          tenantId,
         };
       } catch (error) {
         return status(401);

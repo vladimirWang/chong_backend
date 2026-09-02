@@ -32,11 +32,14 @@ import {
 import { auditCreate, auditUpdate } from "../utils/auditUser";
 import { ApplicationStatus } from "@prisma/client";
 import { AppElysiaStore } from "../types/elysiaAppStore";
+import { createTenantInTx } from "../utils/tenant";
 
 export type JwtPayload = {
   userId: number;
   email: string;
   username: string | null;
+  /** merchant 用户所属租户；AdminUser 跨租户，无租户概念 */
+  tenantId?: number | null;
   exp: string;
   role: "merchant" | "admin";
 };
@@ -125,6 +128,7 @@ export const loginUser = async ({
     userId: userExisted.id,
     email: userExisted.email,
     username: userExisted.username,
+    tenantId: userExisted.tenantId,
     exp: "1d",
     role: "merchant",
   };
@@ -171,19 +175,21 @@ export const registerUser = async ({ body }: { body: RegisterUserBody }) => {
 
   // return new SuccessResponse(salt, "盐生成成功");
 
-  const user = await prisma.user.create({
-    data: {
-      email,
-      password: passwordHash,
-      username,
-      salt,
-    },
-    // select: [
-    //     'id',
-    //     "email",
-    //     "username",
-    //     "createdAt"
-    // ]
+  // 一用户一租户：注册即建租户（无组织名时按 用户名 → 邮箱前缀 兜底），与用户同事务
+  const user = await prisma.$transaction(async (tx) => {
+    const tenant = await createTenantInTx(tx, {
+      fallbackUsername: username,
+      fallbackEmail: email,
+    });
+    return tx.user.create({
+      data: {
+        email,
+        password: passwordHash,
+        username,
+        salt,
+        tenantId: tenant.id,
+      },
+    });
   });
 
   const userCreated = {
@@ -377,23 +383,30 @@ export const registerUserByToken = async ({
   const { password, username, applicant } = body;
   const salt = generateFixedSalt();
   const passwordHash = sha256(password + "_" + salt);
-  await prisma.$transaction([
-    prisma.applicant.update({
+  await prisma.$transaction(async (tx) => {
+    await tx.applicant.update({
       where: {
         id: applicant.id,
       },
       data: {
         status: ApplicationStatus.ACTIVATED,
       },
-    }),
-    prisma.user.create({
+    });
+    // 一用户一租户：申请单带租户名（创建型）则用之；否则按 用户名 → 邮箱前缀 兜底建租户
+    const tenant = await createTenantInTx(tx, {
+      name: applicant.tenantName,
+      fallbackUsername: username,
+      fallbackEmail: applicant.email,
+    });
+    await tx.user.create({
       data: {
         email: applicant.email,
         password: passwordHash,
         username: username,
         salt,
+        tenantId: tenant.id,
       },
-    }),
-  ]);
+    });
+  });
   return new SuccessResponse(null, "用户注册成功");
 };

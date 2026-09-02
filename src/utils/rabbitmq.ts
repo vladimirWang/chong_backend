@@ -14,7 +14,8 @@ function resetAll() {
   channelPromise = null;
 }
 
-function getConnection(): Promise<AmqpConnection> {
+// worker 等需要自建 channel 的场景用此方法；普通 publish 走 getRabbitChannel 即可
+export function getConnection(): Promise<AmqpConnection> {
   if (!connPromise) {
     connPromise = amqp
       .connect(process.env.RABBITMQ_URL!)

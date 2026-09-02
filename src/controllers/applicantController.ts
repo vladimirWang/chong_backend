@@ -27,11 +27,13 @@ export const sendInviteCode = async ({
   body: ParamEmailNotExisted;
   store: AppElysiaStore;
 }) => {
-  const { email } = body;
+  const { email, tenantName } = body;
 
   await prisma.applicant.create({
     data: {
       email,
+      // 创建型场景存新租户名称，激活时据此创建 Tenant
+      ...(tenantName ? { tenantName } : {}),
       ...auditCreate(store.anonymousUserId),
     },
   });

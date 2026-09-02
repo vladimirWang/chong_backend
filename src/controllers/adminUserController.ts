@@ -107,10 +107,12 @@ export const loginUser = async ({
   await redisClient.del(loginFailedKey);
 
   // 生成 token（@elysiajs/jwt 的 sign 只接收一个 payload，exp 需写在 payload 里才会生效）
+  // 生成 token（@elysiajs/jwt 的 sign 只接收一个 payload，exp 需写在 payload 里才会生效）
   const payload: JwtPayload = {
     userId: userExisted.id,
     email: userExisted.email,
     username: userExisted.username,
+    // AdminUser 跨租户，无 tenantId
     exp: "1d",
     role: "admin",
   };

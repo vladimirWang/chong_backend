@@ -4,6 +4,7 @@ import { redisClient } from "../utils/redis";
 import { logger } from "../utils/logger";
 import { generateFixedSalt, sha256 } from "../utils/algo";
 import type { JwtPayload } from "./userController";
+import { createTenantInTx } from "../utils/tenant";
 import { ErrorResponse, SuccessResponse, errorCode } from "../models/Response";
 
 const STATE_PREFIX = "oauth:github:state:";
@@ -129,13 +130,14 @@ async function fetchGithubPrimaryVerifiedEmail(accessToken: string): Promise<str
 }
 
 async function issueMerchantToken(
-  user: { id: number; email: string; username: string | null },
+  user: { id: number; email: string; username: string | null; tenantId: number },
   jwt: { sign: (p: JwtPayload) => Promise<string> },
 ): Promise<string> {
   const payload: JwtPayload = {
     userId: user.id,
     email: user.email,
     username: user.username,
+    tenantId: user.tenantId,
     exp: "1d",
     role: "merchant",
   };
@@ -280,15 +282,23 @@ export const callbackGithubOAuth = async ({
         const salt = generateFixedSalt();
         const randomSecret = randomBytes(32).toString("hex");
         const passwordHash = sha256(randomSecret + "_" + salt);
-        user = await prisma.user.create({
-          data: {
-            email,
-            username: ghUser.login,
-            password: passwordHash,
-            salt,
-            githubId: githubIdStr,
-            avatar: ghUser.avatar_url ?? undefined,
-          },
+        // 一用户一租户：GitHub 新用户注册即建租户（无组织名时按 login → 邮箱前缀 兜底）
+        user = await prisma.$transaction(async (tx) => {
+          const tenant = await createTenantInTx(tx, {
+            fallbackUsername: ghUser.login,
+            fallbackEmail: email,
+          });
+          return tx.user.create({
+            data: {
+              email,
+              username: ghUser.login,
+              password: passwordHash,
+              salt,
+              githubId: githubIdStr,
+              avatar: ghUser.avatar_url ?? undefined,
+              tenantId: tenant.id,
+            },
+          });
         });
       }
     } else {
@@ -303,7 +313,12 @@ export const callbackGithubOAuth = async ({
     }
 
     const token = await issueMerchantToken(
-      { id: user.id, email: user.email, username: user.username },
+      {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        tenantId: user.tenantId,
+      },
       jwt,
     );
     const exchangeId = randomBytes(24).toString("hex");
