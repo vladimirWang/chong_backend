@@ -1,7 +1,6 @@
 import { Elysia } from "elysia";
 import { jwt } from "@elysiajs/jwt";
 import { z, ZodError } from "zod";
-import prisma from "../utils/prisma";
 import { errorCode, ErrorResponse, SuccessResponse } from "../models/Response";
 import { authService } from "../macro/auth.macro";
 import {
@@ -45,9 +44,9 @@ export const productRouter = new Elysia({
       // POST /nodejs_api/product - 创建产品
       .post("/", createProduct, {
         body: createProductBodySchema,
-        beforeHandle: async ({ body }) => {
-          // 检查产品是否已存在
-          const productExisted = await prisma.product.findFirst({
+        beforeHandle: async ({ body, tenantPrisma }) => {
+          // 检查产品是否已存在（用租户级 prisma，自动过滤同租户）
+          const productExisted = await tenantPrisma.product.findFirst({
             where: {
               name: body.name,
               vendorId: body.vendorId,
@@ -67,11 +66,11 @@ export const productRouter = new Elysia({
         },
       })
       // PATCH /nodejs_api/product/:id - 更新产品
-      .patch("/:id", (ctx) => updateProduct(ctx as any), {
+      .patch("/:id", updateProduct, {
         params: updateIdSchema,
         body: updateProductBodySchema,
-        beforeHandle: async ({ params }) => {
-          const productExisted = await prisma.product.findUnique({
+        beforeHandle: async ({ params, tenantPrisma }) => {
+          const productExisted = await tenantPrisma.product.findUnique({
             where: {
               id: params.id,
             },

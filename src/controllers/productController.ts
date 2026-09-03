@@ -57,8 +57,8 @@ export const getProducts = async ({ query, tenantPrisma }: ProductCtx) => {
 };
 
 // 根据ID获取产品
-export const getProductById = async ({ params }: { params: UpdateId }) => {
-  const res = await prisma.product.findUnique({
+export const getProductById = async ({ params, tenantPrisma }: { params: UpdateId; tenantPrisma: TenantPrismaClient }) => {
+  const res = await tenantPrisma.product.findUnique({
     where: {
       id: params.id,
     },
@@ -102,12 +102,6 @@ export const createProduct = async ({
           id: vendorId,
         }
       },
-      // tenantPrisma 扩展会在运行时自动覆盖为正确的 tenantId，此处仅为满足类型
-      tenant: {
-        connect: {
-          id: user.tenantId!,
-        }
-      },
       salePrice,
       desc,
       ...auditCreateConnect(uid),
@@ -121,9 +115,11 @@ export const updateProduct = async ({
   params,
   body,
   user,
+  tenantPrisma,
 }: AuthContext & {
   params: UpdateId;
   body: UpdateProductBody;
+  tenantPrisma: TenantPrismaClient;
 }) => {
   if (!user) {
     return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
@@ -133,7 +129,7 @@ export const updateProduct = async ({
   logger.info(
     `updateProduct request body: id: ${params.id}, name: ${name}, remark: ${remark}, salePrice: ${salePrice}, img: ${img}`,
   );
-  const product = await prisma.product.update({
+  const product = await tenantPrisma.product.update({
     where: {
       id: params.id,
     },
@@ -152,16 +148,18 @@ export const updateProduct = async ({
 // 根据供应商ID获取产品列表
 export const getProductsByVendorId = async ({
   params,
+  tenantPrisma,
 }: {
   params: ProductByVendorParams;
+  tenantPrisma: TenantPrismaClient;
 }) => {
   const { vendorId } = params;
-  const products = await prisma.product.findMany({
+  const products = await tenantPrisma.product.findMany({
     where: {
       vendorId,
     },
   });
-  const total = await prisma.product.count({
+  const total = await tenantPrisma.product.count({
     where: {
       vendorId,
     },
@@ -172,10 +170,12 @@ export const getProductsByVendorId = async ({
 // 根据产品id查询最近一次的建议零售价
 export const getLatestSalePriceByProductId = async ({
   params,
+  tenantPrisma,
 }: {
   params: UpdateId;
+  tenantPrisma: TenantPrismaClient;
 }) => {
-  const res = await prisma.historyCost.findMany({
+  const res = await tenantPrisma.historyCost.findMany({
     where: {
       productId: params.id,
       deletedAt: {
@@ -200,11 +200,13 @@ export const getLatestSalePriceByProductId = async ({
 export const checkProductNameExistedInVendor = async ({
   params,
   query,
+  tenantPrisma,
 }: {
   params: VendorId;
   query: ProductNameString;
+  tenantPrisma: TenantPrismaClient;
 }) => {
-  const existed = await prisma.product.findFirst({
+  const existed = await tenantPrisma.product.findFirst({
     where: {
       vendorId: params.vendorId,
       name: query.productName,
@@ -213,9 +215,9 @@ export const checkProductNameExistedInVendor = async ({
   return new SuccessResponse(existed, "产品最近一次建议零售价获取成功");
 };
 
-export const getProductsByAmount = async({query}: {query: ProductAmountQuery}) => {
+export const getProductsByAmount = async({query, tenantPrisma}: {query: ProductAmountQuery; tenantPrisma: TenantPrismaClient}) => {
   const { amount, moreThan, desc = true } = query;
-  const results = await prisma.product.findMany({
+  const results = await tenantPrisma.product.findMany({
     where: {
       balance: moreThan ? {
         gt: amount,
