@@ -6,7 +6,8 @@ import {
 } from "../validators/stockOutValidator";
 import { sum2, compareArrayMinLoop } from "../utils/algo";
 import { SuccessResponse, ErrorResponse, errorCode } from "../models/Response";
-import prisma from "../utils/prisma";
+import prisma, {TenantPrismaClient} from "../utils/prisma";
+import type { Prisma } from "@prisma/client";
 import {
   Pagination,
   UpdateId,
@@ -27,7 +28,9 @@ import {
   auditSoftDelete,
   auditUpdate,
   auditUpdateConnect,
+  auditCreateConnect
 } from "../utils/auditUser";
+import {AuthInject} from "../macro/auth.macro";
 
 const { PUBLIC_BASE_URL } = process.env;
 
@@ -54,7 +57,13 @@ export type StockOutListRow = StockOperationListRow & {
   price: number;
 };
 
-export const getStockOuts = async ({ query }: { query: StockOutQuery }) => {
+export const getStockOuts = async ({
+  query,
+  tenantPrisma,
+}: {
+  query: StockOutQuery;
+  tenantPrisma: TenantPrismaClient;
+}) => {
   const {
     pagination = true,
     limit = 10,
@@ -74,194 +83,93 @@ export const getStockOuts = async ({ query }: { query: StockOutQuery }) => {
   const vendorNameStr =
     typeof vendorName === "string" ? vendorName.trim() : undefined;
 
-  const hasVendorFilter = Boolean(vendorNameStr && vendorNameStr.length > 0);
+  // —— 构建 where 条件 —— //
+  // tenantPrisma 自动注入 tenantId；软删除扩展自动注入 deletedAt: null（除非显式覆盖）
+  const where: Prisma.StockOutWhereInput = {};
 
-  const whereClauses: string[] = ["1=1"];
-  const params: unknown[] = [];
-
-  if (productNameStr) {
-    whereClauses.push("p.name LIKE ?");
-    params.push(`%${productNameStr}%`);
+  // 嵌套关系过滤
+  if (productNameStr || vendorNameStr) {
+    where.productJoinStockOut = {
+      some: {
+        product: {
+          ...(productNameStr
+            ? { name: { contains: productNameStr } }
+            : {}),
+          ...(vendorNameStr
+            ? { vendor: { name: { contains: vendorNameStr } } }
+            : {}),
+        },
+      },
+    };
   }
 
+  // deletedAt
   if (deletedStart || deletedEnd) {
-    if (deletedStart) {
-      whereClauses.push("s.deletedAt >= ?");
-      params.push(dayjs(deletedStart).format("YYYY-MM-DD HH:mm:ss"));
-    }
-    if (deletedEnd) {
-      whereClauses.push("s.deletedAt <= ?");
-      params.push(dayjs(deletedEnd).format("YYYY-MM-DD HH:mm:ss"));
-    }
-  } else {
-    if (isDeleted === "1") {
-      whereClauses.push("s.deletedAt IS NOT NULL");
-    } else {
-      whereClauses.push("s.deletedAt IS NULL");
-    }
+    where.deletedAt = {
+      ...(deletedStart ? { gte: dayjs(deletedStart).toDate() } : {}),
+      ...(deletedEnd ? { lte: dayjs(deletedEnd).toDate() } : {}),
+    };
+  } else if (isDeleted === "1") {
+    where.deletedAt = { not: null };
   }
+
   if (completedStart) {
-    whereClauses.push("s.completedAt >= ?");
-    params.push(dayjs(completedStart).format("YYYY-MM-DD HH:mm:ss"));
+    where.completedAt = {
+      ...((where.completedAt as object) || {}),
+      gte: dayjs(completedStart).toDate(),
+    };
   }
   if (completedEnd) {
-    whereClauses.push("s.completedAt <= ?");
-    params.push(dayjs(completedEnd).format("YYYY-MM-DD HH:mm:ss"));
+    where.completedAt = {
+      ...((where.completedAt as object) || {}),
+      lte: dayjs(completedEnd).toDate(),
+    };
   }
 
-  if (hasVendorFilter) {
-    whereClauses.push("v.name LIKE ?");
-    params.push(`%${vendorNameStr}%`);
-  }
+  // —— 查询 —— //
+  const [total, stockOuts] = await Promise.all([
+    tenantPrisma.stockOut.count({ where }),
+    tenantPrisma.stockOut.findMany({
+      where,
+      ...(pagination ? { skip, take } : {}),
+      orderBy: { updatedAt: "desc" },
+      include: {
+        productJoinStockOut: {
+          include: {
+            product: { select: { name: true } },
+          },
+        },
+      },
+    }),
+  ]);
 
-  const vendorJoinSql = hasVendorFilter
-    ? " LEFT JOIN Vendor v ON v.id = p.vendorId "
-    : "";
-  const whereSql = "WHERE " + whereClauses.join(" AND ");
-
-  const joinFrom =
-    `FROM StockOut s ` +
-    `LEFT JOIN ProductJoinStockOut pjs ON pjs.stockOutId = s.id ` +
-    `LEFT JOIN Product p ON p.id = pjs.productId` +
-    vendorJoinSql;
-
-  const countSql = `SELECT COUNT(DISTINCT s.id) as cnt ${joinFrom} ${whereSql}`;
-
-  const countRows = await prisma.$queryRawUnsafe<{ cnt: bigint }[]>(
-    countSql,
-    ...params,
-  );
-
-  const total = Number(countRows[0]?.cnt ?? 0);
-
-  let list: Array<
-    StockOperationListRow & {
-      totalPrice: number;
-      platformOrderNo?: string;
-      platformId: number;
-      submittedAt: Date;
-      products: Array<{
-        productId: number;
-        productName: string;
-        price: number;
-        count: number;
-      }>;
-    }
-  >;
-
-  if (total === 0) {
-    list = [];
-  } else {
-    // 先按「进货单」分页拿到当前页的 stockInId 列表
-    const idSql =
-      `SELECT s.id ${joinFrom} ${whereSql} GROUP BY s.id ORDER BY s.updatedAt DESC` +
-      (pagination ? " LIMIT ? OFFSET ?" : "");
-    const idParams = pagination ? [...params, take, skip] : params;
-    const idRows = await prisma.$queryRawUnsafe<{ id: number }[]>(
-      idSql,
-      ...idParams,
-    );
-    const stockOutIds = idRows.map((r) => r.id);
-    if (stockOutIds.length === 0) {
-      list = [];
-    } else {
-      const placeholders = stockOutIds.map(() => "?").join(",");
-      const rowsSql =
-        `SELECT s.id, s.remark, s.docs, s.serviceCode, s.createdAt, s.updatedAt, s.deletedAt, s.totalPrice, s.status, s.completedAt, pjs.productId, p.name as productName, pjs.price, pjs.count, s.platformOrderNo ` +
-        `FROM StockOut s ` +
-        `LEFT JOIN ProductJoinStockOut pjs ON pjs.stockOutId = s.id ` +
-        `LEFT JOIN Product p ON p.id = pjs.productId ` +
-        `WHERE s.id IN (${placeholders}) ORDER BY s.updatedAt DESC`;
-      const rows = await prisma.$queryRawUnsafe<StockOutListRow[]>(
-        rowsSql,
-        ...stockOutIds,
-      );
-
-      // 按进货单 id 聚合成「一单多商品」
-      const byId = new Map<
-        number,
-        StockOperationListRow & {
-          totalPrice: number;
-          docs?: string[];
-          platformOrderNo?: string;
-          platformId: number;
-          submittedAt: Date;
-          products: Array<{
-            productId: number;
-            productName: string;
-            price: number;
-            count: number;
-          }>;
-        }
-      >();
-      for (const row of rows) {
-        const existing = byId.get(row.id);
-        if (!existing) {
-          byId.set(row.id, {
-            id: row.id,
-            remark: row.remark,
-            submittedAt: row.submittedAt,
-            createdAt: row.createdAt,
-            updatedAt: row.updatedAt,
-            deletedAt: row.deletedAt,
-            status: row.status,
-            completedAt: row.completedAt,
-            totalPrice: row.totalPrice,
-            platformOrderNo: row.platformOrderNo,
-            platformId: row.platformId,
-            serviceCode: row.serviceCode,
-            docs: row.docs
-              ? row.docs.map((doc) => `${PUBLIC_BASE_URL}${doc}`)
-              : undefined,
-            products: [
-              {
-                productId: row.productId,
-                productName: row.productName,
-                price: row.price,
-                count: row.count,
-              },
-            ],
-          });
-        } else {
-          existing.products.push({
-            productId: row.productId,
-            productName: row.productName,
-            price: row.price,
-            count: row.count,
-          });
-        }
-      }
-      list = Array.from(byId.values()).sort(
-        (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime(),
-      );
-    }
-  }
-
-  // const { listSql, params, countSql } = generateStockOperationSql<StockInQuery>(
-  //   "StockOut",
-  //   "ProductJoinStockOut",
-  //   query,
-  // );
-  // const listParams = pagination ? [...params, take, skip] : params;
-  // type StockOutListRow = StockOperationListRow & {
-  //   totalPrice: number;
-  // };
-  // const list = await prisma.$queryRawUnsafe<StockOutListRow[]>(
-  //   listSql,
-  //   ...listParams,
-  // );
-
-  // const countRows = await prisma.$queryRawUnsafe<{ cnt: bigint }[]>(
-  //   countSql,
-  //   ...params,
-  // );
-  // const total = Number(countRows[0]?.cnt ?? 0);
+  // —— 映射输出：与原 raw SQL 返回结构一致 —— //
+  const list = stockOuts.map((s) => ({
+    id: s.id,
+    remark: s.remark,
+    createdAt: s.createdAt,
+    submittedAt: s.createdAt,
+    updatedAt: s.updatedAt,
+    deletedAt: s.deletedAt,
+    status: s.status,
+    completedAt: s.completedAt,
+    totalPrice: s.totalPrice,
+    serviceCode: s.serviceCode,
+    platformOrderNo: s.platformOrderNo,
+    platformId: s.platformId,
+    docs: s.docs
+      ? (s.docs as string[]).map((doc) => `${PUBLIC_BASE_URL}${doc}`)
+      : undefined,
+    products: s.productJoinStockOut.map((pjs) => ({
+      productId: pjs.productId,
+      productName: pjs.product?.name ?? "",
+      price: pjs.price,
+      count: pjs.count,
+    })),
+  }));
 
   return new SuccessResponse(
-    {
-      list,
-      total,
-    },
+    { list, total },
     "出货记录列表获取成功",
   );
 };
@@ -270,7 +178,8 @@ export const getStockOuts = async ({ query }: { query: StockOutQuery }) => {
 export const createMultipleStockOut = async ({
   body,
   user,
-}: AuthContext & {
+  tenantPrisma
+}: AuthContext & AuthInject & {
   body: CreateMultipleStockOut;
 }) => {
   if (!user) {
@@ -292,27 +201,47 @@ export const createMultipleStockOut = async ({
     : new Date();
   // const stockOutCode = await generateServiceCode("CH");
   const { serviceCode } = await generateServiceCode("CH", "stockOutCode");
-  const results = await prisma.$transaction([
+  const results = await tenantPrisma.$transaction([
     // 创建出货记录
-    prisma.stockOut.create({
+    tenantPrisma.stockOut.create({
       data: {
-        clientId: clientId ?? undefined,
+        tenant: { connect: { id: user.tenantId! } },
+        client: clientId
+          ? {
+              connect: {
+                id: clientId,
+              },
+            }
+          : undefined,
         serviceCode: serviceCode,
         createdAt,
         totalPrice,
         remark,
         docs,
-        ...auditCreate(uid),
-        platformId,
+        ...auditCreateConnect(uid),
+        platform: {
+          connect: {
+            id: platformId,
+          },
+        },
         platformOrderNo,
         productJoinStockOut: {
           create: productJoinStockOut.map((item) => {
             return {
               price: item.price,
               count: item.count,
-              vendorId: item.vendorId,
-              productId: item.productId,
-              ...auditCreate(uid),
+              tenant: { connect: { id: user.tenantId! } },
+              vendor: {
+                connect: {
+                  id: item.vendorId,
+                },
+              },
+              product: {
+                connect: {
+                  id: item.productId,
+                },
+              },
+              ...auditCreateConnect(uid),
             };
           }),
         },
@@ -320,7 +249,7 @@ export const createMultipleStockOut = async ({
     }),
     // 更新产品表库存数和出货中数量
     ...productJoinStockOut.map((item) => {
-      return prisma.product.update({
+      return tenantPrisma.product.update({
         where: {
           id: item.productId,
         },
@@ -331,7 +260,7 @@ export const createMultipleStockOut = async ({
           stockOutPending: {
             increment: item.count,
           },
-          ...auditUpdate(uid),
+          ...auditUpdateConnect(uid),
         },
       });
     }),
@@ -353,7 +282,8 @@ export const confirmStockOutCompleted = async ({
   params,
   body,
   user,
-}: AuthContext & {
+  tenantPrisma
+}: AuthContext & AuthInject & {
   params: UpdateId;
   body: CompletedAt;
 }) => {
@@ -361,7 +291,7 @@ export const confirmStockOutCompleted = async ({
     return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
   }
   const uid = user.userId;
-  const productsInRecord = await prisma.productJoinStockOut.findMany({
+  const productsInRecord = await tenantPrisma.productJoinStockOut.findMany({
     where: {
       stockOutId: params.id,
     },
@@ -374,8 +304,8 @@ export const confirmStockOutCompleted = async ({
   }
 
   const { completedAt = new Date() } = body || {};
-  await prisma.$transaction([
-    prisma.stockOut.update({
+  await tenantPrisma.$transaction([
+    tenantPrisma.stockOut.update({
       where: {
         id: params.id,
       },
@@ -386,7 +316,7 @@ export const confirmStockOutCompleted = async ({
       },
     }),
     ...productsInRecord.map((item) => {
-      return prisma.product.update({
+      return tenantPrisma.product.update({
         where: {
           id: item.productId,
         },
@@ -408,7 +338,8 @@ export const updateStockOut = async ({
   params,
   body,
   user,
-}: AuthContext & {
+  tenantPrisma
+}: AuthContext & AuthInject & {
   params: UpdateId;
   body: MultipleStockOutBody;
 }) => {
@@ -426,17 +357,17 @@ export const updateStockOut = async ({
     docs,
   } = body;
   // 查询已有数据
-  const existedRecord = await prisma.productJoinStockOut.findMany({
+  const existedRecord = await tenantPrisma.productJoinStockOut.findMany({
     where: {
       stockOutId: params.id,
     },
   });
   // 如果更新后产品为空，则删除出货记录
   if (!productJoinStockOut || productJoinStockOut.length === 0) {
-    await prisma.$transaction([
+    await tenantPrisma.$transaction([
       // 恢复已有产品的库存
       ...existedRecord.map((item) => {
-        return prisma.product.update({
+        return tenantPrisma.product.update({
           where: {
             id: item.productId,
           },
@@ -452,7 +383,7 @@ export const updateStockOut = async ({
         });
       }),
       // 删除出货记录（级联删除会自动删除关联的productJoinStockOut）
-      prisma.stockOut.delete({
+      tenantPrisma.stockOut.delete({
         where: {
           id: params.id,
         },
@@ -507,9 +438,9 @@ export const updateStockOut = async ({
       : typeof clientId === "number"
         ? { connect: { id: clientId } }
         : undefined;
-  const result = await prisma.$transaction([
+  const result = await tenantPrisma.$transaction([
     // 更新出货中间表
-    prisma.stockOut.update({
+    tenantPrisma.stockOut.update({
       where: {
         id: params.id,
       },
@@ -534,7 +465,7 @@ export const updateStockOut = async ({
     // 更新出货中间表记录
     // 更新出货中间表记录--对于新增的产品
     ...added.map((item) => {
-      return prisma.productJoinStockOut.create({
+      return tenantPrisma.productJoinStockOut.create({
         data: {
           price: item.price,
           count: item.count,
@@ -547,7 +478,7 @@ export const updateStockOut = async ({
     }),
     // 更新出货中间表记录--对于修改的产品
     ...modified.map((item) => {
-      return prisma.productJoinStockOut.update({
+      return tenantPrisma.productJoinStockOut.update({
         where: {
           stockOutId_productId: {
             stockOutId: params.id,
@@ -563,7 +494,7 @@ export const updateStockOut = async ({
     }),
     // 删除出货中间表记录--对于删除的产品
     ...deleted.map((item) => {
-      return prisma.productJoinStockOut.delete({
+      return tenantPrisma.productJoinStockOut.delete({
         where: {
           stockOutId_productId: {
             stockOutId: params.id,
@@ -574,7 +505,7 @@ export const updateStockOut = async ({
     }),
     // 更新产品表库存数和出货中数量--对于新增的产品
     ...added.map((item) => {
-      return prisma.product.update({
+      return tenantPrisma.product.update({
         where: {
           id: item.productId,
         },
@@ -594,7 +525,7 @@ export const updateStockOut = async ({
       const existedCount = existedInfoMap[item.productId].count ?? 0;
       // 新可用库存 = 把老的商品数量加回 - 本次的数量
       const balanceDelta = existedCount - item.count;
-      return prisma.product.update({
+      return tenantPrisma.product.update({
         where: {
           id: item.productId,
         },
@@ -611,7 +542,7 @@ export const updateStockOut = async ({
     }),
     // 更新产品表库存数和出货中数量--对于删除的产品
     ...deleted.map((item) => {
-      return prisma.product.update({
+      return tenantPrisma.product.update({
         where: {
           id: item.productId,
         },
@@ -633,10 +564,11 @@ export const updateStockOut = async ({
 
 export const getStockOutDetailById = async ({
   params,
-}: {
+  tenantPrisma
+}: AuthContext & AuthInject & {
   params: UpdateId;
 }) => {
-  const result = await prisma.stockOut.findUnique({
+  const result = await tenantPrisma.stockOut.findUnique({
     where: {
       id: params.id,
     },
@@ -658,8 +590,9 @@ export const getStockOutDetailById = async ({
 async function getValidIdsAndPendingStockOut(
   ids: number[],
   isDeleted: boolean = false,
+  tenantPrisma: TenantPrismaClient
 ) {
-  const pendingStockOuts = await prisma.stockOut.findMany({
+  const pendingStockOuts = await tenantPrisma.stockOut.findMany({
     where: {
       id: {
         in: ids,
@@ -683,7 +616,7 @@ async function getValidIdsAndPendingStockOut(
   }
 
   // 查出所有关联的中间表记录，用于统计每个商品需要扣减的 stockInPending 数量
-  const joinRows = await prisma.productJoinStockOut.findMany({
+  const joinRows = await tenantPrisma.productJoinStockOut.findMany({
     where: {
       stockOutId: {
         in: validIds,
@@ -713,7 +646,8 @@ async function getValidIdsAndPendingStockOut(
 export const batchDeleteStockOut = async ({
   query,
   user,
-}: AuthContext & {
+  tenantPrisma
+}: AuthContext & AuthInject & {
   query: BatchDeleteStockInQuery;
 }) => {
   if (!user) {
@@ -730,6 +664,7 @@ export const batchDeleteStockOut = async ({
   const { validIds, pendingCount } = await getValidIdsAndPendingStockOut(
     ids,
     false,
+    tenantPrisma
   );
 
   if (validIds.length === 0) {
@@ -737,9 +672,9 @@ export const batchDeleteStockOut = async ({
   }
   const now = new Date();
 
-  const txResults = await prisma.$transaction([
+  const txResults = await tenantPrisma.$transaction([
     // 软删除进货单
-    prisma.stockOut.updateMany({
+    tenantPrisma.stockOut.updateMany({
       where: {
         id: {
           in: validIds,
@@ -750,7 +685,7 @@ export const batchDeleteStockOut = async ({
       },
     }),
     // 软删除中间表记录
-    prisma.productJoinStockOut.updateMany({
+    tenantPrisma.productJoinStockOut.updateMany({
       where: {
         stockOutId: {
           in: validIds,
@@ -763,7 +698,7 @@ export const batchDeleteStockOut = async ({
     }),
     // 扣减对应商品的 stockInPending，并把商品数量加回
     ...Object.entries(pendingCount).map(([productId, totalCount]) =>
-      prisma.product.update({
+      tenantPrisma.product.update({
         where: {
           id: Number(productId),
         },
@@ -787,7 +722,8 @@ export const batchDeleteStockOut = async ({
 export const restoreDeletedStockOut = async ({
   body,
   user,
-}: AuthContext & { body: IdArray }) => {
+  tenantPrisma
+}: AuthContext & AuthInject & { body: IdArray }) => {
   if (!user) {
     return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
   }
@@ -800,13 +736,14 @@ export const restoreDeletedStockOut = async ({
   const { validIds, pendingCount } = await getValidIdsAndPendingStockOut(
     ids,
     true,
+    tenantPrisma
   );
   if (validIds.length === 0) {
     return new SuccessResponse(null, "没有符合条件的出货单可恢复");
   }
-  const txResults = await prisma.$transaction([
+  const txResults = await tenantPrisma.$transaction([
     // 恢复出货单
-    prisma.stockOut.updateMany({
+    tenantPrisma.stockOut.updateMany({
       where: {
         id: {
           in: validIds,
@@ -814,11 +751,11 @@ export const restoreDeletedStockOut = async ({
       },
       data: {
         deletedAt: null,
-        ...auditUpdate(uid),
+        ...auditUpdateConnect(uid),
       },
     }),
     // 恢复中间表记录
-    prisma.productJoinStockOut.updateMany({
+    tenantPrisma.productJoinStockOut.updateMany({
       where: {
         stockOutId: {
           in: validIds,
@@ -826,12 +763,12 @@ export const restoreDeletedStockOut = async ({
       },
       data: {
         deletedAt: null,
-        ...auditUpdate(uid),
+        ...auditUpdateConnect(uid),
       },
     }),
     // 恢复对应商品的 stockOutPending，并把商品数量减去
     ...Object.entries(pendingCount).map(([productId, totalCount]) =>
-      prisma.product.update({
+      tenantPrisma.product.update({
         where: {
           id: Number(productId),
         },
@@ -842,7 +779,7 @@ export const restoreDeletedStockOut = async ({
           balance: {
             decrement: totalCount,
           },
-          ...auditUpdate(uid),
+          ...auditUpdateConnect(uid),
         },
       }),
     ),

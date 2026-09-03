@@ -1,4 +1,4 @@
-import prisma from "../utils/prisma";
+import prisma, {TenantPrismaClient} from "../utils/prisma";
 import { errorCode, ErrorResponse, SuccessResponse } from "../models/Response";
 import { Prisma } from "@prisma/client";
 import {
@@ -25,10 +25,12 @@ import { generateServiceCode } from "../utils/common";
 import type { AuthContext } from "./userController";
 import {
   auditCreate,
+  auditCreateConnect,
   auditSoftDelete,
   auditUpdate,
   auditUpdateConnect,
 } from "../utils/auditUser";
+import { AuthInject } from "../macro/auth.macro";
 
 export type StockOperationListRow = {
   id: number;
@@ -52,8 +54,13 @@ export type StockInListRow = StockOperationListRow & {
   serviceCode: string;
 };
 
+type StockInContext = {
+  tenantPrisma: TenantPrismaClient;
+  query: StockInQuery;
+} 
+
 // 获取进货记录列表
-export const getStockIns = async ({ query }: { query: StockInQuery }) => {
+export const getStockIns = async ({ query, tenantPrisma }: StockInContext) => {
   const {
     pagination = true,
     limit = 10,
@@ -68,228 +75,145 @@ export const getStockIns = async ({ query }: { query: StockInQuery }) => {
   } = query;
   const { skip, take } = getPaginationValues({ limit, page });
 
-  // const { listSql, params, countSql } = generateStockOperationSql<StockInQuery>(
-  //   "StockIn",
-  //   "ProductJoinStockIn",
-  //   query
-  // );
-  // 校验后已是 string | undefined，只做 trim
   const productNameStr =
     typeof productName === "string" ? productName.trim() : undefined;
   const vendorNameStr =
     typeof vendorName === "string" ? vendorName.trim() : undefined;
 
-  const hasVendorFilter = Boolean(vendorNameStr && vendorNameStr.length > 0);
+  // —— 构建 where 条件 —— //
+  // tenantPrisma 自动注入 tenantId；软删除扩展自动注入 deletedAt: null（除非显式覆盖）
+  const where: Prisma.StockInWhereInput = {};
 
-  // 用片段 + 参数数组拼 SQL，避免 Prisma.sql 嵌套导致参数顺序错乱（MariaDB）
-  const whereClauses: string[] = ["1=1"];
-  const params: unknown[] = [];
-
-  if (productNameStr) {
-    whereClauses.push("p.name LIKE ?");
-    params.push(`%${productNameStr}%`);
+  // 嵌套关系过滤：通过 ProductJoinStockIn → Product → Vendor 筛选
+  if (productNameStr || vendorNameStr) {
+    where.productJoinStockIn = {
+      some: {
+        product: {
+          ...(productNameStr
+            ? { name: { contains: productNameStr } }
+            : {}),
+          ...(vendorNameStr
+            ? { vendor: { name: { contains: vendorNameStr } } }
+            : {}),
+        },
+      },
+    };
   }
 
-  // raw 查询不经过 $extends，需手动加「未删除」条件，与 findMany 行为一致
+  // deletedAt：显式指定时覆盖软删除扩展的默认 null 过滤
   if (deletedStart || deletedEnd) {
-    if (deletedStart) {
-      whereClauses.push("s.deletedAt >= ?");
-      params.push(dayjs(deletedStart).format("YYYY-MM-DD HH:mm:ss"));
-    }
-    if (deletedEnd) {
-      whereClauses.push("s.deletedAt <= ?");
-      params.push(dayjs(deletedEnd).format("YYYY-MM-DD HH:mm:ss"));
-    }
-  } else {
-    if (isDeleted === "1") {
-      whereClauses.push("s.deletedAt IS NOT NULL");
-    } else {
-      whereClauses.push("s.deletedAt IS NULL");
-    }
+    where.deletedAt = {
+      ...(deletedStart ? { gte: dayjs(deletedStart).toDate() } : {}),
+      ...(deletedEnd ? { lte: dayjs(deletedEnd).toDate() } : {}),
+    };
+  } else if (isDeleted === "1") {
+    where.deletedAt = { not: null };
   }
+  // else: 不写 deletedAt → 软删除扩展自动加 deletedAt: null
 
   if (completedStart) {
-    whereClauses.push("s.completedAt >= ?");
-    params.push(dayjs(completedStart).format("YYYY-MM-DD HH:mm:ss"));
+    where.completedAt = {
+      ...((where.completedAt as object) || {}),
+      gte: dayjs(completedStart).toDate(),
+    };
   }
   if (completedEnd) {
-    whereClauses.push("s.completedAt <= ?");
-    params.push(dayjs(completedEnd).format("YYYY-MM-DD HH:mm:ss"));
+    where.completedAt = {
+      ...((where.completedAt as object) || {}),
+      lte: dayjs(completedEnd).toDate(),
+    };
   }
 
-  if (hasVendorFilter) {
-    whereClauses.push("v.name LIKE ?");
-    params.push(`%${vendorNameStr}%`);
-  }
+  // —— 查询 —— //
+  const [total, stockIns] = await Promise.all([
+    tenantPrisma.stockIn.count({ where }),
+    tenantPrisma.stockIn.findMany({
+      where,
+      ...(pagination ? { skip, take } : {}),
+      orderBy: { updatedAt: "desc" },
+      include: {
+        productJoinStockIn: {
+          include: {
+            product: { select: { name: true } },
+          },
+        },
+      },
+    }),
+  ]);
 
-  const vendorJoinSql = hasVendorFilter
-    ? " LEFT JOIN Vendor v ON v.id = p.vendorId "
-    : "";
-  const whereSql = "WHERE " + whereClauses.join(" AND ");
-  const joinFrom =
-    `FROM StockIn s ` +
-    `LEFT JOIN ProductJoinStockIn pjs ON pjs.stockInId = s.id ` +
-    `LEFT JOIN Product p ON p.id = pjs.productId` +
-    vendorJoinSql;
+  // —— 映射输出：与原 raw SQL 返回结构一致 —— //
+  const list = stockIns.map((s) => ({
+    id: s.id,
+    remark: s.remark,
+    createdAt: s.createdAt,
+    submittedAt: s.submittedAt,
+    updatedAt: s.updatedAt,
+    deletedAt: s.deletedAt,
+    status: s.status,
+    completedAt: s.completedAt,
+    totalCost: s.totalCost,
+    serviceCode: s.serviceCode,
+    products: s.productJoinStockIn.map((pjs) => ({
+      productId: pjs.productId,
+      productName: pjs.product?.name ?? "",
+      cost: pjs.cost,
+      count: pjs.count,
+    })),
+  }));
 
-  const countSql = `SELECT COUNT(DISTINCT s.id) as cnt ${joinFrom} ${whereSql}`;
-  const countRows = await prisma.$queryRawUnsafe<{ cnt: bigint }[]>(
-    countSql,
-    ...params,
-  );
-  const total = Number(countRows[0]?.cnt ?? 0);
-
-  let list: Array<
-    StockOperationListRow & {
-      totalCost: number;
-      products: Array<{
-        productId: number;
-        productName: string;
-        cost: number;
-        count: number;
-      }>;
-    }
-  >;
-
-  if (total === 0) {
-    list = [];
-  } else {
-    // 先按「进货单」分页拿到当前页的 stockInId 列表
-    const idSql =
-      `SELECT s.id ${joinFrom} ${whereSql} GROUP BY s.id ORDER BY s.updatedAt DESC` +
-      (pagination ? " LIMIT ? OFFSET ?" : "");
-    const idParams = pagination ? [...params, take, skip] : params;
-    const idRows = await prisma.$queryRawUnsafe<{ id: number }[]>(
-      idSql,
-      ...idParams,
-    );
-    const stockInIds = idRows.map((r) => r.id);
-    if (stockInIds.length === 0) {
-      list = [];
-    } else {
-      const placeholders = stockInIds.map(() => "?").join(",");
-      const rowsSql =
-        `SELECT s.id, s.remark, s.serviceCode, s.submittedAt, s.updatedAt, s.deletedAt, s.totalCost, s.status, s.completedAt, pjs.productId, p.name as productName, pjs.cost, pjs.count ` +
-        `FROM StockIn s ` +
-        `LEFT JOIN ProductJoinStockIn pjs ON pjs.stockInId = s.id ` +
-        `LEFT JOIN Product p ON p.id = pjs.productId ` +
-        `WHERE s.id IN (${placeholders}) ORDER BY s.updatedAt DESC`;
-      const rows = await prisma.$queryRawUnsafe<StockInListRow[]>(
-        rowsSql,
-        ...stockInIds,
-      );
-      // 按进货单 id 聚合成「一单多商品」
-      const byId = new Map<
-        number,
-        StockOperationListRow & {
-          totalCost: number;
-          products: Array<{
-            productId: number;
-            productName: string;
-            cost: number;
-            count: number;
-          }>;
-        }
-      >();
-      for (const row of rows) {
-        const existing = byId.get(row.id);
-        if (!existing) {
-          byId.set(row.id, {
-            id: row.id,
-            remark: row.remark,
-            createdAt: row.createdAt,
-            submittedAt: row.submittedAt,
-            updatedAt: row.updatedAt,
-            deletedAt: row.deletedAt,
-            status: row.status,
-            completedAt: row.completedAt,
-            totalCost: row.totalCost,
-            serviceCode: row.serviceCode,
-            products: [
-              {
-                productId: row.productId,
-                productName: row.productName,
-                cost: row.cost,
-                count: row.count,
-              },
-            ],
-          });
-        } else {
-          existing.products.push({
-            productId: row.productId,
-            productName: row.productName,
-            cost: row.cost,
-            count: row.count,
-          });
-        }
-      }
-      list = Array.from(byId.values()).sort(
-        (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime(),
-      );
-    }
-  }
-
-  return new SuccessResponse(
-    {
-      list,
-      total,
-    },
-    "进货记录列表获取成功",
-  );
+  return new SuccessResponse({ list, total }, "进货记录列表获取成功");
 };
 
 // 批量产品进货
 export const createMultipleStockIn = async ({
   body,
   user,
-}: AuthContext & {
+  tenantPrisma,
+}: AuthContext & AuthInject & {
   body: MultipleStockInBody;
 }) => {
   if (!user) {
     return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
   }
   const uid = user.userId;
+  const tenantId = user.tenantId!;
   const { productJoinStockIn, submittedAt, remark } = body;
 
-  // const totalCost = productJoinStockIn.reduce((a, c) => {
-  //   return a + c.cost * c.count;
-  // }, 0);
   const totalCost = sum2(productJoinStockIn, "cost");
 
   const submittedAtVal = submittedAt ? dayjs(submittedAt).toDate() : new Date();
   // 生成进货单号
   const { serviceCode } = await generateServiceCode("JH", "stockInCode");
-  const results = await prisma.$transaction([
-    // 创建进库记录
-    prisma.stockIn.create({
+  const results = await tenantPrisma.$transaction([
+    // 创建进库记录（tenantPrisma 扩展自动注入 tenant connect + deletedAt 过滤）
+    tenantPrisma.stockIn.create({
       data: {
         submittedAt: submittedAtVal,
         remark,
         totalCost,
         serviceCode,
-        ...auditCreate(uid),
+        // 用关系语法（connect）与扩展注入的 tenant: { connect } 保持一致
+        ...auditCreateConnect(uid),
+        // tenantPrisma 扩展运行时会覆盖为正确 tenantId，此处仅为满足类型
+        tenant: { connect: { id: tenantId } },
         productJoinStockIn: {
           create: productJoinStockIn.map((item) => {
             return {
               cost: item.cost,
               count: item.count,
-              productId: item.productId,
-              vendorId: item.vendorId,
-              ...auditCreate(uid),
-              // historyCost: {
-              //   create: {
-              //     value: item.cost,
-              //     productId: item.productId,
-              //   },
-              // },
+              product: { connect: { id: item.productId } },
+              vendor: { connect: { id: item.vendorId } },
+              // 嵌套 create 不触发扩展，需手动指定 tenant
+              tenant: { connect: { id: tenantId } },
+              ...auditCreateConnect(uid),
             };
           }),
         },
       },
     }),
-    // 修改待进库数
+    // 修改待进库数（扩展自动在 where 加 tenantId 过滤）
     ...productJoinStockIn.map((item) => {
-      return prisma.product.update({
+      return tenantPrisma.product.update({
         data: {
           stockInPending: {
             increment: item.count,
@@ -315,9 +239,9 @@ export const createMultipleStockIn = async ({
 };
 
 // 根据ID获取进货记录
-export const getStockInById = async ({ params }: { params: UpdateId }) => {
+export const getStockInById = async ({ params, tenantPrisma }: { params: UpdateId, tenantPrisma: TenantPrismaClient }) => {
   const { id } = params;
-  const result = await prisma.stockIn.findUnique({
+  const result = await tenantPrisma.stockIn.findUnique({
     where: {
       id,
     },
@@ -349,16 +273,18 @@ export const updateStockIn = async ({
   params,
   body,
   user,
+  tenantPrisma
 }: AuthContext & {
   params: UpdateId;
   body: MultipleStockInBody;
+  tenantPrisma: TenantPrismaClient
 }) => {
   if (!user) {
     return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
   }
   const uid = user.userId;
   // 查询已有数据
-  const existedRecord = await prisma.productJoinStockIn.findMany({
+  const existedRecord = await tenantPrisma.productJoinStockIn.findMany({
     where: {
       stockInId: params.id,
     },
@@ -408,9 +334,9 @@ export const updateStockIn = async ({
     .map((item) => item.id)
     .filter((id): id is number => typeof id === "number");
 
-  await prisma.$transaction([
+  await tenantPrisma.$transaction([
     // 更新进货记录
-    prisma.stockIn.update({
+    tenantPrisma.stockIn.update({
       where: {
         id: params.id,
       },
@@ -423,7 +349,7 @@ export const updateStockIn = async ({
     }),
     // 新增中间表记录
     ...added.map((item) => {
-      return prisma.productJoinStockIn.create({
+      return tenantPrisma.productJoinStockIn.create({
         data: {
           cost: item.cost,
           count: item.count,
@@ -436,7 +362,7 @@ export const updateStockIn = async ({
     }),
     // 更新中间表记录
     ...modified.map((item) => {
-      return prisma.productJoinStockIn.update({
+      return tenantPrisma.productJoinStockIn.update({
         where: {
           stockInId_productId: {
             stockInId: params.id,
@@ -452,7 +378,7 @@ export const updateStockIn = async ({
     }),
     // 删除中间表记录
     ...deleted.map((item) => {
-      return prisma.productJoinStockIn.delete({
+      return tenantPrisma.productJoinStockIn.delete({
         where: {
           stockInId_productId: {
             stockInId: params.id,
@@ -465,7 +391,7 @@ export const updateStockIn = async ({
     // 不管新增还是编辑已有商品
     // TODO 删除进货中某个商品时，要把最新成本还原到前一次，多加一个表来实现
     ...added.map((item) => {
-      return prisma.product.update({
+      return tenantPrisma.product.update({
         where: {
           id: item.productId,
         },
@@ -479,7 +405,7 @@ export const updateStockIn = async ({
     }),
     // 更新产品库存-对修改的商品
     ...modified.map((item) => {
-      return prisma.product.update({
+      return tenantPrisma.product.update({
         where: {
           id: item.productId,
         },
@@ -493,7 +419,7 @@ export const updateStockIn = async ({
     }),
     // 更新产品库存-对删除的商品
     ...deleted.map((item) => {
-      return prisma.product.update({
+      return tenantPrisma.product.update({
         where: {
           id: item.productId,
         },
@@ -514,7 +440,8 @@ export const confirmCompleted = async ({
   params,
   body,
   user,
-}: AuthContext & {
+  tenantPrisma,
+}: AuthContext & AuthInject & {
   params: UpdateId;
   body: CompletedAt;
 }) => {
@@ -522,16 +449,17 @@ export const confirmCompleted = async ({
     return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
   }
   const uid = user.userId;
-  const relatedProducts = await prisma.productJoinStockIn.findMany({
+  const tenantId = user.tenantId!;
+  const relatedProducts = await tenantPrisma.productJoinStockIn.findMany({
     where: {
       stockInId: params.id,
     },
   });
 
   const { completedAt = new Date() } = body || {};
-  const record = await prisma.$transaction([
-    // 改进货单状态
-    prisma.stockIn.update({
+  const record = await tenantPrisma.$transaction([
+    // 改进货单状态（扩展自动在 where 加 tenantId；data 全用关系语法避免冲突）
+    tenantPrisma.stockIn.update({
       where: {
         id: params.id,
       },
@@ -543,14 +471,11 @@ export const confirmCompleted = async ({
     }),
     // 改产品表，把待进货加到库存数中
     ...relatedProducts.map((item) => {
-      // // TODO 正确处理判空
-      // const productCode = luhn(item!);
-      return prisma.product.update({
+      return tenantPrisma.product.update({
         where: {
           id: item.productId,
         },
         data: {
-          // productCode,
           balance: {
             increment: item.count,
           },
@@ -558,18 +483,20 @@ export const confirmCompleted = async ({
             increment: -1 * item.count,
           },
           latestCost: item.cost,
-          ...auditUpdate(uid),
+          // 统一用关系语法
+          ...auditUpdateConnect(uid),
         },
       });
     }),
-    // 新增历史成本
+    // 新增历史成本（扩展注入 tenant.connect 与标量 FK 冲突，全部用关系语法）
     ...relatedProducts.map((item) => {
-      return prisma.historyCost.create({
+      return tenantPrisma.historyCost.create({
         data: {
           value: item.cost,
-          productId: item.productId,
-          stockInId: params.id,
-          ...auditCreate(uid),
+          tenant: { connect: { id: tenantId } },
+          product: { connect: { id: item.productId } },
+          stockIn: { connect: { id: params.id } },
+          ...auditCreateConnect(uid),
         },
       });
     }),
@@ -582,7 +509,7 @@ async function getValidsAndPendingCount(
   isDeleted: boolean = false,
 ) {
   // 只处理「未完成、未删除」的进货单，避免把已经完成的单子反向扣 pending
-  const pendingStockIns = await prisma.stockIn.findMany({
+  const pendingStockIns = await tenantPrisma.stockIn.findMany({
     where: {
       id: {
         in: ids,
@@ -608,7 +535,7 @@ async function getValidsAndPendingCount(
   }
 
   // 查出所有关联的中间表记录，用于统计每个商品需要扣减的 stockInPending 数量
-  const joinRows = await prisma.productJoinStockIn.findMany({
+  const joinRows = await tenantPrisma.productJoinStockIn.findMany({
     where: {
       stockInId: {
         in: validIds,
@@ -636,8 +563,10 @@ async function getValidsAndPendingCount(
 export const batchDeleteStockIn = async ({
   query,
   user,
+  tenantPrisma
 }: AuthContext & {
   query: BatchDeleteStockInQuery;
+  tenantPrisma: TenantPrismaClient;
 }) => {
   if (!user) {
     return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
@@ -657,9 +586,9 @@ export const batchDeleteStockIn = async ({
 
   const now = new Date();
 
-  const txResults = await prisma.$transaction([
+  const txResults = await tenantPrisma.$transaction([
     // 软删除进货单
-    prisma.stockIn.updateMany({
+    tenantPrisma.stockIn.updateMany({
       where: {
         id: {
           in: validIds,
@@ -670,7 +599,7 @@ export const batchDeleteStockIn = async ({
       },
     }),
     // 软删除中间表记录
-    prisma.productJoinStockIn.updateMany({
+    tenantPrisma.productJoinStockIn.updateMany({
       where: {
         stockInId: {
           in: validIds,
@@ -683,7 +612,7 @@ export const batchDeleteStockIn = async ({
     }),
     // 扣减对应商品的 stockInPending
     ...Object.entries(pendingCount).map(([productId, totalCount]) =>
-      prisma.product.update({
+      tenantPrisma.product.update({
         where: {
           id: Number(productId),
         },
@@ -703,7 +632,8 @@ export const batchDeleteStockIn = async ({
 export const restoreDeletedStockIn = async ({
   body,
   user,
-}: AuthContext & { body: IdArray }) => {
+  tenantPrisma
+}: AuthContext & { body: IdArray, tenantPrisma: TenantPrismaClient }) => {
   if (!user) {
     return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
   }
@@ -718,9 +648,9 @@ export const restoreDeletedStockIn = async ({
     return new SuccessResponse(null, "没有符合条件的进货单可恢复");
   }
 
-  const txResults = await prisma.$transaction([
+  const txResults = await tenantPrisma.$transaction([
     // 软删除进货单
-    prisma.stockIn.updateMany({
+    tenantPrisma.stockIn.updateMany({
       where: {
         id: {
           in: validIds,
@@ -732,7 +662,7 @@ export const restoreDeletedStockIn = async ({
       },
     }),
     // 软删除中间表记录
-    prisma.productJoinStockIn.updateMany({
+    tenantPrisma.productJoinStockIn.updateMany({
       where: {
         stockInId: {
           in: validIds,
@@ -745,7 +675,7 @@ export const restoreDeletedStockIn = async ({
     }),
     // 扣减对应商品的 stockInPending
     ...Object.entries(pendingCount).map(([productId, totalCount]) =>
-      prisma.product.update({
+      tenantPrisma.product.update({
         where: {
           id: Number(productId),
         },

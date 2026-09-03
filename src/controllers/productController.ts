@@ -1,7 +1,7 @@
-import prisma from "../utils/prisma";
+import prisma, {TenantPrismaClient} from "../utils/prisma";
 import { errorCode, ErrorResponse, SuccessResponse } from "../models/Response";
 import type { AuthContext } from "./userController";
-import { auditCreate, auditUpdate } from "../utils/auditUser";
+import { auditCreate, auditCreateConnect, auditUpdate } from "../utils/auditUser";
 import { getPaginationValues, getWhereValues } from "../utils/db";
 import {
   ProductQuery,
@@ -16,11 +16,19 @@ import {
   ProductNameString,
 } from "../validators/commonValidator";
 import { logger } from "../utils/logger";
+import { AuthInject } from "../macro/auth.macro";
 
 const { PUBLIC_BASE_URL } = process.env;
 
+type ProductCtx = {
+  query: ProductQuery;
+  status?: any;
+  /** 注入的租户级 prisma（tenantId 自动过滤） */
+  tenantPrisma: TenantPrismaClient;
+};
+
 // 获取产品列表
-export const getProducts = async ({ query }: { query: ProductQuery }) => {
+export const getProducts = async ({ query, tenantPrisma }: ProductCtx) => {
   const { limit, page, productName, pagination = "1" } = query;
   let skip = undefined,
     take = undefined;
@@ -32,10 +40,9 @@ export const getProducts = async ({ query }: { query: ProductQuery }) => {
     skip = paginationInfo.skip;
     take = paginationInfo.take;
   }
-
   // 查询条件
   const whereValues = getWhereValues({ name: productName });
-  const products = await prisma.product.findMany({
+  const products = await tenantPrisma.product.findMany({
     skip,
     take,
     where: whereValues,
@@ -44,7 +51,7 @@ export const getProducts = async ({ query }: { query: ProductQuery }) => {
       // historyCost: true,
     },
   });
-  const total = await prisma.product.count({ where: whereValues });
+  const total = await tenantPrisma.product.count({ where: whereValues });
 
   return new SuccessResponse({ total, list: products }, "产品列表获取成功");
 };
@@ -78,13 +85,14 @@ export const getProductById = async ({ params }: { params: UpdateId }) => {
 export const createProduct = async ({
   body,
   user,
-}: AuthContext & { body: CreateProductBody }) => {
+  tenantPrisma,
+}: AuthContext & AuthInject & { body: CreateProductBody }) => {
   if (!user) {
     return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
   }
   const uid = user.userId;
   const { name, remark, vendorId, salePrice, img, desc } = body;
-  const product = await prisma.product.create({
+  const product = await tenantPrisma.product.create({
     data: {
       name,
       remark,
@@ -94,24 +102,15 @@ export const createProduct = async ({
           id: vendorId,
         }
       },
-      salePrice,
-      desc,
+      // tenantPrisma 扩展会在运行时自动覆盖为正确的 tenantId，此处仅为满足类型
       tenant: {
         connect: {
-          id: user.tenantId,
+          id: user.tenantId!,
         }
       },
-      // ...auditCreate(uid),
-      createdByUser: {
-        connect: {
-          id: uid,
-        }
-      },
-      updatedByUser: {
-        connect: {
-          id: uid,
-        }
-      }
+      salePrice,
+      desc,
+      ...auditCreateConnect(uid),
     },
   });
   return new SuccessResponse(product, "产品创建成功");
@@ -226,6 +225,9 @@ export const getProductsByAmount = async({query}: {query: ProductAmountQuery}) =
     },
     orderBy: {
       balance: desc ? "desc" : "asc",
+    },
+    include: {
+      vendor: true,
     },
   });
   return new SuccessResponse({ list: results }, "产品列表获取成功");

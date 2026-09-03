@@ -85,7 +85,7 @@ export const vendorRouter = new Elysia({ prefix: "/vendor" })
         {
           body: z.object({
             name: z.string().min(2),
-            remark: z.string().optional(),
+            remark: z.string().nullable().optional(),
           }),
           beforeHandle: async ({ body, user, tenantPrisma }) => {
             const vendorExisted = await (tenantPrisma as TenantPrismaClient).vendor.findFirst({
@@ -172,7 +172,7 @@ export const vendorRouter = new Elysia({ prefix: "/vendor" })
           params: updateIdSchema,
           body: z.object({
             name: z.string().min(2).optional(),
-            remark: z.string().optional(),
+            remark: z.string().nullable().optional(),
           }),
         },
       ),
