@@ -8,6 +8,7 @@ import { githubApiAuthRouter } from "./routers/githubApiAuthRouter";
 import { loggerPlugin } from "./plugins/loggerPlugin";
 import { uploadFile, uploadExcelFile } from "./controllers/uploadController";
 import { ErrorResponse, errorCode } from "./models/Response";
+import { BusinessError } from "./errors/BusinessError";
 import { ValidationError } from "elysia";
 import { ZodError } from "zod";
 import { jwt } from "@elysiajs/jwt";
@@ -85,6 +86,15 @@ export const app = new Elysia()
   // 全局错误处理 - 拦截 zod 校验异常
   .onError(({ code, error, path }) => {
     console.error("--------Error occurred at path:---------", path, "with error:", error);
+
+    // ✅ 业务错误：handler 中 throw new BusinessError(code, message) 直接中断
+    if (error instanceof BusinessError) {
+      return new Response(
+        JSON.stringify(new ErrorResponse(error.code, error.message)),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
     // 直接处理 ZodError（包括在 beforeHandle 中抛出的）
     if (error instanceof ZodError) {
       const errorMessages = error.issues.map((issue) => issue.message);

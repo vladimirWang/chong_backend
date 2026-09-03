@@ -1,5 +1,6 @@
 import type { Context } from "elysia";
 import { errorCode, ErrorResponse, SuccessResponse } from "../models/Response";
+import { BusinessError } from "../errors/BusinessError";
 import {
   LoginUserBody,
   RegisterUserBody,
@@ -244,6 +245,9 @@ export const getUserSaltByEmail = async ({
   params: ParamAdminEmailExistedTransform;
 }) => {
   // 由 paramAdminEmailExistedTransformSchema 预查询并注入 user（含 salt）
+  if (!params.user) {
+    throw new BusinessError(errorCode.USER_NOT_FOUND, "邮箱未注册");
+  }
   return new SuccessResponse(params.user.salt, "获取salt成功");
 };
 
@@ -289,6 +293,9 @@ export const resetPassword = async ({
   body: ParamAdminEmailExistedTransform;
 }) => {
   const { user: userMatched } = body;
+  if (!userMatched) {
+    throw new BusinessError(errorCode.USER_NOT_FOUND, "邮箱未注册");
+  }
   const initialPassword = generateInitialPassword(6);
 
   const passwordHash = sha256(initialPassword + "_" + userMatched.salt);
