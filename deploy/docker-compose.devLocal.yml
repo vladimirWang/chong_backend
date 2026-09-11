@@ -1,0 +1,18 @@
+services:
+  redis:
+    image: redis:7.0-alpine
+    ports:
+      - "6379:6379"
+    command:
+      ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec"]
+    volumes:
+      - redis_data_prod:/data
+    networks:
+      - mac_docker_network
+
+volumes:
+  redis_data_prod:
+
+networks:
+  mac_docker_network:
+    external: true

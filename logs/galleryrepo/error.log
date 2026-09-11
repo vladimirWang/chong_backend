@@ -1,0 +1,65 @@
+{"level":"error","time":"2026-03-06T06:57:33.278Z","pid":1,"hostname":"1d2088f1b24c","err":"Socket closed unexpectedly","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T06:57:33.289Z","pid":1,"hostname":"1d2088f1b24c","err":"connect ECONNREFUSED 172.20.0.3:6379","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:51:50.255Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:51:50.353Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:51:50.616Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:51:50.873Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:51:51.442Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:51:52.288Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:51:54.094Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:51:56.339Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:51:58.524Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:52:00.760Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:52:02.783Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:52:04.993Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:52:07.070Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:52:09.181Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:52:11.334Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:52:13.425Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:52:15.565Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:52:17.717Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:52:19.797Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:52:21.942Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:52:23.991Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:52:26.036Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:52:28.185Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:52:30.241Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:52:32.441Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:52:34.633Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:52:36.773Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:52:38.940Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:52:41.053Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:52:43.233Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:52:45.258Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:52:47.351Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:52:49.498Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:52:51.624Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:52:53.668Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:52:55.825Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:52:58.017Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:53:00.157Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:53:02.247Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:53:04.348Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:53:06.391Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:53:08.536Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:53:10.632Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:53:12.701Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:53:14.748Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:53:16.911Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:53:18.981Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:53:21.177Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:53:23.266Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:53:25.360Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:53:27.487Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:53:29.505Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:53:31.611Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:53:33.657Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:53:35.726Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:53:37.874Z","pid":1,"hostname":"2fa388e4c889","err":"","msg":"Redis error"}
+{"level":"error","time":"2026-03-06T07:59:33.439Z","pid":1,"hostname":"5e79384f9ab8","error":"PUBLIC_BASE_URL is not defined","stack":"ReferenceError: PUBLIC_BASE_URL is not defined\n    at <anonymous> (/app/src/controllers/productController.ts:63:18)\n    at async handle (file:///app/node_modules/elysia/dist/bun/index.js:20:47)\n    at processTicksAndRejections (native:7:39)","url":"http://localhost:3000/nodejs_api/product/1","msg":"未捕获异常"}
+{"level":"error","time":"2026-03-06T08:00:14.571Z","pid":1,"hostname":"1d42f5bdd6a9","error":"PUBLIC_BASE_URL is not defined","stack":"ReferenceError: PUBLIC_BASE_URL is not defined\n    at <anonymous> (/app/src/controllers/productController.ts:63:18)\n    at async handle (file:///app/node_modules/elysia/dist/bun/index.js:20:47)\n    at processTicksAndRejections (native:7:39)","url":"http://localhost:3000/nodejs_api/product/1","msg":"未捕获异常"}
+{"level":"error","time":"2026-03-06T08:00:17.511Z","pid":1,"hostname":"1d42f5bdd6a9","error":"PUBLIC_BASE_URL is not defined","stack":"ReferenceError: PUBLIC_BASE_URL is not defined\n    at <anonymous> (/app/src/controllers/productController.ts:63:18)\n    at async handle (file:///app/node_modules/elysia/dist/bun/index.js:20:47)\n    at processTicksAndRejections (native:7:39)","url":"http://localhost:3000/nodejs_api/product/1","msg":"未捕获异常"}
+{"level":"error","time":"2026-03-06T08:00:27.586Z","pid":1,"hostname":"1d42f5bdd6a9","error":"PUBLIC_BASE_URL is not defined","stack":"ReferenceError: PUBLIC_BASE_URL is not defined\n    at <anonymous> (/app/src/controllers/productController.ts:63:18)\n    at async handle (file:///app/node_modules/elysia/dist/bun/index.js:20:47)\n    at processTicksAndRejections (native:7:39)","url":"http://localhost:3000/nodejs_api/product/1","msg":"未捕获异常"}
+{"level":"error","time":"2026-03-06T08:00:28.692Z","pid":1,"hostname":"1d42f5bdd6a9","error":"PUBLIC_BASE_URL is not defined","stack":"ReferenceError: PUBLIC_BASE_URL is not defined\n    at <anonymous> (/app/src/controllers/productController.ts:63:18)\n    at async handle (file:///app/node_modules/elysia/dist/bun/index.js:20:47)\n    at processTicksAndRejections (native:7:39)","url":"http://localhost:3000/nodejs_api/product/1","msg":"未捕获异常"}
+{"level":"error","time":"2026-03-06T08:00:34.297Z","pid":1,"hostname":"1d42f5bdd6a9","error":"PUBLIC_BASE_URL is not defined","stack":"ReferenceError: PUBLIC_BASE_URL is not defined\n    at <anonymous> (/app/src/controllers/productController.ts:63:18)\n    at async handle (file:///app/node_modules/elysia/dist/bun/index.js:20:47)\n    at processTicksAndRejections (native:7:39)","url":"http://localhost:3000/nodejs_api/product/1","msg":"未捕获异常"}
+{"level":"error","time":"2026-03-06T08:00:55.500Z","pid":1,"hostname":"1d42f5bdd6a9","error":"PUBLIC_BASE_URL is not defined","stack":"ReferenceError: PUBLIC_BASE_URL is not defined\n    at <anonymous> (/app/src/controllers/productController.ts:63:18)\n    at async handle (file:///app/node_modules/elysia/dist/bun/index.js:20:47)\n    at processTicksAndRejections (native:7:39)","url":"http://localhost:3000/nodejs_api/product/1","msg":"未捕获异常"}

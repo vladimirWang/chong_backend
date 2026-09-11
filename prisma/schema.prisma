@@ -1,0 +1,431 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+// ==================== 租户域 ====================
+
+enum TenantStatus {
+  ACTIVE   // 正常
+  SUSPENDED // 暂停使用
+  DISABLED // 已停用
+}
+
+// 租户/组织
+model Tenant {
+  id        Int          @id @default(autoincrement())
+  name      String       @unique// 显示名称
+  code      String       @unique // 机器用唯一编码
+  status    TenantStatus @default(ACTIVE)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  // 业务域子表（1:N）
+  users                User[]
+  vendors              Vendor[]
+  stockIns             StockIn[]
+  productJoinStockIns  ProductJoinStockIn[]
+  products             Product[]
+  historyCosts         HistoryCost[]
+  stockOuts            StockOut[]
+  productJoinStockOuts ProductJoinStockOut[]
+  clients              Client[]
+  applicants           Applicant[] // Applicant.tenantId 可空（加入型必填、创建型为空）
+}
+
+// ==================== 业务域 ====================
+
+// 供应商
+model Vendor {
+  id                   Int                   @id @default(autoincrement())
+  tenantId             Int
+  tenant               Tenant                @relation(fields: [tenantId], references: [id])
+  name                 String
+  remark               String?
+  products             Product[]
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  deletedAt            DateTime?
+  // stockIns   StockIn[]
+  productJoinStockIns  ProductJoinStockIn[]
+  productJoinStockOuts ProductJoinStockOut[]
+  createdBy            Int
+  createdByUser        User?                 @relation("VendorCreatedBy", fields: [createdBy], references: [id])
+  updatedBy            Int
+  updatedByUser        User?                 @relation("VendorUpdatedBy", fields: [updatedBy], references: [id])
+  deletedBy            Int?
+  deletedByUser        User?                 @relation("VendorDeletedBy", fields: [deletedBy], references: [id])
+
+  @@index([tenantId])
+  @@unique([tenantId, name])
+}
+
+// 进货单的状态
+enum StockInStatus {
+  PENDING // 处理中
+  COMPLETED // 完成
+}
+
+// 进货
+model StockIn {
+  id                 Int                  @id @default(autoincrement())
+  tenantId           Int
+  tenant             Tenant               @relation(fields: [tenantId], references: [id])
+  remark             String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  deletedAt          DateTime?
+  totalCost          Int                  @db.UnsignedMediumInt // 订单总价
+  productJoinStockIn ProductJoinStockIn[]
+  status             StockInStatus        @default(PENDING) // 进货单的状态
+  completedAt        DateTime?
+  historyCosts       HistoryCost[]
+  serviceCode        String
+  submittedAt        DateTime
+  createdBy          Int
+  createdByUser      User?                @relation("StockInCreatedBy", fields: [createdBy], references: [id])
+  updatedBy          Int
+  updatedByUser      User?                @relation("StockInUpdatedBy", fields: [updatedBy], references: [id])
+  deletedBy          Int?
+  deletedByUser      User?                 @relation("StockInDeletedBy", fields: [deletedBy], references: [id])
+
+  @@index([tenantId])
+}
+
+// 产品进货单中间表
+model ProductJoinStockIn {
+  id            Int       @id @default(autoincrement())
+  tenantId      Int
+  tenant        Tenant    @relation(fields: [tenantId], references: [id])
+  stockInId     Int
+  stockIn       StockIn   @relation(fields: [stockInId], references: [id], onDelete: Cascade)
+  productId     Int
+  product       Product   @relation(fields: [productId], references: [id])
+  cost          Int // 售价
+  count         Int // 数量
+  // historyCost HistoryCost?
+  vendorId      Int
+  vendor        Vendor?   @relation(fields: [vendorId], references: [id])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+  productCode   String?   @db.VarChar(20) // 只有进库后才有
+  createdBy     Int
+  createdByUser User?     @relation("ProductJoinStockInCreatedBy", fields: [createdBy], references: [id])
+  updatedBy     Int
+  updatedByUser User?     @relation("ProductJoinStockInUpdatedBy", fields: [updatedBy], references: [id])
+  deletedBy     Int?
+  deletedByUser User?     @relation("ProductJoinStockInDeletedBy", fields: [deletedBy], references: [id])
+
+  @@index([tenantId])
+  @@unique([stockInId, productId])
+}
+
+// 商品
+model Product {
+  id                  Int                   @id @default(autoincrement())
+  tenantId            Int
+  tenant              Tenant                @relation(fields: [tenantId], references: [id])
+  name                String
+  img                 String?
+  vendorId            Int
+  remark              String?
+  balance             Int?                  @default(0) @db.UnsignedSmallInt
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  deletedAt           DateTime?
+  // imports  ImportProduct[]
+  vendor              Vendor?               @relation(fields: [vendorId], references: [id])
+  // StockIn   StockIn[]
+  latestPrice         Int? // 售价,只有进库后才有
+  latestCost          Int? // 成本价,只有进库后才有
+  productJoinStockIn  ProductJoinStockIn[] // 进货中间表
+  historyCost         HistoryCost[]         @relation("HistoryCostProduct")
+  productJoinStockOut ProductJoinStockOut[] // 出货中间表
+  stockOutPending     Int                   @default(0) @db.UnsignedSmallInt // 出货中产品
+  stockInPending      Int                   @default(0) @db.UnsignedSmallInt // 进货中产品
+  salePrice           Int? // 销售价
+  desc                String?               @db.LongText
+  createdBy           Int
+  createdByUser       User?                 @relation("ProductCreatedBy", fields: [createdBy], references: [id])
+  updatedBy           Int
+  updatedByUser       User?                 @relation("ProductUpdatedBy", fields: [updatedBy], references: [id])
+  deletedBy           Int?
+  deletedByUser       User?                 @relation("ProductDeletedBy", fields: [deletedBy], references: [id])
+
+  @@index([tenantId])
+  @@index([vendorId], map: "Product_brandId_fkey")
+  @@unique([tenantId, name])
+}
+
+// 用户
+model User {
+  id                         Int                   @id @default(autoincrement())
+  tenantId                   Int
+  tenant                     Tenant                @relation(fields: [tenantId], references: [id])
+  email                      String                @unique
+  username                   String?
+  createdAt                  DateTime              @default(now())
+  updatedAt                  DateTime              @updatedAt
+  deletedAt                  DateTime?
+  password                   String
+  avatar                     String?
+  salt                       String
+  githubId                   String?               @unique
+  vendorsCreated             Vendor[]              @relation("VendorCreatedBy")
+  vendorsUpdated             Vendor[]              @relation("VendorUpdatedBy")
+  vendorsDeleted             Vendor[]              @relation("VendorDeletedBy")
+  productCreated             Product[]             @relation("ProductCreatedBy")
+  productUpdated             Product[]             @relation("ProductUpdatedBy")
+  productDeleted             Product[]             @relation("ProductDeletedBy")
+  stockInCreated             StockIn[]             @relation("StockInCreatedBy")
+  stockInUpdated             StockIn[]             @relation("StockInUpdatedBy")
+  stockInDeleted             StockIn[]             @relation("StockInDeletedBy")
+  stockOutCreated            StockOut[]            @relation("StockOutCreatedBy")
+  stockOutUpdated            StockOut[]            @relation("StockOutUpdatedBy")
+  stockOutDeleted            StockOut[]            @relation("StockOutDeletedBy")
+  fileInfoCreated            FileInfo[]            @relation("FileInfoCreatedBy")
+  fileInfoUpdated            FileInfo[]            @relation("FileInfoUpdatedBy")
+  fileInfoDeleted            FileInfo[]            @relation("FileInfoDeletedBy")
+  productJoinStockOutCreated ProductJoinStockOut[] @relation("ProductJoinStockOutCreatedBy")
+  productJoinStockOutUpdated ProductJoinStockOut[] @relation("ProductJoinStockOutUpdatedBy")
+  productJoinStockOutDeleted ProductJoinStockOut[] @relation("ProductJoinStockOutDeletedBy")
+  clientCreated              Client[]              @relation("ClientCreatedBy")
+  clientUpdated              Client[]              @relation("ClientUpdatedBy")
+  clientDeleted              Client[]              @relation("ClientDeletedBy")
+  productJoinStockInCreated  ProductJoinStockIn[]  @relation("ProductJoinStockInCreatedBy")
+  productJoinStockInUpdated  ProductJoinStockIn[]  @relation("ProductJoinStockInUpdatedBy")
+  productJoinStockInDeleted  ProductJoinStockIn[]  @relation("ProductJoinStockInDeletedBy")
+  historyCostsCreated        HistoryCost[]         @relation("HistoryCostCreatedBy")
+  historyCostsUpdated        HistoryCost[]         @relation("HistoryCostUpdatedBy")
+  historyCostsDeleted        HistoryCost[]         @relation("HistoryCostDeletedBy")
+
+  @@index([tenantId])
+}
+
+// 历史成本
+model HistoryCost {
+  id            Int       @id @default(autoincrement())
+  tenantId      Int
+  tenant        Tenant    @relation(fields: [tenantId], references: [id])
+  stockInId     Int
+  stockIn       StockIn   @relation(fields: [stockInId], references: [id])
+  productId     Int
+  product       Product   @relation("HistoryCostProduct", fields: [productId], references: [id])
+  value         Int       @db.UnsignedMediumInt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+  createdBy     Int
+  createdByUser User?     @relation("HistoryCostCreatedBy", fields: [createdBy], references: [id])
+  updatedBy     Int
+  updatedByUser User?     @relation("HistoryCostUpdatedBy", fields: [updatedBy], references: [id])
+  deletedBy     Int?
+  deletedByUser User?     @relation("HistoryCostDeletedBy", fields: [deletedBy], references: [id])
+
+  @@index([tenantId])
+}
+
+// 出货表
+model StockOut {
+  id                  Int                   @id @default(autoincrement())
+  tenantId            Int
+  tenant              Tenant                @relation(fields: [tenantId], references: [id])
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  deletedAt           DateTime?
+  totalPrice          Int                   @db.UnsignedMediumInt
+  status              StockInStatus         @default(PENDING)
+  completedAt         DateTime?
+  remark              String?
+  productJoinStockOut ProductJoinStockOut[]
+  platformId          Int
+  platform            Platform?             @relation(fields: [platformId], references: [id])
+  platformOrderNo     String?
+  clientId            Int?
+  client              Client?               @relation(fields: [clientId], references: [id])
+  serviceCode         String
+  docs                Json? // 单据：多个文件地址，存为字符串数组 JSON
+  createdBy           Int
+  createdByUser       User?                 @relation("StockOutCreatedBy", fields: [createdBy], references: [id])
+  updatedBy           Int
+  updatedByUser       User?                 @relation("StockOutUpdatedBy", fields: [updatedBy], references: [id])
+  deletedBy           Int?
+  deletedByUser       User?                 @relation("StockOutDeletedBy", fields: [deletedBy], references: [id])
+
+  @@index([tenantId])
+  @@unique([tenantId, platformId, platformOrderNo])
+}
+
+model ProductJoinStockOut {
+  id            Int       @id @default(autoincrement())
+  tenantId      Int
+  tenant        Tenant    @relation(fields: [tenantId], references: [id])
+  productId     Int
+  product       Product   @relation(fields: [productId], references: [id])
+  stockOutId    Int
+  stockOut      StockOut  @relation(fields: [stockOutId], references: [id], onDelete: Cascade)
+  price         Int // 售价
+  count         Int // 数量
+  vendorId      Int
+  vendor        Vendor?   @relation(fields: [vendorId], references: [id])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+  createdBy     Int
+  createdByUser User?     @relation("ProductJoinStockOutCreatedBy", fields: [createdBy], references: [id])
+  updatedBy     Int
+  updatedByUser User?     @relation("ProductJoinStockOutUpdatedBy", fields: [updatedBy], references: [id])
+  deletedBy     Int?
+  deletedByUser User?     @relation("ProductJoinStockOutDeletedBy", fields: [deletedBy], references: [id])
+
+  @@index([tenantId])
+  @@unique([stockOutId, productId])
+}
+
+model FileInfo {
+  id            Int       @id @default(autoincrement())
+  hash          String    @unique
+  filePath      String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+  createdBy     Int
+  createdByUser User?     @relation("FileInfoCreatedBy", fields: [createdBy], references: [id])
+  updatedBy     Int
+  updatedByUser User?     @relation("FileInfoUpdatedBy", fields: [updatedBy], references: [id])
+  deletedBy     Int?
+  deletedByUser User?     @relation("FileInfoDeletedBy", fields: [deletedBy], references: [id])
+}
+
+// 平台（全局字典表，不区分租户）
+model Platform {
+  id        Int        @id @default(autoincrement())
+  name      String     @unique
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  deletedAt DateTime?
+  stockOuts StockOut[]
+}
+
+// 客户
+model Client {
+  id            Int        @id @default(autoincrement())
+  tenantId      Int
+  tenant        Tenant     @relation(fields: [tenantId], references: [id])
+  name          String
+  tel           String?
+  address       String?
+  remark        String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  deletedAt     DateTime?
+  stockOuts     StockOut[]
+  createdBy     Int
+  createdByUser User?      @relation("ClientCreatedBy", fields: [createdBy], references: [id])
+  updatedBy     Int
+  updatedByUser User?      @relation("ClientUpdatedBy", fields: [updatedBy], references: [id])
+  deletedBy     Int?
+  deletedByUser User?      @relation("ClientDeletedBy", fields: [deletedBy], references: [id])
+
+  @@index([tenantId])
+}
+
+// ==================== 系统/后管域（不加 tenantId）====================
+
+// 用户
+model AdminUser {
+  id                               Int                        @id @default(autoincrement())
+  email                            String                     @unique
+  username                         String?
+  createdAt                        DateTime                   @default(now())
+  updatedAt                        DateTime                   @updatedAt
+  deletedAt                        DateTime?
+  password                         String
+  salt                             String
+  applicantActivationTokensCreated ApplicantActivationToken[] @relation("ApplicantActivationTokenCreatedBy")
+  applicantActivationTokensUpdated ApplicantActivationToken[] @relation("ApplicantActivationTokenUpdatedBy")
+  applicantActivationTokensDeleted ApplicantActivationToken[] @relation("ApplicantActivationTokenDeletedBy")
+  applicantsCreated                Applicant[]                @relation("ApplicantCreatedBy")
+  applicantsUpdated                Applicant[]                @relation("ApplicantUpdatedBy")
+  applicantsDeleted                Applicant[]                @relation("ApplicantDeletedBy")
+}
+
+enum ApplicationStatus {
+  PENDING // 待审核
+  APPROVED // 已发送激活链接
+  ACTIVATED // 已激活并注册成功
+  REJECTED // 已拒绝
+}
+
+// 系统申请人
+model Applicant {
+  id               Int                        @id @default(autoincrement())
+  tenantId         Int?                       // 可空：加入型必填，创建型为空
+  tenant           Tenant?                    @relation(fields: [tenantId], references: [id])
+  tenantName       String?                    // 可空：创建型场景存新租户名称，激活时据此创建 Tenant
+  email            String                     @unique
+  // inviteCode       String?
+  status           ApplicationStatus          @default(PENDING)
+  activationTokens ApplicantActivationToken[]
+  createdAt        DateTime                   @default(now())
+  updatedAt        DateTime                   @updatedAt
+  deletedAt        DateTime?
+  createdBy        Int
+  createdByUser    AdminUser?                 @relation("ApplicantCreatedBy", fields: [createdBy], references: [id])
+  updatedBy        Int
+  updatedByUser    AdminUser?                 @relation("ApplicantUpdatedBy", fields: [updatedBy], references: [id])
+  deletedBy        Int?
+  deletedByUser    AdminUser?                 @relation("ApplicantDeletedBy", fields: [deletedBy], references: [id])
+
+  @@index([tenantId])
+}
+
+// 申请人激活链接（用于完成注册的一次性 token）
+model ApplicantActivationToken {
+  id          Int       @id @default(autoincrement())
+  applicantId Int
+  applicant   Applicant @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+
+  // 注意：只建议存 token 的 hash，不存明文
+  tokenHash String    @unique @db.VarChar(128)
+  expiresAt DateTime
+  usedAt    DateTime? // 使用时间
+  revokedAt DateTime? // 作废时间
+
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  deletedAt     DateTime?
+  createdBy     Int
+  createdByUser AdminUser? @relation("ApplicantActivationTokenCreatedBy", fields: [createdBy], references: [id])
+  updatedBy     Int
+  updatedByUser AdminUser? @relation("ApplicantActivationTokenUpdatedBy", fields: [updatedBy], references: [id])
+  deletedBy     Int?
+  deletedByUser AdminUser? @relation("ApplicantActivationTokenDeletedBy", fields: [deletedBy], references: [id])
+
+  @@index([applicantId])
+  @@index([expiresAt])
+  @@index([usedAt])
+}
+
+enum MailStatus {
+  PENDING // 待发送
+  SENT // 已发送
+  FAILED // 发送失败
+}
+model Mail {
+  id Int @id @default(autoincrement())
+  title String
+  content String
+  sendAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  to String
+  from String
+  failCount Int @default(0) @db.UnsignedSmallInt
+  status MailStatus @default(PENDING)
+}

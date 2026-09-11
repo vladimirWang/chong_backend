@@ -1,0 +1,75 @@
+@base=http://localhost:3000/nodejs_api/stockin
+@token =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjIsImVtYWlsIjoiZmVybmFuZG93YW5nNTg0QGdtYWlsLmNvbSIsInVzZXJuYW1lIjoiZmVybmFuZG8iLCJleHAiOjE3NzM1NjM3MjYsImlhdCI6MTc3MzQ3NzMyNn0.C_pb4rwMU8vTymVd7c7Em5mH6Y136lmy36xC58PNxFA
+### stockIn list
+GET {{base}}?isDeleted=1
+Authorization: {{token}}
+
+### create import
+POST {{base}}/single
+Content-Type: application/json
+
+{
+    "remark": "importRemark",
+    "cost": 10, 
+    "count": 20,
+    "productId": 5
+}
+
+### create import
+POST {{base}}/multiple
+Content-Type: application/json
+Authorization: {{token}}
+
+{
+    "remark": "importRemark",
+    "productJoinStockIn": [
+        {
+            "cost": 100, 
+            "count": 200,
+            "productId": 1,
+            "vendorId": 1
+        },
+        {
+            "cost": 10, 
+            "count": 20,
+            "productId": 1,
+            "vendorId": 1
+        }
+    ]
+}
+
+### update stockIn
+PUT {{base}}/13
+Content-Type: application/json
+Authorization: {{token}}
+
+{
+    "remark": "importRemark",
+    "productJoinStockIn": [
+        {
+            "cost": 19, 
+            "count": 40,
+            "productId": 1,
+            "vendorId": 1
+        },
+        {
+            "cost": 200, 
+            "count": 300,
+            "productId": 2,
+            "vendorId": 1
+        }
+    ]
+}
+
+### 删除进货单
+DELETE {{base}}/86
+Authorization: {{token}}
+
+### 批量恢复已删除的进货单
+POST {{base}}/restoreDeleted
+Authorization: {{token}}
+Content-Type: application/json
+
+{
+    "ids": [2]
+}

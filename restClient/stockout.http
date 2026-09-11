@@ -1,0 +1,52 @@
+@base=http://localhost:3000/nodejs_api/stockout
+@token =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjIsImVtYWlsIjoiZmVybmFuZG93YW5nNTg0QGdtYWlsLmNvbSIsInVzZXJuYW1lIjoiZmVybmFuZG8iLCJleHAiOjE3NzM1MjY5MzcsImlhdCI6MTc3MzQ0MDUzN30._7IvAfy7-5AFax_GnpWTfZu-8h8cNS4EFF2Y_RInAKc
+
+### user list
+GET {{base}}?limit=10&page=1
+Authorization: Bearer {{token}}
+
+### create stockOut
+POST {{base}}/multiple
+Content-Type: application/json
+Authorization: {{token}}
+
+{
+    "platformId": 1,
+    "docs": ["123"],
+    "remark": "good",
+    "productJoinStockOut": [
+        {
+            "price": 10, 
+            "count": 1,
+            "productId": 1,
+            "vendorId": 1
+        },
+        {
+            "price": 30, 
+            "count": 3,
+            "productId": 3,
+            "vendorId": 2
+        }
+    ]
+}
+
+### update stockOut
+PUT {{base}}/1
+content-type: application/json
+
+{
+    "productJoinStockOut": []
+}
+
+### update stockOut
+PATCH {{base}}/confirmCompleted/5
+content-type: application/json
+
+### 批量恢复
+POST {{base}}/restoreDeleted
+Content-Type: application/json
+Authorization: {{token}}
+
+{
+    "ids": [20]
+}

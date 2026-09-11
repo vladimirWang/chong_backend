@@ -1,0 +1,65 @@
+services:
+  nginx:
+    build:
+      context: ../nginx
+      args:
+        NGINX_SITE: prod
+    volumes:
+      - ../nginx/html/dist:/usr/share/nginx/html:ro
+      - ../nginx/ssl:/etc/ssl/cert:ro
+    ports:
+      - "6080:80"
+      - "6443:443"
+    depends_on:
+      - server
+    networks:
+      - default
+
+  server:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    # 固定镜像名，worker 复用同一镜像，避免重复构建
+    image: repo-backend:latest
+    # migrate 遇到 mysql 未就绪等瞬时故障时自动重试，避免容器永久退出
+    restart: unless-stopped
+    expose:
+      - "4000"
+    ports:
+      - "4000:4000"
+    env_file:
+      - ../.env.prod
+    volumes:
+      - /var/log/galleryrepo:/var/log/galleryrepo:rw
+    networks:
+      - mac_docker_network
+      - default
+
+  # RabbitMQ 消费者：与 server 共用同一镜像，仅覆盖启动命令
+  worker:
+    image: repo-backend:latest
+    command: bun run src/worker.ts
+    env_file:
+      - ../.env.prod
+    depends_on:
+      - server
+    restart: unless-stopped
+    networks:
+      - mac_docker_network
+      - default
+
+  # redis:
+  #   image: redis:7.0-alpine
+  #   ports:
+  #     - "6379:6379"
+  #   command:
+  #     ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec"]
+  #   volumes:
+  #     - redis_data_prod:/data
+
+# volumes:
+  # redis_data_prod:
+
+networks:
+  mac_docker_network:
+    external: true

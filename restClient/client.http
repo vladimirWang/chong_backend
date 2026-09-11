@@ -1,0 +1,40 @@
+@authUrl=http://localhost:3000/nodejs_api/user/login
+@base=http://localhost:3000/nodejs_api/client
+@token =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImVtYWlsIjoiZmVybmFuZG93YW5nNTg0QGdtYWlsLmNvbSIsInVzZXJuYW1lIjoiZmVybmFuZG8iLCJleHAiOjE3NzMxOTUxMTQsImlhdCI6MTc3MzEwODcxNH0.LKFflfnRFirbppwm94o5dbI5oAATD2oY1286eReyYws
+### brand list
+GET {{base}}?limit=2&page=2
+Authorization: {{token}}
+
+### create brand
+POST {{base}}
+Content-Type: application/json
+Authorization: {{token}}
+
+{
+    "name": "jason",
+    "tel": "16699888898",
+    "address": "上海市浦东新区123",
+    "remark": "1234567890"
+}
+
+### get data by id
+GET {{base}}/byId/1
+Authorization: Bearer {{token}}
+
+
+### token test
+GET http://localhost:3000/hi
+Authorization: {{token}}
+
+### token test
+DELETE http://localhost:3000/nodejs_api/vendor/1
+Authorization: {{token}}
+
+### 批量删除供应商
+DELETE http://localhost:3000/nodejs_api/vendor/batch
+Authorization: {{token}}
+Content-Type: application/json
+
+{
+    "id": [4]
+}

@@ -1,0 +1,52 @@
+@base=http://localhost:4000/nodejs_api/applicant
+@token =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjIsImVtYWlsIjoiZmVybmFuZG93YW5nNTg0QGdtYWlsLmNvbSIsInVzZXJuYW1lIjoiYWRtaW4iLCJyb2xlIjoiYWRtaW4iLCJleHAiOjE3NzY0Nzg4MzUsImlhdCI6MTc3NjM5MjQzNX0.qbVBDmwj5lmSbMWGAhlLiynqpwAdSoOM_sJJNJs4ZHY
+
+### brand list
+POST {{base}}/approve
+Authorization: Bearer {{token}}
+content-type: application/json
+
+{
+    "id": 11
+}
+
+### create brand
+POST {{base}}
+Content-Type: application/json
+Authorization: {{token}}
+
+{
+    "name": "nike3"
+}
+
+### get data by id
+GET {{base}}/byId/1
+Authorization: Bearer {{token}}
+
+
+### token test
+GET http://localhost:3000/hi
+Authorization: {{token}}
+
+### token test
+DELETE http://localhost:3000/nodejs_api/vendor/1
+Authorization: {{token}}
+
+### 批量删除供应商
+DELETE http://localhost:3000/nodejs_api/vendor/batch
+Authorization: {{token}}
+Content-Type: application/json
+
+{
+    "id": [4]
+}
+
+
+### 发送系统申请
+POST {{base}}/sendInviteCode
+Content-Type: application/json
+Authorization: {{token}}
+
+{
+    "email": "123132@hello.com"
+}

@@ -1,0 +1,16 @@
+{
+  "name": "gallery_hono",
+  "scripts": {
+    "dev": "bun run --watch src/index.ts"
+  },
+  "dependencies": {
+    "@prisma/adapter-mariadb": "7.4.2",
+    "@prisma/client": "7.4.2",
+    "dotenv": "^17.4.2",
+    "hono": "^4.13.5"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "prisma": "7.4.2"
+  }
+}

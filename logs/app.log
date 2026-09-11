@@ -1,0 +1,14 @@
+{"level":"info","time":"2026-03-18T07:03:28.061Z","pid":54196,"hostname":"WangdeMacBook-Pro.local","msg":"Redis 连接成功"}
+{"level":"info","time":"2026-03-18T07:03:28.080Z","pid":54196,"hostname":"WangdeMacBook-Pro.local","msg":"定时任务已注册","tz":"Asia/Shanghai","schedule":"08 16 * * *"}
+{"level":"info","time":"2026-03-18T07:03:28.080Z","pid":54196,"hostname":"WangdeMacBook-Pro.local","msg":"服务启动","host":"localhost","port":3000,"env":"test","msg":"Elysia 已启动 http://localhost:3000"}
+{"level":"info","time":"2026-03-18T07:03:28.165Z","pid":54196,"hostname":"WangdeMacBook-Pro.local","msg":"request","method":"GET","path":"/"}
+{"level":"info","time":"2026-08-27T06:24:51.188Z","pid":43460,"hostname":"WangdeMacBook-Pro.local","msg":"Redis 连接成功"}
+{"level":"info","time":"2026-08-27T06:31:01.287Z","pid":44944,"hostname":"WangdeMacBook-Pro.local","msg":"Redis 连接成功"}
+{"level":"info","time":"2026-08-27T06:34:28.164Z","pid":45681,"hostname":"WangdeMacBook-Pro.local","msg":"Redis 连接成功"}
+{"level":"info","time":"2026-08-27T06:35:13.839Z","pid":45820,"hostname":"WangdeMacBook-Pro.local","msg":"Redis 连接成功"}
+{"level":"info","time":"2026-08-27T06:36:12.690Z","pid":45995,"hostname":"WangdeMacBook-Pro.local","msg":"Redis 连接成功"}
+{"level":"info","time":"2026-08-27T06:37:11.299Z","pid":46215,"hostname":"WangdeMacBook-Pro.local","msg":"Redis 连接成功"}
+{"level":"info","time":"2026-08-27T06:37:33.632Z","pid":46306,"hostname":"WangdeMacBook-Pro.local","msg":"Redis 连接成功"}
+{"level":"info","time":"2026-08-27T06:38:45.407Z","pid":46550,"hostname":"WangdeMacBook-Pro.local","msg":"Redis 连接成功"}
+{"level":"info","time":"2026-08-27T06:39:50.477Z","pid":46752,"hostname":"WangdeMacBook-Pro.local","msg":"Redis 连接成功"}
+{"level":"info","time":"2026-08-29T14:58:49.105Z","pid":17197,"hostname":"WangdeMacBook-Pro.local","msg":"RabbitMQ 连接成功"}

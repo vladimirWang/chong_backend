@@ -1,0 +1,27 @@
+@base=http://localhost:3000/nodejs_api/product
+@token =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImVtYWlsIjoiYWFjaGVuMjAxMkBvdXRsb29rLmNvbSIsImlhdCI6MTc3MDI5MzQzNH0.CPkt8O6XW5UFN6O6LMTOYPCyy7vWCCoo9f5l05XKZlU
+### user list
+GET {{base}}
+Authorization: {{token}}
+### create product
+POST {{base}}
+Content-Type: application/json
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImVtYWlsIjoiMTIzNDU2QHFxLmNvbSIsImlhdCI6MTc2OTc1MDk5Mn0.-qGHh9I4_SeoaB32R2-fHHIWUMQKR2oC1VTJcV6p9Ik
+
+{
+    "name": "beer123",
+    "vendorId": 3,
+    "salePrice": 100
+}
+
+
+### 根据id获取产品
+GET {{base}}/getProductById/3
+
+### 根据id获取最近建议零售价
+GET {{base}}/getLatestShelfPriceByProductId/1
+Authorization: {{token}}
+
+### 查询商品名是否存在
+GET {{base}}/checkProductNameExistedInVendor/1?productName=nikehat
+Authorization: {{token}}
