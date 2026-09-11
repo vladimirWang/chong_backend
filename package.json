@@ -4,6 +4,7 @@
     "dev": "bun run --watch src/index.ts"
   },
   "dependencies": {
+    "@clickhouse/client": "^1.23.1",
     "@prisma/adapter-mariadb": "7.4.2",
     "@prisma/client": "7.4.2",
     "dotenv": "^17.4.2",

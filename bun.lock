@@ -5,6 +5,7 @@
     "": {
       "name": "gallery_hono",
       "dependencies": {
+        "@clickhouse/client": "^1.23.1",
         "@prisma/adapter-mariadb": "7.4.2",
         "@prisma/client": "7.4.2",
         "dotenv": "^17.4.2",
@@ -24,6 +25,8 @@
     "@chevrotain/types": ["@chevrotain/types@10.5.0", "https://registry.npmmirror.com/@chevrotain/types/-/types-10.5.0.tgz", {}, "sha512-f1MAia0x/pAVPWH/T73BJVyO2XU5tI4/iE7cnxb7tqdNTNhQI3Uq3XkqcoteTmD4t1aM0LbHCJOhgIDn07kl2A=="],
 
     "@chevrotain/utils": ["@chevrotain/utils@10.5.0", "https://registry.npmmirror.com/@chevrotain/utils/-/utils-10.5.0.tgz", {}, "sha512-hBzuU5+JjB2cqNZyszkDHZgOSrUUT8V3dhgRl8Q9Gp6dAj/H5+KILGjbhDpc3Iy9qmqlm/akuOI2ut9VUtzJxQ=="],
+
+    "@clickhouse/client": ["@clickhouse/client@1.23.1", "https://registry.npmmirror.com/@clickhouse/client/-/client-1.23.1.tgz", {}, "sha512-vs3/Zc1dHvT171btW5nMoPsPCJ6QVJ5pp7obxzO5sjqwFx/jjz9wwCAqcFOdc2DhprugDBaVn+4dVY8hG3A9nw=="],
 
     "@electric-sql/pglite": ["@electric-sql/pglite@0.3.15", "https://registry.npmmirror.com/@electric-sql/pglite/-/pglite-0.3.15.tgz", {}, "sha512-Cj++n1Mekf9ETfdc16TlDi+cDDQF0W7EcbyRHYOAeZdsAe8M/FJg18itDTSwyHfar2WIezawM9o0EKaRGVKygQ=="],
 
