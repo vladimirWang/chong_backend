@@ -3,7 +3,22 @@ import prisma from './utils/prisma'
 import { getClickhouse, initClickhouse, ACCESS_LOG_TABLE } from './utils/clickhouse'
 import { connectRedis } from './utils/redis'
 import { apiRouter } from './router'
+import { HttpError } from './models/HttpError'
+import { errorCode } from './models/Response'
+import type { ContentfulStatusCode } from 'hono/utils/http-status'
 const app = new Hono()
+
+// 全局异常：业务可预期的 HttpError → 对应状态码 + ErrorResponse；其余 500
+app.onError((err, c) => {
+  if (err instanceof HttpError) {
+    return c.json(
+      { code: err.code, message: err.message, data: err.data },
+      err.status as ContentfulStatusCode,
+    )
+  }
+  console.error('[onError]', err)
+  return c.json({ code: errorCode.INTERNAL_ERROR, message: '服务器内部错误', data: null }, 500)
+})
 
 app.use('*', async (c, next) => {
   // ========= 请求进来：前置拦截逻辑（路由执行之前） =========

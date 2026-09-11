@@ -25,6 +25,7 @@ export const errorCode = {
   VALIDATION_ERROR: 10002, // 校验失败
   USER_NOT_FOUND: 10003, // 用户不存在
   NOT_FOUND: 10004, // 路由不存在
+  VENDOR_HAS_PRODUCTS: 10005, // 供应商有关联产品
   CAPTCHA_EXPIRED: 10006, // 验证码已过期
   CAPTCHA_INCORRECT: 10007, // 验证码不正确
   PASSWORD_INCORRECT: 10008, // 密码不正确

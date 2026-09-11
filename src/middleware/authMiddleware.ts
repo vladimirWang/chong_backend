@@ -1,5 +1,6 @@
 import type { MiddlewareHandler } from "hono";
 import { redisClient } from "../utils/redis";
+import { createTenantPrisma } from "../utils/prisma";
 import type { AuthUser } from "../types/auth";
 
 /** 无需登录的公共路由（与 repo_backend auth.macro.ts 的 publicRoutes 对齐，随接口迁移追加） */
@@ -10,6 +11,19 @@ const publicRoutes = new Set([
   "/nodejs_api/util/get-nonce",
 ]);
 
+/** 白名单含 :param 模板，需把模板转成路径段正则匹配实际路径 */
+function isPublicPath(path: string) {
+  if (path.startsWith("/nodejs_api/public")) return true;
+  for (const route of publicRoutes) {
+    if (route === path) return true;
+    if (route.includes(":") &&
+      new RegExp("^" + route.replace(/:[^/]+/g, "[^/]+") + "$").test(path)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /**
  * 登录态校验中间件（移植自 repo_backend isSignIn 宏）
  * 与老架构一致：authorization header 存 token 原文（非 Bearer），
@@ -17,7 +31,7 @@ const publicRoutes = new Set([
  */
 export const authMiddleware: MiddlewareHandler = async (c, next) => {
   // 公共路由不鉴权
-  if (publicRoutes.has(c.req.path) || c.req.path.startsWith("/nodejs_api/public")) {
+  if (isPublicPath(c.req.path)) {
     await next();
     return;
   }
@@ -32,6 +46,11 @@ export const authMiddleware: MiddlewareHandler = async (c, next) => {
     const user = JSON.parse(userInfoStr) as AuthUser;
     if (!user) return c.body(null, 401);
     c.set("user", user);
+    // 与老架构 isSignIn 宏一致：按当前 tenantId 创建租户级 prisma（业务 CRUD 自动隔离）
+    if (user.tenantId != null) {
+      c.set("tenantId", user.tenantId);
+      c.set("tenantPrisma", createTenantPrisma(user.tenantId));
+    }
   } catch {
     return c.body(null, 401);
   }
