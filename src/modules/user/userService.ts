@@ -111,7 +111,7 @@ export async function getUserSaltByEmail(email: string) {
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) {
     // 与老架构行为一致：邮箱未注册不暴露 USER_NOT_FOUND，按校验失败处理
-    return new ErrorResponse(errorCode.VALIDATION_ERROR, "邮箱未注册1");
+    return new ErrorResponse(errorCode.VALIDATION_ERROR, "邮箱未注册");
   }
   return new SuccessResponse<string>(user.salt, "获取salt成功");
 }
