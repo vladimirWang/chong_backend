@@ -1,7 +1,8 @@
 import { Hono } from 'hono'
 import prisma from './utils/prisma'
 import { getClickhouse, initClickhouse, ACCESS_LOG_TABLE } from './utils/clickhouse'
-
+import { connectRedis } from './utils/redis'
+import { apiRouter } from './router'
 const app = new Hono()
 
 app.use('*', async (c, next) => {
@@ -18,6 +19,8 @@ app.use('*', async (c, next) => {
 app.get('/', (c) => {
   return c.text('Hello Hono!')
 })
+
+app.route('/nodejs_api', apiRouter)
 
 app.post("/test-clickhouse", async (c) => {
   const ch = getClickhouse()
@@ -59,6 +62,7 @@ app.get("/ping", async (c) => {
   }
 })
 
+await connectRedis()
 await initClickhouse()
 
 Bun.serve({
