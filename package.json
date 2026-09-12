@@ -1,7 +1,10 @@
 {
   "name": "gallery_hono",
   "scripts": {
-    "dev": "bun run --watch src/index.ts"
+    "dev": "bun run --watch src/index.ts",
+    "build": "bun build src/index.ts",
+    "migrate": "bunx dotenv -e .env.devLocal -- prisma migrate dev",
+    "generate": "bunx dotenv -e .env.devLocal -- prisma generate"
   },
   "dependencies": {
     "@clickhouse/client": "^1.23.1",
@@ -16,6 +19,7 @@
   },
   "devDependencies": {
     "@types/bun": "latest",
+    "dotenv-cli": "^11.0.0",
     "prisma": "7.4.2"
   }
 }

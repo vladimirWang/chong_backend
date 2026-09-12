@@ -158,7 +158,7 @@ model Product {
 
   @@index([tenantId])
   @@index([vendorId], map: "Product_brandId_fkey")
-  @@unique([tenantId, name])
+  @@unique([tenantId, vendorId, name])
 }
 
 // 用户

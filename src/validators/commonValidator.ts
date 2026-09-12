@@ -13,3 +13,15 @@ export const paginationSchema = z.object({
   page: z.coerce.number().optional(),
 });
 export type Pagination = z.infer<typeof paginationSchema>;
+
+/** :vendorId 路径参数 */
+export const vendorIdSchema = z.object({
+  vendorId: z.coerce.number(),
+});
+export type VendorId = z.infer<typeof vendorIdSchema>;
+
+/** productName query 参数 */
+export const productNameStringSchema = z.object({
+  productName: z.string(),
+});
+export type ProductNameString = z.infer<typeof productNameStringSchema>;
