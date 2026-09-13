@@ -31,5 +31,8 @@ export const errorCode = {
   PASSWORD_INCORRECT: 10008, // 密码不正确
   ACCOUNT_LOCKED: 10010, // 账号锁定
   NONCE_INVALID: 10011, // nonce无效
+  FAILED_TO_CREATE_STOCK_IN: 10012, // 创建进货单失败
+  FAILED_TO_CREATE_STOCK_OUT: 10016, // 创建出货单失败
+  PRODUCT_NOT_FOUND: 10017, // 产品不存在
   INTERNAL_ERROR: 10019, // 服务器内部错误
 };
