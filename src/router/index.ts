@@ -6,6 +6,8 @@ import { vendorRouter } from "../modules/vendor/vendorRouter";
 import { productRouter } from "../modules/product/productRouter";
 import { stockInRouter } from "../modules/stockIn/stockInRouter";
 import { stockOutRouter } from "../modules/stockOut/stockOutRouter";
+import { platformRouter } from "../modules/platform/platformRouter";
+import { clientRouter } from "../modules/client/clientRouter";
 
 /**
  * 汇总各业务模块路由，统一挂到 /nodejs_api（与 repo_backend 对齐）
@@ -18,4 +20,6 @@ export const apiRouter = new Hono()
   .route("/vendor", vendorRouter)
   .route("/product", productRouter)
   .route("/stockin", stockInRouter)
-  .route("/stockout", stockOutRouter);
+  .route("/stockout", stockOutRouter)
+  .route("/platform", platformRouter)
+  .route("/client", clientRouter);
