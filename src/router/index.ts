@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { authMiddleware } from "../middleware/authMiddleware";
+import { accessLogMiddleware } from "../middleware/accessLogMiddleware";
 import { userRouter } from "../modules/user/userRouter";
 import { utilRouter } from "../modules/util/utilRouter";
 import { vendorRouter } from "../modules/vendor/vendorRouter";
@@ -8,6 +9,8 @@ import { stockInRouter } from "../modules/stockIn/stockInRouter";
 import { stockOutRouter } from "../modules/stockOut/stockOutRouter";
 import { platformRouter } from "../modules/platform/platformRouter";
 import { clientRouter } from "../modules/client/clientRouter";
+import { statisticsRouter } from "../modules/statistics/statisticsRouter";
+import { analyticsRouter } from "../modules/analytics/analyticsRouter";
 
 /**
  * 汇总各业务模块路由，统一挂到 /nodejs_api（与 repo_backend 对齐）
@@ -15,6 +18,7 @@ import { clientRouter } from "../modules/client/clientRouter";
  */
 export const apiRouter = new Hono()
   .use("*", authMiddleware)
+  .use("*", accessLogMiddleware)
   .route("/user", userRouter)
   .route("/util", utilRouter)
   .route("/vendor", vendorRouter)
@@ -22,4 +26,6 @@ export const apiRouter = new Hono()
   .route("/stockin", stockInRouter)
   .route("/stockout", stockOutRouter)
   .route("/platform", platformRouter)
-  .route("/client", clientRouter);
+  .route("/client", clientRouter)
+  .route("/statistics", statisticsRouter)
+  .route("/analytics", analyticsRouter);
