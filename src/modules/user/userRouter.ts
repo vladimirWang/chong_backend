@@ -4,6 +4,7 @@ import {
   getCurrentUserHandler,
   getUserSaltByEmailHandler,
   loginHandler,
+  logoutUserHandler,
 } from "./userController";
 import { loginBodySchema, paramEmailSchema } from "./userValidator";
 
@@ -21,6 +22,7 @@ const userRouter = new Hono()
     zValidator("param", paramEmailSchema),
     getUserSaltByEmailHandler,
   )
+  .post("/logout", logoutUserHandler)
   .get("/current", getCurrentUserHandler);
 
 export { userRouter };

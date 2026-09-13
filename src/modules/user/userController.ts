@@ -3,6 +3,7 @@ import {
   getCurrentUser,
   getUserSaltByEmail,
   loginUser,
+  logoutUser,
 } from "./userService";
 import type { LoginBody } from "./userValidator";
 
@@ -30,5 +31,14 @@ export const getUserSaltByEmailHandler = async (c: Context) => {
  */
 export const getCurrentUserHandler = (c: Context) => {
   const result = getCurrentUser(c.get("user"));
+  return c.json(result);
+};
+
+/**
+ * POST /user/logout：登出，删除 redis 中的 token 使其立即失效（需登录）
+ */
+export const logoutUserHandler = async (c: Context) => {
+  const token = c.req.header("authorization")!;
+  const result = await logoutUser(token);
   return c.json(result);
 };

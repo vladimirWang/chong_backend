@@ -125,3 +125,13 @@ export function getCurrentUser(user: AuthUser | undefined) {
   }
   return new SuccessResponse<AuthUser>(user, "获取用户信息成功");
 }
+
+/**
+ * 用户登出（移植自 repo_backend logoutUser）
+ * 登录态以 redis token:{token} 存在性为准，删除即立即失效（JWT 本身不做验签）
+ * authorization header 由 authMiddleware 保证存在（未登录在中间件就被 401）
+ */
+export async function logoutUser(token: string) {
+  await redisClient.del(`token:${token}`);
+  return new SuccessResponse(null, "用户登出成功");
+}
