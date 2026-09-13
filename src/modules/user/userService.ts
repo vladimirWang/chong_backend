@@ -104,6 +104,16 @@ export async function loginUser(body: LoginBody) {
 }
 
 /**
+ * 按邮箱检查用户是否已存在（注册 / 忘记密码前置校验，公共路由无需登录）
+ * 移植自 repo_backend checkEmailExisted
+ */
+export async function checkEmailExisted(email: string) {
+  const user = await prisma.user.findUnique({ where: { email } });
+  const existed = Boolean(user);
+  return new SuccessResponse<boolean>(existed, existed ? "邮箱已存在" : "邮箱不存在");
+}
+
+/**
  * 按邮箱取用户 salt（登录第一步，客户端用它推导 passwordHash）
  * 移植自 repo_backend：resolveUserByEmail + getUserSaltByEmail
  */

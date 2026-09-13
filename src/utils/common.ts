@@ -42,3 +42,18 @@ export async function generateServiceCode(
     previousValue: currentValue > 1 ? currentValue - 1 : null,
   };
 }
+
+/**
+ * 生成随机初始密码（移植自 repo_backend utils/common.generateInitialPassword）
+ * 管理员重置密码后把该密码发给用户，用户登录后自行修改。
+ */
+export function generateInitialPassword(length: number = 8): string {
+  if (length <= 0) {
+    throw new Error("length must be greater than 0");
+  }
+  let result = "";
+  while (result.length < length) {
+    result += Math.random().toString(36).substring(2, 12);
+  }
+  return result.slice(0, length);
+}

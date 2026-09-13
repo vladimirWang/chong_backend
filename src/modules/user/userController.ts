@@ -1,5 +1,6 @@
 import type { Context } from "hono";
 import {
+  checkEmailExisted,
   getCurrentUser,
   getUserSaltByEmail,
   loginUser,
@@ -14,6 +15,15 @@ import type { LoginBody } from "./userValidator";
 export const loginHandler = async (c: Context) => {
   const body: LoginBody = await c.req.json();
   const result = await loginUser(body);
+  return c.json(result);
+};
+
+/**
+ * GET /user/checkEmailExisted/:email：检查邮箱是否已注册（公共路由，无需登录）
+ */
+export const checkEmailExistedHandler = async (c: Context) => {
+  const email = c.req.param("email")!;
+  const result = await checkEmailExisted(email);
   return c.json(result);
 };
 

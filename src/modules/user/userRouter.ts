@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import {
+  checkEmailExistedHandler,
   getCurrentUserHandler,
   getUserSaltByEmailHandler,
   loginHandler,
@@ -16,6 +17,11 @@ const userRouter = new Hono()
     "/login",
     zValidator("json", loginBodySchema),
     loginHandler,
+  )
+  .get(
+    "/checkEmailExisted/:email",
+    zValidator("param", paramEmailSchema),
+    checkEmailExistedHandler,
   )
   .get(
     "/getSalt/:email",

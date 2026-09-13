@@ -7,8 +7,21 @@ import type { AuthUser } from "../types/auth";
 const publicRoutes = new Set([
   "/nodejs_api/user/login",
   "/nodejs_api/user/getSalt/:email",
+  "/nodejs_api/user/checkEmailExisted/:email",
   "/nodejs_api/util/captcha",
   "/nodejs_api/util/get-nonce",
+  // 申请人注册流程
+  "/nodejs_api/applicant/sendInviteCode",
+  "/nodejs_api/applicant/checkInviteCode",
+  "/nodejs_api/applicant/checkApplicantExisted/:email",
+  // 管理员登录/注册/找回密码
+  "/nodejs_api/admin/user/login",
+  "/nodejs_api/admin/user/register",
+  "/nodejs_api/admin/user/registerShortCut",
+  "/nodejs_api/admin/user/checkEmailExisted/:email",
+  "/nodejs_api/admin/user/checkEmailNotExisted/:email",
+  "/nodejs_api/admin/user/getSalt/:email",
+  "/nodejs_api/admin/user/resetPassword",
 ]);
 
 /** 白名单含 :param 模板，需把模板转成路径段正则匹配实际路径 */

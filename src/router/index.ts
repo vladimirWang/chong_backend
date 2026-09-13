@@ -11,6 +11,8 @@ import { platformRouter } from "../modules/platform/platformRouter";
 import { clientRouter } from "../modules/client/clientRouter";
 import { statisticsRouter } from "../modules/statistics/statisticsRouter";
 import { analyticsRouter } from "../modules/analytics/analyticsRouter";
+import { applicantRouter } from "../modules/applicant/applicantRouter";
+import { adminUserRouter } from "../modules/adminUser/adminUserRouter";
 
 /**
  * 汇总各业务模块路由，统一挂到 /nodejs_api（与 repo_backend 对齐）
@@ -28,4 +30,6 @@ export const apiRouter = new Hono()
   .route("/platform", platformRouter)
   .route("/client", clientRouter)
   .route("/statistics", statisticsRouter)
-  .route("/analytics", analyticsRouter);
+  .route("/analytics", analyticsRouter)
+  .route("/applicant", applicantRouter)
+  .route("/admin/user", adminUserRouter);
