@@ -5,6 +5,7 @@ import {
   checkApplicantExistedHandler,
   checkInviteCodeHandler,
   getApplicantsHandler,
+  resendActivationLinkHandler,
   sendInviteCodeHandler,
 } from "./applicantController";
 import { paginationSchema } from "../../validators/commonValidator";
@@ -18,7 +19,7 @@ import {
 /**
  * 申请人路由
  * 公共：sendInviteCode / checkInviteCode / checkApplicantExisted（在 authMiddleware 白名单放行）
- * 需登录：GET /（列表）、POST /approve（审核）
+ * 需登录：GET /（列表）、POST /approve（审核）、POST /resend（重发激活链接）
  */
 const applicantRouter = new Hono()
   .post(
@@ -41,6 +42,11 @@ const applicantRouter = new Hono()
     "/approve",
     zValidator("json", approveApplicationBodySchema),
     approveApplicationHandler,
+  )
+  .post(
+    "/resend",
+    zValidator("json", approveApplicationBodySchema),
+    resendActivationLinkHandler,
   );
 
 export { applicantRouter };

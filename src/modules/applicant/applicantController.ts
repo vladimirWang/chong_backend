@@ -4,6 +4,7 @@ import {
   checkApplicantExisted,
   checkInviteCode,
   getApplicants,
+  resendActivationLink,
   sendInviteCode,
 } from "./applicantService";
 import type { Pagination } from "../../validators/commonValidator";
@@ -44,6 +45,15 @@ export const getApplicantsHandler = async (c: Context) => {
 export const approveApplicationHandler = async (c: Context) => {
   const body = c.req.valid("json" as never) as ApproveApplicationBody;
   return c.json(await approveApplication(body, c.get("user")));
+};
+
+/**
+ * POST /applicant/resend：重新发送激活链接（需管理员登录）
+ * 旧激活 token 会被作废，只有新链接可用
+ */
+export const resendActivationLinkHandler = async (c: Context) => {
+  const body = c.req.valid("json" as never) as ApproveApplicationBody;
+  return c.json(await resendActivationLink(body, c.get("user")));
 };
 
 /**

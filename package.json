@@ -1,10 +1,19 @@
 {
   "name": "gallery_hono",
   "scripts": {
-    "dev": "bun run --watch src/index.ts",
-    "build": "bun build src/index.ts",
-    "migrate": "bunx dotenv -e .env.devLocal -- prisma migrate dev",
-    "generate": "bunx dotenv -e .env.devLocal -- prisma generate"
+    "test": "./test-setup.sh && bunx dotenv -e .env.test -- bun test",
+    "test:setup": "./test-setup.sh",
+    "dev:local:server": "bunx dotenv -e .env.devLocal -- bun run --watch src/index.ts",
+    "dev:local:worker": "bunx dotenv -e .env.devLocal -- bun run --watch src/worker.ts",
+    "dev:local": "concurrently -n server,worker -c blue,green npm:dev:local:server npm:dev:local:worker",
+    "perf:http": "bun run perf/http_load.ts",
+    "db:push": "bunx dotenv -e .env.dev -- prisma db push",
+    "migrate:dev": "bunx dotenv -e .env.devLocal -- prisma migrate dev",
+    "generate:dev": "bunx dotenv -e .env.devLocal -- prisma generate",
+    "reset:dev": "bunx dotenv -e .env.dev -- prisma migrate reset",
+    "seed:dev": "bunx dotenv -e .env.dev -- prisma db seed",
+    "seed:test": "bunx dotenv -e .env.test -- prisma db seed",
+    "seed:prod": "bunx dotenv -e .env.prod -- prisma db seed"
   },
   "dependencies": {
     "@clickhouse/client": "^1.23.1",

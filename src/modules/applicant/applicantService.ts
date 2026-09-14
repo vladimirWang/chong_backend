@@ -22,6 +22,9 @@ import type {
   SendInviteCodeBody,
 } from "./applicantValidator";
 
+/** 交互式事务 client 类型（从扩展型 prisma 实例推导，与 $transaction 回调入参一致） */
+type TxClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
 /**
  * 公开申请接口没有登录态，审计字段需要一个系统管理员 id。
  * 与老架构一致从 ANONYMOUS_EMAIL 对应的 AdminUser 取，查不到退回 0。
@@ -119,6 +122,51 @@ export async function getApplicants(query: Pagination) {
 }
 
 /**
+ * 在事务内：生成新激活 token（7 天有效）+ 落一条 Mail + 通过 RabbitMQ 通知 worker 异步发信。
+ * approve（首次审核）与 resend（重发链接）复用。
+ */
+async function issueActivationMail(
+  tx: TxClient,
+  applicantId: number,
+  email: string,
+  userId: number,
+) {
+  // 生成激活链接 token（只存 hash）
+  const token = randomBytes(32).toString("hex");
+  await tx.applicantActivationToken.create({
+    data: {
+      applicantId,
+      tokenHash: token,
+      expiresAt: dayjs().add(7, "day").toDate(),
+      ...auditCreate(userId),
+    },
+  });
+  const activatedLink = `${process.env.FRONTEND_URL}/#/applicant/activate?token=${token}`;
+  const insertMail = await tx.mail.create({
+    data: {
+      title: "库存系统激活链接",
+      content: `<p>激活链接为：<a href="${activatedLink}" target="_blank">前往填写用户信息</a>, 请尽快使用。</p>`,
+      from: sendFrom,
+      to: email,
+    },
+  });
+  // 共享连接：DNS/建连只在首次发生，断线后自动懒重建
+  const channel = await getRabbitChannel();
+  await channel.assertExchange(applicantExchange, "topic", {
+    durable: true,
+  });
+  console.log("insertMail.id: ", insertMail.id);
+  const buf = JSON.stringify({ mailId: insertMail.id });
+  channel.publish(
+    applicantExchange,
+    applicationApproveRoutingKey,
+    Buffer.from(buf),
+    { persistent: true },
+  );
+  console.log("publish success mailId: ", insertMail.id);
+}
+
+/**
  * 审核通过：事务内创建激活 token + 更新申请状态 + 落一条 Mail，
  * 随后通过 RabbitMQ 通知 worker 异步发信（移植自 repo_backend approveApplication）
  */
@@ -140,16 +188,6 @@ export async function approveApplication(
   try {
     await prisma.$transaction(
       async (tx) => {
-        // 生成激活链接 token（只存 hash）
-        const token = randomBytes(32).toString("hex");
-        await tx.applicantActivationToken.create({
-          data: {
-            applicantId: id,
-            tokenHash: token,
-            expiresAt: dayjs().add(7, "day").toDate(),
-            ...auditCreate(user.userId),
-          },
-        });
         await tx.applicant.update({
           where: { id, status: { not: "APPROVED" } },
           data: {
@@ -157,29 +195,7 @@ export async function approveApplication(
             ...auditUpdate(user.userId),
           },
         });
-        const activatedLink = `${process.env.FRONTEND_URL}/#/applicant/activate?token=${token}`;
-        const insertMail = await tx.mail.create({
-          data: {
-            title: "库存系统激活链接",
-            content: `<p>激活链接为：<a href="${activatedLink}" target="_blank">前往填写用户信息</a>, 请尽快使用。</p>`,
-            from: sendFrom,
-            to: applicant.email,
-          },
-        });
-        // 共享连接：DNS/建连只在首次发生，断线后自动懒重建
-        const channel = await getRabbitChannel();
-        await channel.assertExchange(applicantExchange, "topic", {
-          durable: true,
-        });
-        console.log("insertMail.id: ", insertMail.id);
-        const buf = JSON.stringify({ mailId: insertMail.id });
-        channel.publish(
-          applicantExchange,
-          applicationApproveRoutingKey,
-          Buffer.from(buf),
-          { persistent: true },
-        );
-        console.log("publish success mailId: ", insertMail.id);
+        await issueActivationMail(tx, id, applicant.email, user.userId);
       },
       {
         // 发信可能较慢，避免默认 timeout 过早中断
@@ -195,6 +211,65 @@ export async function approveApplication(
     );
   }
   return new SuccessResponse(null, "审核通过， 邮件已发送");
+}
+
+/**
+ * 重新发送激活链接（需管理员登录）
+ *
+ * 激活 token 存在数据库 ApplicantActivationToken 表（非 Redis），
+ * 重发时在同一事务内把该申请人所有未使用/未作废的旧 token 置为 revokedAt，
+ * 旧激活链接立即失效，再生成新 token 并发信。
+ * 仅 APPROVED（已审核、尚未激活）状态允许重发。
+ */
+export async function resendActivationLink(
+  body: ApproveApplicationBody,
+  user: AuthUser | undefined,
+) {
+  const { id } = body;
+  if (!user) {
+    return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
+  }
+
+  const applicant = await prisma.applicant.findUnique({ where: { id } });
+  if (!applicant) {
+    return new ErrorResponse(errorCode.VALIDATION_ERROR, "申请人不存在");
+  }
+  if (applicant.status === "PENDING") {
+    return new ErrorResponse(errorCode.VALIDATION_ERROR, "申请尚未审核，请先审核通过");
+  }
+  if (applicant.status === "REJECTED") {
+    return new ErrorResponse(errorCode.VALIDATION_ERROR, "申请已驳回，无法重发");
+  }
+  if (applicant.status === "ACTIVATED") {
+    return new ErrorResponse(errorCode.VALIDATION_ERROR, "该用户已激活，无需重发");
+  }
+
+  try {
+    await prisma.$transaction(
+      async (tx) => {
+        // 作废旧 token：未使用且未作废的全部置为 revoked（旧激活链接立即失效）
+        await tx.applicantActivationToken.updateMany({
+          where: { applicantId: id, usedAt: null, revokedAt: null },
+          data: {
+            revokedAt: new Date(),
+            ...auditUpdate(user.userId),
+          },
+        });
+        await issueActivationMail(tx, id, applicant.email, user.userId);
+      },
+      {
+        timeout: 30_000,
+        maxWait: 10_000,
+      },
+    );
+  } catch (error) {
+    console.error("resendActivationLink error: ", error);
+    return new ErrorResponse(
+      errorCode.SYSTEM_ERROR,
+      "重发失败：数据库更新或发送邮件出错，已回滚",
+    );
+  }
+  return new SuccessResponse(null, "激活链接已重新发送");
 }
 
 /**
