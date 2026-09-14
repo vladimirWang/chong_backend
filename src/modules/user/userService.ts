@@ -1,14 +1,15 @@
 import { sign } from "hono/jwt";
+import { randomBytes } from "node:crypto";
 import prisma from "../../utils/prisma";
 import { redisClient } from "../../utils/redis";
-import { sha256, isValidNonce } from "../../utils/algo";
+import { sha256, isValidNonce, generateFixedSalt } from "../../utils/algo";
 import {
   ErrorResponse,
   SuccessResponse,
   errorCode,
 } from "../../models/Response";
 import type { AuthUser } from "../../types/auth";
-import type { LoginBody } from "./userValidator";
+import type { LoginBody, RegisterByTokenBody } from "./userValidator";
 
 export type JwtPayload = {
   userId: number;
@@ -144,4 +145,116 @@ export function getCurrentUser(user: AuthUser | undefined) {
 export async function logoutUser(token: string) {
   await redisClient.del(`token:${token}`);
   return new SuccessResponse(null, "用户登出成功");
+}
+
+/**
+ * 通过激活 token 注册用户（公共路由，无需登录）
+ *
+ * 流程：
+ * 1. 校验 token 有效性（存在 / 未过期 / 未使用 / 未作废）
+ * 2. 校验邮箱未已注册
+ * 3. 按租户选项处理：
+ *    - create：用 tenantName 创建新 Tenant（自动生成 code）
+ *    - join  ：按 tenantCode 查找已有 Tenant
+ * 4. 事务内：创建 User + 更新 Applicant 状态为 ACTIVATED + 标记 token 已使用
+ */
+export async function registerUserByToken(body: RegisterByTokenBody) {
+  const { token, password, username, tenantOption, tenantName, tenantCode } =
+    body;
+
+  // 1. 校验 token
+  const tokenRecord = await prisma.applicantActivationToken.findFirst({
+    where: { tokenHash: token },
+    include: { applicant: true },
+  });
+  if (!tokenRecord) {
+    return new ErrorResponse(errorCode.VALIDATION_ERROR, "token 不存在");
+  }
+  if (tokenRecord.usedAt) {
+    return new ErrorResponse(errorCode.VALIDATION_ERROR, "token 已使用");
+  }
+  if (tokenRecord.revokedAt) {
+    return new ErrorResponse(errorCode.VALIDATION_ERROR, "token 已作废");
+  }
+  if (tokenRecord.expiresAt < new Date()) {
+    return new ErrorResponse(errorCode.VALIDATION_ERROR, "token 已过期");
+  }
+
+  const applicant = tokenRecord.applicant;
+
+  // 2. 邮箱是否已注册
+  const userExisted = await prisma.user.findUnique({
+    where: { email: applicant.email },
+  });
+  if (userExisted) {
+    return new ErrorResponse(errorCode.VALIDATION_ERROR, "该邮箱已注册");
+  }
+
+  // 3. 处理租户
+  let tenantId: number;
+  if (tenantOption === "create") {
+    if (!tenantName) {
+      return new ErrorResponse(errorCode.VALIDATION_ERROR, "请填写租户名称");
+    }
+    const nameExisted = await prisma.tenant.findUnique({
+      where: { name: tenantName },
+    });
+    if (nameExisted) {
+      return new ErrorResponse(errorCode.VALIDATION_ERROR, "租户名称已存在");
+    }
+    // code 自动生成，保证唯一
+    const generatedCode = randomBytes(8).toString("hex");
+    const tenant = await prisma.tenant.create({
+      data: { name: tenantName, code: generatedCode },
+    });
+    tenantId = tenant.id;
+  } else {
+    if (!tenantCode) {
+      return new ErrorResponse(errorCode.VALIDATION_ERROR, "请填写租户编码");
+    }
+    const tenant = await prisma.tenant.findUnique({
+      where: { code: tenantCode },
+    });
+    if (!tenant) {
+      return new ErrorResponse(errorCode.VALIDATION_ERROR, "租户编码不存在");
+    }
+    if (tenant.status !== "ACTIVE") {
+      return new ErrorResponse(errorCode.VALIDATION_ERROR, "租户已停用");
+    }
+    tenantId = tenant.id;
+  }
+
+  // 4. 事务：创建用户 + 更新申请人状态 + 标记 token 已使用
+  const salt = generateFixedSalt();
+  const passwordHash = sha256(password + "_" + salt);
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.user.create({
+        data: {
+          email: applicant.email,
+          password: passwordHash,
+          username,
+          salt,
+          tenantId,
+        },
+      });
+      await tx.applicant.update({
+        where: { id: applicant.id },
+        data: {
+          status: "ACTIVATED",
+          tenantId,
+        },
+      });
+      await tx.applicantActivationToken.update({
+        where: { id: tokenRecord.id },
+        data: { usedAt: new Date() },
+      });
+    });
+  } catch (error) {
+    console.error("registerUserByToken error: ", error);
+    return new ErrorResponse(errorCode.SYSTEM_ERROR, "注册失败，已回滚");
+  }
+
+  return new SuccessResponse(null, "用户注册成功");
 }

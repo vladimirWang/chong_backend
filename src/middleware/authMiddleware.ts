@@ -14,6 +14,8 @@ const publicRoutes = new Set([
   "/nodejs_api/applicant/sendInviteCode",
   "/nodejs_api/applicant/checkInviteCode",
   "/nodejs_api/applicant/checkApplicantExisted/:email",
+  // 通过激活 token 注册（无需登录）
+  "/nodejs_api/user/registerByToken",
   // 管理员登录/注册/找回密码
   "/nodejs_api/admin/user/login",
   "/nodejs_api/admin/user/register",

@@ -5,8 +5,9 @@ import {
   getUserSaltByEmail,
   loginUser,
   logoutUser,
+  registerUserByToken,
 } from "./userService";
-import type { LoginBody } from "./userValidator";
+import type { LoginBody, RegisterByTokenBody } from "./userValidator";
 
 /**
  * HTTP 层：取参（zValidator 已在路由层校验过）、调 service、组装响应
@@ -51,4 +52,13 @@ export const logoutUserHandler = async (c: Context) => {
   const token = c.req.header("authorization")!;
   const result = await logoutUser(token);
   return c.json(result);
+};
+
+/**
+ * POST /user/registerByToken：通过激活 token 注册用户（公共路由，无需登录）
+ * 前端激活表单提交：token + password + username + tenantOption(create/join) + tenantName/tenantCode
+ */
+export const registerUserByTokenHandler = async (c: Context) => {
+  const body = c.req.valid("json" as never) as RegisterByTokenBody;
+  return c.json(await registerUserByToken(body));
 };

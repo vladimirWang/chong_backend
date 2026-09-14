@@ -6,8 +6,13 @@ import {
   getUserSaltByEmailHandler,
   loginHandler,
   logoutUserHandler,
+  registerUserByTokenHandler,
 } from "./userController";
-import { loginBodySchema, paramEmailSchema } from "./userValidator";
+import {
+  loginBodySchema,
+  paramEmailSchema,
+  registerByTokenBodySchema,
+} from "./userValidator";
 
 /**
  * 路由层：只做路由注册 + 挂 validator，业务逻辑在 controller/service
@@ -17,6 +22,11 @@ const userRouter = new Hono()
     "/login",
     zValidator("json", loginBodySchema),
     loginHandler,
+  )
+  .post(
+    "/registerByToken",
+    zValidator("json", registerByTokenBodySchema),
+    registerUserByTokenHandler,
   )
   .get(
     "/checkEmailExisted/:email",
