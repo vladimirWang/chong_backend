@@ -1,6 +1,5 @@
 import { getClickhouse, ACCESS_LOG_TABLE } from "../../utils/clickhouse";
 import { SuccessResponse } from "../../models/Response";
-import type { AuthUser } from "../../types/auth";
 import type { AnalyticsRangeQuery } from "./analyticsValidator";
 
 interface OverviewRow {
@@ -40,7 +39,6 @@ function resolveRange(query: AnalyticsRangeQuery) {
 }
 
 interface RangeParams {
-  tenantId: number;
   start: string;
   end: string;
 }
@@ -62,7 +60,6 @@ async function queryCh<T>(
 
 /** GET /analytics/overview：区间 PV/UV（UV = 去重登录用户数） */
 export async function getAnalyticsOverview(
-  user: AuthUser,
   query: AnalyticsRangeQuery,
 ) {
   const { start, end } = resolveRange(query);
@@ -71,11 +68,10 @@ export async function getAnalyticsOverview(
       SELECT count() AS pv,
              uniqExactIf(userId, userId IS NOT NULL) AS uv
       FROM ${ACCESS_LOG_TABLE}
-      WHERE tenantId = {tenantId:UInt32}
-        AND ts >= {start:String}
+      WHERE ts >= {start:String}
         AND ts <= {end:String}
     `,
-    { tenantId: user.tenantId!, start: formatDateTime(start), end: formatDateTime(end) },
+    { start: formatDateTime(start), end: formatDateTime(end) },
   );
 
   const row = rows?.[0];
@@ -87,7 +83,6 @@ export async function getAnalyticsOverview(
 
 /** GET /analytics/daily-trend：按日 PV/UV（补齐区间内无访问的日期） */
 export async function getAnalyticsDailyTrend(
-  user: AuthUser,
   query: AnalyticsRangeQuery,
 ) {
   const { start, end } = resolveRange(query);
@@ -97,13 +92,12 @@ export async function getAnalyticsDailyTrend(
              count() AS pv,
              uniqExactIf(userId, userId IS NOT NULL) AS uv
       FROM ${ACCESS_LOG_TABLE}
-      WHERE tenantId = {tenantId:UInt32}
-        AND ts >= {start:String}
+      WHERE ts >= {start:String}
         AND ts <= {end:String}
       GROUP BY day
       ORDER BY day
     `,
-    { tenantId: user.tenantId!, start: formatDateTime(start), end: formatDateTime(end) },
+    { start: formatDateTime(start), end: formatDateTime(end) },
   );
 
   const map = new Map(
@@ -126,7 +120,6 @@ export async function getAnalyticsDailyTrend(
 
 /** GET /analytics/top-paths：访问量 Top10 路径 + 平均耗时 */
 export async function getAnalyticsTopPaths(
-  user: AuthUser,
   query: AnalyticsRangeQuery,
 ) {
   const { start, end } = resolveRange(query);
@@ -136,14 +129,13 @@ export async function getAnalyticsTopPaths(
              count() AS pv,
              toUInt32(round(avg(duration))) AS avgDuration
       FROM ${ACCESS_LOG_TABLE}
-      WHERE tenantId = {tenantId:UInt32}
-        AND ts >= {start:String}
+      WHERE ts >= {start:String}
         AND ts <= {end:String}
       GROUP BY path
       ORDER BY pv DESC
       LIMIT 10
     `,
-    { tenantId: user.tenantId!, start: formatDateTime(start), end: formatDateTime(end) },
+    { start: formatDateTime(start), end: formatDateTime(end) },
   );
 
   const result = (rows ?? []).map((row) => ({
