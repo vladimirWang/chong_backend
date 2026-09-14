@@ -3,7 +3,6 @@ import { zValidator } from "@hono/zod-validator";
 import {
   checkEmailExistedHandler,
   checkEmailNotExistedHandler,
-  checkFileExistedByHashHandler,
   getUserSaltByEmailHandler,
   loginHandler,
   registerHandler,
@@ -14,7 +13,6 @@ import {
 import {
   loginBodySchema,
   paramEmailSchema,
-  paramHashSchema,
   registerBodySchema,
   registerShortCutBodySchema,
   resetPasswordBodySchema,
@@ -25,7 +23,8 @@ import {
  * 管理员用户路由（挂在 /admin/user 下）
  * 公共：login / register / registerShortCut / checkEmailExisted /
  *       checkEmailNotExisted / getSalt / resetPassword（在 authMiddleware 白名单放行）
- * 需登录：updatePassword / checkFileExisted
+ * 需登录：updatePassword
+ * （checkFileExisted 已移至 file 模块）
  */
 const adminUserRouter = new Hono()
   .post("/login", zValidator("json", loginBodySchema), loginHandler)
@@ -63,11 +62,6 @@ const adminUserRouter = new Hono()
     "/updatePassword",
     zValidator("json", updatePasswordBodySchema),
     updatePasswordHandler,
-  )
-  .get(
-    "/checkFileExisted/:hash",
-    zValidator("param", paramHashSchema),
-    checkFileExistedByHashHandler,
   );
 
 export { adminUserRouter };

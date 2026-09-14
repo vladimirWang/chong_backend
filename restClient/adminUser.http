@@ -53,21 +53,21 @@ Content-Type: application/json
 POST {{base}}/avatar
 Authorization: Bearer {{token}}
 
-### user avatar
-POST {{base}}/user/upload
-Authorization: {{token}}
-Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
-
-------WebKitFormBoundary7MA4YWxkTrZu0gW
-Content-Disposition: form-data; name="hash"
-
-avatar
-------WebKitFormBoundary7MA4YWxkTrZu0gW
-Content-Disposition: form-data; name="file"; filename="1.png"
-Content-Type: image/png
-
-< ./1.png
-------WebKitFormBoundary7MA4YWxkTrZu0gW--
+### 文件上传（已移至 file 模块）
+# POST http://localhost:4000/nodejs_api/file/upload
+# Authorization: {{token}}
+# Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+#
+# ------WebKitFormBoundary7MA4YWxkTrZu0gW
+# Content-Disposition: form-data; name="hash"
+#
+# avatar
+# ------WebKitFormBoundary7MA4YWxkTrZu0gW
+# Content-Disposition: form-data; name="file"; filename="1.png"
+# Content-Type: image/png
+#
+# < ./1.png
+# ------WebKitFormBoundary7MA4YWxkTrZu0gW--
 
 ### user info
 GET {{base}}/user/1
@@ -81,9 +81,9 @@ Authorization: Bearer {{token}}
 GET {{base}}/user/captcha?q=123
 
 
-### 根据hash检查文件是否存在
-GET {{base}}/user/checkFileExisted/avatar
-Authorization: {{token}}
+### 根据hash检查文件是否存在（已移至 file 模块）
+# GET http://localhost:4000/nodejs_api/file/checkFileExisted/avatar
+# Authorization: {{token}}
 
 ### user change password
 POST {{base}}/user/changePassword

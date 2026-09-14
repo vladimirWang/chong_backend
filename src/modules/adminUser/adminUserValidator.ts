@@ -45,9 +45,3 @@ export const paramEmailSchema = z.object({
   email: z.email(),
 });
 export type ParamEmail = z.infer<typeof paramEmailSchema>;
-
-/** 秒传校验路径参数 */
-export const paramHashSchema = z.object({
-  hash: z.string(),
-});
-export type ParamHash = z.infer<typeof paramHashSchema>;

@@ -55,7 +55,7 @@ POST {{base}}/avatar
 Authorization: Bearer {{token}}
 
 ### user avatar
-POST {{base}}/user/upload
+POST {{base}}/file/upload
 Authorization: {{token}}
 Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
 
@@ -67,7 +67,7 @@ avatar
 Content-Disposition: form-data; name="file"; filename="1.png"
 Content-Type: image/png
 
-< ./1.png
+< ./1.jpeg
 ------WebKitFormBoundary7MA4YWxkTrZu0gW--
 
 ### user info
@@ -83,7 +83,7 @@ GET {{base}}/user/captcha?q=123
 
 
 ### 根据hash检查文件是否存在
-GET {{base}}/user/checkFileExisted/avatar
+GET {{base}}/file/checkFileExisted/avatar
 Authorization: {{token}}
 
 ### user change password

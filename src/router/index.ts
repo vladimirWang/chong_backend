@@ -14,6 +14,7 @@ import { analyticsRouter } from "../modules/analytics/analyticsRouter";
 import { applicantRouter } from "../modules/applicant/applicantRouter";
 import { adminUserRouter } from "../modules/adminUser/adminUserRouter";
 import { fileRouter } from "../modules/file/fileRouter";
+import { imageRouter } from "../modules/image/imageRouter";
 
 /**
  * 汇总各业务模块路由，统一挂到 /nodejs_api（与 repo_backend 对齐）
@@ -35,3 +36,4 @@ export const apiRouter = new Hono()
   .route("/applicant", applicantRouter)
   .route("/admin/user", adminUserRouter)
   .route("/file", fileRouter)
+  .route("/image", imageRouter);

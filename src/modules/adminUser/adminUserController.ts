@@ -2,7 +2,6 @@ import type { Context } from "hono";
 import {
   checkAdminEmailExisted,
   checkAdminEmailNotExisted,
-  checkFileExistedByHash,
   getAdminUserSaltByEmail,
   loginAdminUser,
   registerAdminUser,
@@ -13,7 +12,6 @@ import {
 import type {
   LoginBody,
   ParamEmail,
-  ParamHash,
   RegisterBody,
   RegisterShortCutBody,
   ResetPasswordBody,
@@ -66,10 +64,4 @@ export const resetPasswordHandler = async (c: Context) => {
 export const updatePasswordHandler = async (c: Context) => {
   const body = c.req.valid("json" as never) as UpdatePasswordBody;
   return c.json(await updateAdminPassword(body, c.get("user")));
-};
-
-/** GET /admin/user/checkFileExisted/:hash：秒传校验（需登录） */
-export const checkFileExistedByHashHandler = async (c: Context) => {
-  const { hash } = c.req.valid("param" as never) as ParamHash;
-  return c.json(await checkFileExistedByHash(hash));
 };

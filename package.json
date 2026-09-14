@@ -8,6 +8,8 @@
   },
   "dependencies": {
     "@clickhouse/client": "^1.23.1",
+    "@grpc/grpc-js": "^1.14.3",
+    "@grpc/proto-loader": "^0.8.0",
     "@hono/zod-validator": "^0.9.1",
     "@prisma/adapter-mariadb": "7.4.2",
     "@prisma/client": "7.4.2",

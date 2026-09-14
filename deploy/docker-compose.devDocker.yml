@@ -9,11 +9,29 @@ services:
       - "4000"
     env_file:
       - ../.env.devDocker
+    environment:
+      IMAGE_GRPC_TARGET: image-service:50051
+    depends_on:
+      image-service:
+        condition: service_healthy
     volumes:
       - /var/log/docker-study:/app/logs:rw
     networks:
       - mac_docker_network
       - default
+
+  image-service:
+    build:
+      context: ../../image_service
+      dockerfile: Dockerfile
+    image: image-service:dev
+    expose:
+      - "50051"
+    environment:
+      IMAGE_GRPC_HOST: 0.0.0.0
+      IMAGE_GRPC_PORT: 50051
+    networks:
+      - mac_docker_network
 
 networks:
   mac_docker_network:

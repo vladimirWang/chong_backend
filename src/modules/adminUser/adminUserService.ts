@@ -235,18 +235,3 @@ export async function updateAdminPassword(
   });
   return new SuccessResponse(null, "密码修改成功");
 }
-
-/**
- * 秒传校验：按文件 hash 查是否已上传过（需登录）
- * 移植自 repo_backend adminUserController.checkFileExistedByHash
- */
-export async function checkFileExistedByHash(hash: string) {
-  const fileInfo = await prisma.fileInfo.findFirst({ where: { hash } });
-  return new SuccessResponse(
-    {
-      filePath: fileInfo?.filePath ?? "",
-      baseUrl: process.env.PUBLIC_BASE_URL,
-    },
-    fileInfo ? "文件已存在" : "文件不存在",
-  );
-}

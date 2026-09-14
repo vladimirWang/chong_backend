@@ -29,11 +29,30 @@ services:
       - "4000:4000"
     env_file:
       - ../.env.prod
+    environment:
+      IMAGE_GRPC_TARGET: image-service:50051
+    depends_on:
+      image-service:
+        condition: service_healthy
     volumes:
       - /var/log/galleryrepo:/var/log/galleryrepo:rw
     networks:
       - mac_docker_network
       - default
+
+  image-service:
+    build:
+      context: ../../image_service
+      dockerfile: Dockerfile
+    image: image-service:latest
+    restart: unless-stopped
+    expose:
+      - "50051"
+    environment:
+      IMAGE_GRPC_HOST: 0.0.0.0
+      IMAGE_GRPC_PORT: 50051
+    networks:
+      - mac_docker_network
 
   # RabbitMQ 消费者：与 server 共用同一镜像，仅覆盖启动命令
   worker:

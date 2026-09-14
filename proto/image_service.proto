@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package image.v1;
+
+// 商品图标准化服务：抠图 / 白底 / 方形补边 / 等比缩放 / 格式转换
+// 与 image_service/proto/image_service.proto 保持一致（Python 服务端为唯一真源）
+service ImageService {
+  rpc Standardize(StandardizeRequest) returns (ImageResponse);
+  rpc Ping(PingRequest) returns (PongResponse);
+}
+
+message StandardizeRequest {
+  bytes image = 1;
+  Options options = 2;
+}
+
+message Options {
+  bool remove_background = 1;
+  int32 max_width = 2;
+  int32 max_height = 3;
+  bool square = 4;
+  string background = 5;
+  string output_format = 6;
+  int32 jpeg_quality = 7;
+}
+
+message ImageResponse {
+  bytes image = 1;
+  string mime_type = 2;
+  int32 width = 3;
+  int32 height = 4;
+  int64 original_size = 5;
+  int64 processed_size = 6;
+  bool background_removed = 7;
+}
+
+message PingRequest {}
+
+message PongResponse {
+  string message = 1;
+}
