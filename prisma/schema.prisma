@@ -16,12 +16,14 @@ enum TenantStatus {
 
 // 租户/组织
 model Tenant {
-  id        Int          @id @default(autoincrement())
-  name      String       @unique// 显示名称
-  code      String       @unique // 机器用唯一编码
-  status    TenantStatus @default(ACTIVE)
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
+  id          Int          @id @default(autoincrement())
+  name        String       @unique// 显示名称
+  code        String       @unique // 机器用唯一编码
+  status      TenantStatus @default(ACTIVE)
+  superUserId Int?         @unique // 租户超级管理员（自建租户的申请人）
+  superUser   User?        @relation("TenantSuperUser", fields: [superUserId], references: [id])
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
   // 业务域子表（1:N）
   users                User[]
@@ -202,6 +204,9 @@ model User {
   historyCostsCreated        HistoryCost[]         @relation("HistoryCostCreatedBy")
   historyCostsUpdated        HistoryCost[]         @relation("HistoryCostUpdatedBy")
   historyCostsDeleted        HistoryCost[]         @relation("HistoryCostDeletedBy")
+
+  // 反向 relation：该 User 是某 Tenant 的 superUser（自建租户时设置）
+  tenantSuperUser            Tenant?                @relation("TenantSuperUser")
 
   @@index([tenantId])
 }

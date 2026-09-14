@@ -1,8 +1,12 @@
 import { z } from "zod";
 
-/** 申请（获取邀请码）入参：邮箱 + 可选的新租户名称（创建型场景） */
+/** 申请（获取邀请码）入参
+ *  join  型：email + tenantCode（加入已有租户，由该租户 superUser 审核）
+ *  create 型：email + tenantName（新建租户，由系统管理员审核）
+ */
 export const sendInviteCodeBodySchema = z.object({
   email: z.email(),
+  tenantCode: z.string().optional(),
   tenantName: z.string().optional(),
 });
 export type SendInviteCodeBody = z.infer<typeof sendInviteCodeBodySchema>;

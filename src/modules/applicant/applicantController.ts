@@ -32,11 +32,12 @@ export const checkInviteCodeHandler = async (c: Context) => {
 };
 
 /**
- * GET /applicant：申请人分页列表（需管理员登录）
+ * GET /applicant：申请人分页列表（需登录）
+ * 管理员看全部；租户 superUser 只看本租户
  */
 export const getApplicantsHandler = async (c: Context) => {
   const query = c.req.valid("query" as never) as Pagination;
-  return c.json(await getApplicants(query));
+  return c.json(await getApplicants(query, c.get("user")));
 };
 
 /**

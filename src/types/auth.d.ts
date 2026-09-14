@@ -9,6 +9,7 @@ export interface AuthUser {
   username: string | null;
   tenantId: number | null;
   role?: string;
+  isSuperUser?: boolean;
   exp?: number;
   [k: string]: unknown;
 }

@@ -18,15 +18,16 @@ export const paramEmailSchema = z.object({
 
 export type ParamEmail = z.infer<typeof paramEmailSchema>;
 
-/** 通过激活 token 注册的入参（与前端 RegisterForm.tsx 对齐）
- *  tenantOption=join   加入已有租户：必传 tenantCode（租户编码）
- *  tenantOption=create 自建租户：必传 tenantName
+/** 通过激活 token 注册的入参
+ *  新流程：申请时已确定租户（applicant.tenantId 或 applicant.tenantName），
+ *         激活时只需 token + username + password
+ *  兼容：旧流程在激活时传 tenantOption/tenantCode/tenantName
  */
 export const registerByTokenBodySchema = z.object({
   token: z.string().min(1),
   password: z.string().min(6),
   username: z.string().max(8),
-  tenantOption: z.enum(["join", "create"]),
+  tenantOption: z.enum(["join", "create"]).optional(),
   tenantName: z.string().optional(),
   tenantCode: z.string().optional(),
 });

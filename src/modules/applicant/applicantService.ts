@@ -40,26 +40,40 @@ async function getAnonymousAdminUserId(): Promise<number> {
 
 /**
  * 提交申请（获取邀请码），公共路由
- * 移植自 repo_backend sendInviteCode
+ *
+ * join  型：传 tenantCode，查到租户后写入 applicant.tenantId，由该租户 superUser 审核
+ * create 型：传 tenantName，tenantId 留空，由系统管理员审核
  */
 export async function sendInviteCode(body: SendInviteCodeBody) {
-  const { email, tenantName } = body;
+  const { email, tenantCode, tenantName } = body;
 
   const userExisted = await prisma.user.findFirst({ where: { email } });
   if (userExisted) {
     return new ErrorResponse(errorCode.VALIDATION_ERROR, "邮箱已注册");
   }
 
+  // join 型：校验 tenantCode 有效且租户 ACTIVE
+  let tenantId: number | undefined;
+  if (tenantCode) {
+    const tenant = await prisma.tenant.findUnique({
+      where: { code: tenantCode },
+    });
+    if (!tenant) {
+      return new ErrorResponse(errorCode.VALIDATION_ERROR, "租户编码不存在");
+    }
+    if (tenant.status !== "ACTIVE") {
+      return new ErrorResponse(errorCode.VALIDATION_ERROR, "租户已停用");
+    }
+    tenantId = tenant.id;
+  }
+
   const anonymousUserId = await getAnonymousAdminUserId();
-  // const anonymousUserId = 1;
   await prisma.applicant.create({
     data: {
       email,
-      // 创建型场景存新租户名称，激活时据此创建 Tenant
+      // join 型关联租户；create 型存 tenantName
+      ...(tenantId ? { tenant: { connect: { id: tenantId } } } : {}),
       ...(tenantName ? { tenantName } : {}),
-      // tenantName: '123',
-      // ...auditCreate(anonymousUserId),
-      // ...auditCreateConnect(anonymousUserId),
       createdByUser: {
         connect: {
           id: anonymousUserId,
@@ -95,10 +109,25 @@ export async function checkInviteCode(body: CheckInviteCodeBody) {
 }
 
 /**
- * 申请人分页列表（需管理员登录）
- * 移植自 repo_backend getApplicants
+ * 申请人分页列表（需登录）
+ *
+ * - 系统管理员（role=admin）：查看全部申请人（含 create 型）
+ * - 租户 superUser（role=merchant + isSuperUser）：只查看本租户的申请人
+ * - 普通租户用户：无权访问
  */
-export async function getApplicants(query: Pagination) {
+export async function getApplicants(
+  query: Pagination,
+  user: AuthUser | undefined,
+) {
+  if (!user) {
+    return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
+  }
+
+  // 普通租户用户无权查看申请人列表
+  if (user.role === "merchant" && !user.isSuperUser) {
+    return new ErrorResponse(errorCode.FORBIDDEN, "仅租户超级管理员可查看申请人列表");
+  }
+
   const { limit, page, pagination = "1" } = query;
   let skip: number | undefined;
   let take: number | undefined;
@@ -110,13 +139,21 @@ export async function getApplicants(query: Pagination) {
     skip = paginationInfo.skip;
     take = paginationInfo.take;
   }
+
+  // 管理员看全部；租户 superUser 只看本租户
+  const where =
+    user.role === "merchant" && user.tenantId != null
+      ? { tenantId: user.tenantId }
+      : {};
+
   const [list, total] = await Promise.all([
     prisma.applicant.findMany({
+      where,
       orderBy: { updatedAt: "desc" },
       skip,
       take,
     }),
-    prisma.applicant.count(),
+    prisma.applicant.count({ where }),
   ]);
   return new SuccessResponse({ total, list }, "获取申请人列表成功");
 }
@@ -167,8 +204,39 @@ async function issueActivationMail(
 }
 
 /**
+ * 权限校验：
+ * - create 型（applicant.tenantId 为空）：仅系统管理员可审核
+ * - join 型（applicant.tenantId 有值）：仅该租户 superUser 可审核
+ */
+function checkApprovePermission(
+  applicant: { tenantId: number | null },
+  user: AuthUser | undefined,
+): ErrorResponse<unknown> | null {
+  if (!user) {
+    return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
+  }
+  // 管理员可审核所有申请（含 create 型）
+  if (user.role === "admin") return null;
+  // join 型：仅本租户 superUser 可审核
+  if (applicant.tenantId != null) {
+    if (user.tenantId !== applicant.tenantId) {
+      return new ErrorResponse(errorCode.FORBIDDEN, "无权审核其他租户的申请");
+    }
+    if (!user.isSuperUser) {
+      return new ErrorResponse(errorCode.FORBIDDEN, "仅租户超级管理员可审核");
+    }
+  } else {
+    // create 型：仅系统管理员可审核
+    return new ErrorResponse(errorCode.FORBIDDEN, "仅系统管理员可审核新建租户申请");
+  }
+  return null;
+}
+
+/**
  * 审核通过：事务内创建激活 token + 更新申请状态 + 落一条 Mail，
- * 随后通过 RabbitMQ 通知 worker 异步发信（移植自 repo_backend approveApplication）
+ * 随后通过 RabbitMQ 通知 worker 异步发信
+ *
+ * 权限：申请人有 tenantId → 该租户 superUser 审核；无 tenantId（create 型）→ 管理员审核
  */
 export async function approveApplication(
   body: ApproveApplicationBody,
@@ -179,11 +247,19 @@ export async function approveApplication(
     return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
   }
 
-  // 老架构由 approveApplicationBodySchema 预查询注入 applicant，这里在 service 内查询
   const applicant = await prisma.applicant.findUnique({ where: { id } });
   if (!applicant) {
     return new ErrorResponse(errorCode.VALIDATION_ERROR, "申请人不存在");
   }
+
+  const permError = checkApprovePermission(applicant, user);
+  if (permError) return permError;
+
+  // 审计字段引用 AdminUser 表：admin 用户直接用 userId，
+  // merchant 用户（User 表）改用匿名 AdminUser ID 避免外键约束失败
+  const auditUserId = user.role === "admin"
+    ? user.userId
+    : await getAnonymousAdminUserId();
 
   try {
     await prisma.$transaction(
@@ -192,10 +268,10 @@ export async function approveApplication(
           where: { id, status: { not: "APPROVED" } },
           data: {
             status: "APPROVED",
-            ...auditUpdate(user.userId),
+            ...auditUpdate(auditUserId),
           },
         });
-        await issueActivationMail(tx, id, applicant.email, user.userId);
+        await issueActivationMail(tx, id, applicant.email, auditUserId);
       },
       {
         // 发信可能较慢，避免默认 timeout 过早中断
@@ -234,6 +310,10 @@ export async function resendActivationLink(
   if (!applicant) {
     return new ErrorResponse(errorCode.VALIDATION_ERROR, "申请人不存在");
   }
+
+  const permError = checkApprovePermission(applicant, user);
+  if (permError) return permError;
+
   if (applicant.status === "PENDING") {
     return new ErrorResponse(errorCode.VALIDATION_ERROR, "申请尚未审核，请先审核通过");
   }
@@ -244,6 +324,11 @@ export async function resendActivationLink(
     return new ErrorResponse(errorCode.VALIDATION_ERROR, "该用户已激活，无需重发");
   }
 
+  // 审计字段引用 AdminUser 表：merchant 用户改用匿名 AdminUser ID
+  const auditUserId = user.role === "admin"
+    ? user.userId
+    : await getAnonymousAdminUserId();
+
   try {
     await prisma.$transaction(
       async (tx) => {
@@ -252,10 +337,10 @@ export async function resendActivationLink(
           where: { applicantId: id, usedAt: null, revokedAt: null },
           data: {
             revokedAt: new Date(),
-            ...auditUpdate(user.userId),
+            ...auditUpdate(auditUserId),
           },
         });
-        await issueActivationMail(tx, id, applicant.email, user.userId);
+        await issueActivationMail(tx, id, applicant.email, auditUserId);
       },
       {
         timeout: 30_000,
