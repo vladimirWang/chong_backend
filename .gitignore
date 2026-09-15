@@ -6,3 +6,6 @@ nginx/ssl
 
 # LLVM/Bun 覆盖率原始数据
 *.profraw
+.env.prod
+.env.devLocal
+.env.test
