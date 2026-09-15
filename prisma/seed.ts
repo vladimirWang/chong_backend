@@ -1,9 +1,9 @@
 import prisma from "../src/utils/prisma";
 
-const ANONYMOUS_EMAIL = process.env.ANONYMOUS_EMAIL;
-const ANONYMOUS_USERNAME = process.env.ANONYMOUS_USERNAME;
-const ANONYMOUS_PASSWORD = process.env.ANONYMOUS_PASSWORD;
-const ANONYMOUS_SALT = process.env.ANONYMOUS_SALT;
+// const ANONYMOUS_EMAIL = process.env.ANONYMOUS_EMAIL;
+// const ANONYMOUS_USERNAME = process.env.ANONYMOUS_USERNAME;
+// const ANONYMOUS_PASSWORD = process.env.ANONYMOUS_PASSWORD;
+// const ANONYMOUS_SALT = process.env.ANONYMOUS_SALT;
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME;
@@ -41,13 +41,13 @@ async function upsertPlatform(data: { name: string }) {
 
 async function main() {
   await prisma.$connect();
-  // 顺序执行，避免两个 upsert 同时抢连接池导致 @prisma/adapter-mariadb 在刚建连时超时
-  const task1 = upsertAdminUser({
-    email: ANONYMOUS_EMAIL!,
-    username: ANONYMOUS_USERNAME!,
-    password: ANONYMOUS_PASSWORD!,
-    salt: ANONYMOUS_SALT!,
-  });
+  // // 顺序执行，避免两个 upsert 同时抢连接池导致 @prisma/adapter-mariadb 在刚建连时超时
+  // const task1 = upsertAdminUser({
+  //   email: ANONYMOUS_EMAIL!,
+  //   username: ANONYMOUS_USERNAME!,
+  //   password: ANONYMOUS_PASSWORD!,
+  //   salt: ANONYMOUS_SALT!,
+  // });
   const task2 = upsertAdminUser({
     email: ADMIN_EMAIL!,
     username: ADMIN_USERNAME!,
@@ -61,7 +61,7 @@ async function main() {
   `;
   const task4 = upsertPlatform({ name: "拼多多" });
   const task5 = upsertPlatform({ name: "闲鱼" });
-  return Promise.all([task1, task2, task3, task4, task5]);
+  return Promise.all([task2, task3, task4, task5]);
 }
 
 async function run() {

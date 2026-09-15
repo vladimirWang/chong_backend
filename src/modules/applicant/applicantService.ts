@@ -30,7 +30,8 @@ type TxClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
  * 与老架构一致从 ANONYMOUS_EMAIL 对应的 AdminUser 取，查不到退回 0。
  */
 async function getAnonymousAdminUserId(): Promise<number> {
-  const email = process.env.ANONYMOUS_EMAIL;
+  // const email = process.env.ANONYMOUS_EMAIL;
+  const email = process.env.ADMIN_EMAIL;
   if (email) {
     const admin = await prisma.adminUser.findFirst({ where: { email } });
     if (admin) return admin.id;
