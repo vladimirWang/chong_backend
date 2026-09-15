@@ -13,8 +13,31 @@ function withBaseUrl(logo: string | null): string | null {
 }
 
 /**
- * GET /tenant：获取当前登录用户所属租户信息
- * 仅租户超级管理员可访问（页面查看权限）
+ * GET /tenant/info：获取当前登录用户所属租户基本信息（名称、code、logo）
+ * 任意租户用户可调（不限 superUser），用于侧边栏等展示
+ */
+export async function getTenantInfo(user: AuthUser | undefined) {
+  if (!user?.tenantId) {
+    return new ErrorResponse(errorCode.FORBIDDEN, "无所属租户");
+  }
+
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: user.tenantId },
+    select: { id: true, name: true, code: true, logo: true },
+  });
+  if (!tenant) {
+    return new ErrorResponse(errorCode.TENANT_NOT_FOUND, "租户不存在");
+  }
+
+  return new SuccessResponse(
+    { ...tenant, logo: withBaseUrl(tenant.logo) },
+    "租户信息获取成功",
+  );
+}
+
+/**
+ * GET /tenant：获取当前登录用户所属租户完整信息
+ * 仅租户超级管理员可访问（租户设置页面）
  */
 export async function getTenantProfile(user: AuthUser | undefined) {
   if (!user?.tenantId || !user.isSuperUser) {
