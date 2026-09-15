@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { serveStatic } from 'hono/bun'
 import prisma from './utils/prisma'
 import { getClickhouse, initClickhouse, ACCESS_LOG_TABLE } from './utils/clickhouse'
 import { connectRedis } from './utils/redis'
@@ -34,6 +35,9 @@ app.use('*', async (c, next) => {
 app.get('/', (c) => {
   return c.text('Hello Hono!')
 })
+
+// 静态资源：上传的文件存于 public/uploads（商品图、租户 logo 等），通过 /uploads/* 直接访问
+app.use('/uploads/*', serveStatic({ root: './public' }))
 
 app.route('/nodejs_api', apiRouter)
 

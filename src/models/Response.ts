@@ -40,4 +40,6 @@ export const errorCode = {
   APPLICATION_NOT_FOUND: 10014, // 未收到系统权限申请
   SYSTEM_ERROR: 10015, // 系统错误
   FORBIDDEN: 10018, // 无权操作
+  TENANT_NOT_FOUND: 10021, // 租户不存在
+  TENANT_NAME_EXISTED: 10022, // 租户名称已存在
 };
