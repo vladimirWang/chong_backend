@@ -1,5 +1,5 @@
 # 使用官方 Bun 镜像
-FROM oven/bun:1.2-alpine
+FROM oven/bun:1.4-alpine
 
 WORKDIR /app
 
