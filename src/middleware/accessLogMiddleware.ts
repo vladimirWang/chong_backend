@@ -33,7 +33,7 @@ export async function accessLogMiddleware(c: Context, next: Next) {
 
   // 不 await：日志落库不阻塞/拖慢响应
   ch.insert({ table: ACCESS_LOG_TABLE, values: [row], format: "JSONEachRow" })
-    .catch((err) => {
+    .catch((err: unknown) => {
       console.warn("[accessLog] 写入 ClickHouse 失败:", err);
     });
 }

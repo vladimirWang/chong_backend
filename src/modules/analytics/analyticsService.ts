@@ -55,7 +55,7 @@ async function queryCh<T>(
     format: "JSONEachRow",
   });
   // JSONEachRow：json<Row>() 返回 Row[]
-  return resultSet.json<T>();
+  return resultSet.json() as T[];
 }
 
 /** GET /analytics/overview：区间 PV/UV（UV = 去重登录用户数） */
