@@ -41,27 +41,20 @@ async function upsertPlatform(data: { name: string }) {
 
 async function main() {
   await prisma.$connect();
-  // // 顺序执行，避免两个 upsert 同时抢连接池导致 @prisma/adapter-mariadb 在刚建连时超时
-  // const task1 = upsertAdminUser({
-  //   email: ANONYMOUS_EMAIL!,
-  //   username: ANONYMOUS_USERNAME!,
-  //   password: ANONYMOUS_PASSWORD!,
-  //   salt: ANONYMOUS_SALT!,
-  // });
-  const task2 = upsertAdminUser({
+  // 顺序执行，避免多个查询同时抢连接池导致 @prisma/adapter-mariadb 在刚建连时超时/卡死
+  await upsertAdminUser({
     email: ADMIN_EMAIL!,
     username: ADMIN_USERNAME!,
     password: ADMIN_PASSWORD!,
     salt: ADMIN_SALT!,
   });
   // 用原生 SQL 固定 id=1，绕过 Prisma upsert 对主键处理的兼容性问题
-  const task3 = prisma.$executeRaw`
+  await prisma.$executeRaw`
     INSERT INTO Platform (id, name, updatedAt) VALUES (1, '实体店', NOW())
     ON DUPLICATE KEY UPDATE name = '实体店'
   `;
-  const task4 = upsertPlatform({ name: "拼多多" });
-  const task5 = upsertPlatform({ name: "闲鱼" });
-  return Promise.all([task2, task3, task4, task5]);
+  await upsertPlatform({ name: "拼多多" });
+  await upsertPlatform({ name: "闲鱼" });
 }
 
 async function run() {

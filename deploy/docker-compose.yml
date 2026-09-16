@@ -4,6 +4,9 @@ services:
       context: ../nginx
       args:
         NGINX_SITE: prod
+    # 服务器重启后 nginx 可能早于 server 接入网络，静态 upstream 解析失败会 emerg 退出；
+    # 加自重启 + 等 server 健康后再启动
+    restart: unless-stopped
     volumes:
       - ../nginx/html/dist:/usr/share/nginx/html:ro
       - ../nginx/ssl:/etc/ssl/cert:ro
@@ -11,7 +14,8 @@ services:
       - "6080:80"
       - "6443:443"
     depends_on:
-      - server
+      server:
+        condition: service_healthy
     networks:
       - default
 
@@ -34,6 +38,14 @@ services:
         condition: service_healthy
     volumes:
       - /var/log/galleryrepo_server:/var/log/galleryrepo_server:rw
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - bun -e "fetch('http://127.0.0.1:4000/ping').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
     networks:
       - mac_docker_network
       - default
@@ -59,7 +71,8 @@ services:
     env_file:
       - ../.env.prod
     depends_on:
-      - server
+      server:
+        condition: service_healthy
     restart: unless-stopped
     volumes:
       - /var/log/galleryrepo_worker:/var/log/galleryrepo_worker:rw

@@ -22,7 +22,7 @@ services:
 
   image-service:
     build:
-      context: ../../image_service
+      context: /root/image_service
       dockerfile: Dockerfile
     image: image-service:dev
     expose:
