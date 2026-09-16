@@ -5,6 +5,7 @@ import { getPaginationValues } from "../../utils/db";
 import { auditCreate, auditCreateConnect, auditUpdate } from "../../utils/auditUser";
 import { getRabbitChannel } from "../../utils/rabbitmq";
 import { sendFrom } from "../../utils/mailer";
+import { createModuleLogger } from "../../utils/logger";
 import {
   applicantExchange,
   applicationApproveRoutingKey,
@@ -21,6 +22,8 @@ import type {
   CheckInviteCodeBody,
   SendInviteCodeBody,
 } from "./applicantValidator";
+
+const logger = createModuleLogger("applicant");
 
 /** 交互式事务 client 类型（从扩展型 prisma 实例推导，与 $transaction 回调入参一致） */
 type TxClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
@@ -193,7 +196,7 @@ async function issueActivationMail(
   await channel.assertExchange(applicantExchange, "topic", {
     durable: true,
   });
-  console.log("insertMail.id: ", insertMail.id);
+  logger.info("审核通过，创建激活邮件", { mailId: insertMail.id });
   const buf = JSON.stringify({ mailId: insertMail.id });
   channel.publish(
     applicantExchange,
@@ -201,7 +204,7 @@ async function issueActivationMail(
     Buffer.from(buf),
     { persistent: true },
   );
-  console.log("publish success mailId: ", insertMail.id);
+  logger.info("已投递发信消息", { mailId: insertMail.id });
 }
 
 /**
@@ -281,7 +284,9 @@ export async function approveApplication(
       },
     );
   } catch (error) {
-    console.error("approveApplication error: ", error);
+    logger.error(
+      `approveApplication error: ${error instanceof Error ? error.stack ?? error.message : String(error)}`,
+    );
     return new ErrorResponse(
       errorCode.SYSTEM_ERROR,
       "审核失败：数据库更新或发送邮件出错，已回滚",
@@ -349,7 +354,9 @@ export async function resendActivationLink(
       },
     );
   } catch (error) {
-    console.error("resendActivationLink error: ", error);
+    logger.error(
+      `resendActivationLink error: ${error instanceof Error ? error.stack ?? error.message : String(error)}`,
+    );
     return new ErrorResponse(
       errorCode.SYSTEM_ERROR,
       "重发失败：数据库更新或发送邮件出错，已回滚",

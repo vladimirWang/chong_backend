@@ -29,13 +29,11 @@ services:
       - "4000:4000"
     env_file:
       - ../.env.prod
-    environment:
-      IMAGE_GRPC_TARGET: image-service:50051
     depends_on:
       image-service:
         condition: service_healthy
     volumes:
-      - /var/log/galleryrepo:/var/log/galleryrepo:rw
+      - /var/log/galleryrepo_server:/var/log/galleryrepo_server:rw
     networks:
       - mac_docker_network
       - default
@@ -63,6 +61,8 @@ services:
     depends_on:
       - server
     restart: unless-stopped
+    volumes:
+      - /var/log/galleryrepo_worker:/var/log/galleryrepo_worker:rw
     networks:
       - mac_docker_network
       - default

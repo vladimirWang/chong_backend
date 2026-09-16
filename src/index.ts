@@ -6,7 +6,10 @@ import { connectRedis } from './utils/redis'
 import { apiRouter } from './router'
 import { HttpError } from './models/HttpError'
 import { errorCode } from './models/Response'
+import { createModuleLogger } from './utils/logger'
 import type { ContentfulStatusCode } from 'hono/utils/http-status'
+
+const logger = createModuleLogger('http')
 const app = new Hono()
 
 // 全局异常：业务可预期的 HttpError → 对应状态码 + ErrorResponse；其余 500
@@ -17,19 +20,18 @@ app.onError((err, c) => {
       err.status as ContentfulStatusCode,
     )
   }
-  console.error('[onError]', err)
+  logger.error(`未捕获异常: ${err instanceof Error ? err.stack ?? err.message : String(err)}`)
   return c.json({ code: errorCode.INTERNAL_ERROR, message: '服务器内部错误', data: null }, 500)
 })
 
 app.use('*', async (c, next) => {
   // ========= 请求进来：前置拦截逻辑（路由执行之前） =========
-  console.log('收到请求', c.req.method, c.req.path)
-  // 可以在这里做：鉴权、traceId、日志、注入上下文、设置用户信息（对应你GORM的tx.Set）
+  logger.debug('收到请求', { method: c.req.method, path: c.req.path })
 
   await next() // 放行，进入后续中间件/路由
 
   // ========= 响应返回：后置拦截逻辑（路由执行完之后） =========
-  console.log('响应状态码', c.res.status)
+  logger.debug('响应状态码', { status: c.res.status, path: c.req.path })
 })
 
 app.get('/', (c) => {
@@ -88,4 +90,4 @@ Bun.serve({
   port: 4000,
   fetch: app.fetch,
 })
-console.log("server: http://localhost:4000")
+logger.info('server: http://localhost:4000')

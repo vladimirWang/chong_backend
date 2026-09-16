@@ -1,8 +1,11 @@
 import { Prisma } from "@prisma/client";
 import prisma from "../../utils/prisma";
 import { ErrorResponse, SuccessResponse, errorCode } from "../../models/Response";
+import { createModuleLogger } from "../../utils/logger";
 import type { AuthUser } from "../../types/auth";
 import type { UpdateTenantBody } from "./tenantValidator";
+
+const logger = createModuleLogger("tenant");
 
 /** Tenant 是跨租户的全局表，统一用 basePrisma，不用 tenantPrisma */
 
@@ -93,7 +96,9 @@ export async function updateTenantProfile(
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
       return new ErrorResponse(errorCode.TENANT_NOT_FOUND, "租户不存在");
     }
-    console.error("[updateTenantProfile]", error);
+    logger.error(
+      `[updateTenantProfile] ${error instanceof Error ? error.stack ?? error.message : String(error)}`,
+    );
     return new ErrorResponse(errorCode.SYSTEM_ERROR, "更新租户信息失败");
   }
 }

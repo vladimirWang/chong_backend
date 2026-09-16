@@ -1,4 +1,7 @@
 import { createClient, type RedisClientType } from "@redis/client";
+import { createModuleLogger } from "./logger";
+
+const logger = createModuleLogger("redis");
 
 const redisClient: RedisClientType = createClient({
   url: process.env.REDIS_URL,
@@ -7,15 +10,15 @@ const redisClient: RedisClientType = createClient({
 function connectRedis() {
   return redisClient
     .on("error", (err) => {
-      console.error("Redis error:", err?.message);
+      logger.error("Redis error", { error: err?.message });
     })
     .connect()
     .then((res) => {
-      console.log("Redis 连接成功");
+      logger.info("Redis 连接成功");
       return res;
     })
     .catch((err) => {
-      console.error("Redis 连接失败:", err?.message);
+      logger.error("Redis 连接失败", { error: err?.message });
       return Promise.reject(err);
     });
 }

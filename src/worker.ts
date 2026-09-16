@@ -14,6 +14,9 @@ import {
 import { getRabbitChannel } from "./utils/rabbitmq";
 import { sendEmail } from "./utils/mailer";
 import prisma from "./utils/prisma";
+import { createModuleLogger } from "./utils/logger";
+
+const logger = createModuleLogger("worker");
 
 async function startWorker() {
   const channel = await getRabbitChannel();
@@ -31,7 +34,7 @@ async function startWorker() {
     if (!msg) return;
     try {
       const value = msg.content.toString();
-      console.log("[worker] 收到消息:", value);
+      logger.info("收到消息", { body: value });
 
       let parsed: { mailId?: number };
       try {
@@ -54,11 +57,11 @@ async function startWorker() {
         where: { id: parsed.mailId },
         data: { sendAt: new Date() },
       });
-      console.log(`[worker] 邮件发送成功: id=${mail.id}, to=${mail.to}`);
+      logger.info(`邮件发送成功: id=${mail.id}, to=${mail.to}`);
       channel.ack(msg);
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : String(err);
-      console.error("[worker] 消费失败:", errMsg);
+      logger.error("消费失败", { error: errMsg });
       // 尝试递增 failCount（parsed 可能未定义，需二次解析）
       try {
         const parsed = JSON.parse(msg.content.toString());
@@ -76,10 +79,12 @@ async function startWorker() {
     }
   });
 
-  console.log("[worker] 邮件消费者已启动，等待消息...");
+  logger.info("邮件消费者已启动，等待消息...");
 }
 
 startWorker().catch((err) => {
-  console.error("[worker] 启动失败:", err);
+  logger.error(
+    `启动失败: ${err instanceof Error ? err.stack ?? err.message : String(err)}`,
+  );
   process.exit(1);
 });

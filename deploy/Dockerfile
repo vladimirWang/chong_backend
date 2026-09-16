@@ -20,6 +20,9 @@ RUN chmod +x ./docker-entrypoint.sh
 # 复制源码
 COPY . .
 
+# 日志输出目录（compose 会挂载宿主机目录覆盖）
+RUN mkdir -p /var/log/galleryrepo_server /var/log/galleryrepo_worker
+
 # COPY scripts/docker-entrypoint.sh /app/docker-entrypoint.sh
 # RUN chmod +x /app/docker-entrypoint.sh
 

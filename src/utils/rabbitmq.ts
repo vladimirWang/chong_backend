@@ -1,4 +1,7 @@
 import amqp from "amqplib";
+import { createModuleLogger } from "./logger";
+
+const logger = createModuleLogger("rabbitmq");
 
 // 用返回值推断类型，避免依赖 @types/amqplib 不同版本间的类型改名（Connection/Channel）
 type AmqpConnection = Awaited<ReturnType<typeof amqp.connect>>;
@@ -15,16 +18,16 @@ function getConnection(): Promise<AmqpConnection> {
     connPromise = amqp
       .connect(process.env.RABBITMQ_URL!)
       .then((conn) => {
-        console.log("[rabbitmq] 连接成功");
+        logger.info("连接成功");
         conn.on("close", resetAll);
         conn.on("error", (err) => {
-          console.error("[rabbitmq] connection error:", err?.message);
+          logger.error("connection error", { error: err?.message });
           resetAll();
         });
         return conn;
       })
       .catch((err) => {
-        console.error("[rabbitmq] 连接失败:", err?.message);
+        logger.error("连接失败", { error: err?.message });
         resetAll();
         return Promise.reject(err);
       });
@@ -41,7 +44,7 @@ export function getRabbitChannel(): Promise<AmqpChannel> {
           channelPromise = null;
         });
         channel.on("error", (err) => {
-          console.error("[rabbitmq] channel error:", err?.message);
+          logger.error("channel error", { error: err?.message });
           channelPromise = null;
         });
         return channel;

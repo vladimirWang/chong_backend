@@ -8,8 +8,11 @@ import {
   SuccessResponse,
   errorCode,
 } from "../../models/Response";
+import { createModuleLogger } from "../../utils/logger";
 import type { AuthUser } from "../../types/auth";
 import type { LoginBody, RegisterByTokenBody } from "./userValidator";
+
+const logger = createModuleLogger("user");
 
 export type JwtPayload = {
   userId: number;
@@ -291,7 +294,9 @@ export async function registerUserByToken(body: RegisterByTokenBody) {
       });
     });
   } catch (error) {
-    console.error("registerUserByToken error: ", error);
+    logger.error(
+      `registerUserByToken error: ${error instanceof Error ? error.stack ?? error.message : String(error)}`,
+    );
     const msg = error instanceof Error ? error.message : "注册失败，已回滚";
     return new ErrorResponse(errorCode.SYSTEM_ERROR, msg);
   }
