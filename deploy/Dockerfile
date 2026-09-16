@@ -22,6 +22,8 @@ COPY . .
 
 # 日志输出目录（compose 会挂载宿主机目录覆盖）
 RUN mkdir -p /var/log/galleryrepo_server /var/log/galleryrepo_worker
+# 上传目录兜底（生产由 compose 挂载宿主机卷覆盖；未挂载时代码也会自行 mkdir）
+RUN mkdir -p /app/public/uploads
 
 # COPY scripts/docker-entrypoint.sh /app/docker-entrypoint.sh
 # RUN chmod +x /app/docker-entrypoint.sh
