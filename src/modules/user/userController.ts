@@ -6,8 +6,9 @@ import {
   loginUser,
   logoutUser,
   registerUserByToken,
+  updateUserPassword,
 } from "./userService";
-import type { LoginBody, RegisterByTokenBody } from "./userValidator";
+import type { LoginBody, RegisterByTokenBody, UpdatePasswordBody } from "./userValidator";
 
 /**
  * HTTP 层：取参（zValidator 已在路由层校验过）、调 service、组装响应
@@ -61,4 +62,10 @@ export const logoutUserHandler = async (c: Context) => {
 export const registerUserByTokenHandler = async (c: Context) => {
   const body = c.req.valid("json" as never) as RegisterByTokenBody;
   return c.json(await registerUserByToken(body));
+};
+
+/** POST /user/updatePassword：修改密码（需登录，user 由 authMiddleware 注入） */
+export const updatePasswordHandler = async (c: Context) => {
+  const body = c.req.valid("json" as never) as UpdatePasswordBody;
+  return c.json(await updateUserPassword(body, c.get("user")));
 };

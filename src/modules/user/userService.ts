@@ -10,7 +10,7 @@ import {
 } from "../../models/Response";
 import { createModuleLogger } from "../../utils/logger";
 import type { AuthUser } from "../../types/auth";
-import type { LoginBody, RegisterByTokenBody } from "./userValidator";
+import type { LoginBody, RegisterByTokenBody, UpdatePasswordBody } from "./userValidator";
 
 const logger = createModuleLogger("user");
 
@@ -302,4 +302,46 @@ export async function registerUserByToken(body: RegisterByTokenBody) {
   }
 
   return new SuccessResponse(null, "用户注册成功");
+}
+
+/**
+ * 修改密码（需登录）
+ * 移植自 adminUserService.updateAdminPassword，查询 prisma.user
+ * 新增校验：新密码不能与旧密码一致
+ */
+export async function updateUserPassword(
+  body: UpdatePasswordBody,
+  user: AuthUser | undefined,
+) {
+  const { current, password, nonce } = body;
+  if (!user) {
+    return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
+  }
+  const userMatched = await prisma.user.findFirst({
+    where: { id: user.userId },
+  });
+  if (!userMatched) {
+    return new ErrorResponse(errorCode.USER_NOT_FOUND, "用户不存在");
+  }
+
+  // 校验当前密码：sha256(库中password + "_" + nonce) 必须等于前端传来的 current
+  const calculatedPassword = sha256(userMatched.password + "_" + nonce);
+  if (calculatedPassword !== current) {
+    return new ErrorResponse(errorCode.PASSWORD_INCORRECT, "密码不正确");
+  }
+
+  // 校验新密码不能与旧密码一致
+  const newPasswordHash = sha256(password + "_" + userMatched.salt);
+  if (newPasswordHash === userMatched.password) {
+    return new ErrorResponse(
+      errorCode.VALIDATION_ERROR,
+      "新密码不能与旧密码一致",
+    );
+  }
+
+  await prisma.user.update({
+    where: { id: userMatched.id },
+    data: { password: newPasswordHash },
+  });
+  return new SuccessResponse(null, "密码修改成功");
 }

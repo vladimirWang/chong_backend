@@ -7,11 +7,13 @@ import {
   loginHandler,
   logoutUserHandler,
   registerUserByTokenHandler,
+  updatePasswordHandler,
 } from "./userController";
 import {
   loginBodySchema,
   paramEmailSchema,
   registerByTokenBodySchema,
+  updatePasswordBodySchema,
 } from "./userValidator";
 
 /**
@@ -39,6 +41,11 @@ const userRouter = new Hono()
     getUserSaltByEmailHandler,
   )
   .post("/logout", logoutUserHandler)
-  .get("/current", getCurrentUserHandler);
+  .get("/current", getCurrentUserHandler)
+  .post(
+    "/updatePassword",
+    zValidator("json", updatePasswordBodySchema),
+    updatePasswordHandler,
+  );
 
 export { userRouter };

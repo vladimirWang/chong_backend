@@ -18,6 +18,14 @@ export const paramEmailSchema = z.object({
 
 export type ParamEmail = z.infer<typeof paramEmailSchema>;
 
+/** 修改密码入参（需登录，与 adminUserValidator.updatePasswordBodySchema 一致） */
+export const updatePasswordBodySchema = z.object({
+  current: z.string().min(6),
+  password: z.string().min(6),
+  nonce: z.string(),
+});
+export type UpdatePasswordBody = z.infer<typeof updatePasswordBodySchema>;
+
 /** 通过激活 token 注册的入参
  *  新流程：申请时已确定租户（applicant.tenantId 或 applicant.tenantName），
  *         激活时只需 token + username + password
