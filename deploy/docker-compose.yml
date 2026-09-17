@@ -49,9 +49,9 @@ services:
       - "4000:4000"
     env_file:
       - ../.env.prod
-    depends_on:
-      image-service:
-        condition: service_healthy
+    # depends_on:
+    #   image-service:
+    #     condition: service_healthy
     volumes:
       - /var/log/galleryrepo_server:/var/log/galleryrepo_server:rw
       # 上传文件持久化（商品图、租户 logo），否则容器重建后图片丢失/404
