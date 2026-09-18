@@ -54,7 +54,11 @@ export async function getHotSales(
   user: AuthUser,
   query: DateRangeQuery,
 ) {
-  const tenantId = user.tenantId!;
+  // 平台 admin（tenantId 为空，authMiddleware 也不会创建 tenantPrisma）没有租户口径数据，直接返回空列表
+  const tenantId = user.tenantId;
+  if (tenantId == null) {
+    return new SuccessResponse([], "热销商品获取成功");
+  }
   const { start, end } = getRangeStartEnd(query);
   const { select, from } = buildJoinWhere(tenantId, start, end, "productId");
 
@@ -95,7 +99,11 @@ export async function getTopProductsByRevenue(
   user: AuthUser,
   query: DateRangeQuery,
 ) {
-  const tenantId = user.tenantId!;
+  // 平台 admin 无租户口径数据（tenantPrisma 未创建），返回空列表
+  const tenantId = user.tenantId;
+  if (tenantId == null) {
+    return new SuccessResponse([], "销售额最高的产品获取成功");
+  }
   const { start, end } = getRangeStartEnd(query);
   const { select, from } = buildJoinWhere(tenantId, start, end, "productId");
 
@@ -133,7 +141,11 @@ export async function getTopProductsByVolume(
   user: AuthUser,
   query: DateRangeQuery,
 ) {
-  const tenantId = user.tenantId!;
+  // 平台 admin 无租户口径数据（tenantPrisma 未创建），返回空列表
+  const tenantId = user.tenantId;
+  if (tenantId == null) {
+    return new SuccessResponse([], "销量最好的产品获取成功");
+  }
   const { start, end } = getRangeStartEnd(query);
   const { select, from } = buildJoinWhere(tenantId, start, end, "productId");
 
@@ -171,7 +183,11 @@ export async function getTopVendorsByRevenue(
   user: AuthUser,
   query: DateRangeQuery,
 ) {
-  const tenantId = user.tenantId!;
+  // 平台 admin 无租户口径数据（tenantPrisma 未创建），返回空列表
+  const tenantId = user.tenantId;
+  if (tenantId == null) {
+    return new SuccessResponse([], "销售额最高的品牌获取成功");
+  }
   const { start, end } = getRangeStartEnd(query);
   const { select, from } = buildJoinWhere(tenantId, start, end, "vendorId");
 
