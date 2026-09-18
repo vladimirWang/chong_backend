@@ -12,8 +12,6 @@ import type { ContentfulStatusCode } from 'hono/utils/http-status'
 const logger = createModuleLogger('http')
 const app = new Hono()
 
-logger.error("------------start app-------------")
-
 // 全局异常：业务可预期的 HttpError → 对应状态码 + ErrorResponse；其余 500
 app.onError((err, c) => {
   if (err instanceof HttpError) {
@@ -86,7 +84,7 @@ app.get("/ping", async (c) => {
 })
 
 await connectRedis()
-await initClickhouse()
+// await initClickhouse()
 
 Bun.serve({
   port: 4000,

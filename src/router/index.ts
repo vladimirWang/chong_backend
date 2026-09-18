@@ -23,7 +23,7 @@ import { tenantRouter } from "../modules/tenant/tenantRouter";
  */
 export const apiRouter = new Hono()
   .use("*", authMiddleware)
-  .use("*", accessLogMiddleware)
+  // .use("*", accessLogMiddleware)
   .route("/user", userRouter)
   .route("/util", utilRouter)
   .route("/vendor", vendorRouter)
