@@ -27,17 +27,29 @@ export const updatePasswordBodySchema = z.object({
 export type UpdatePasswordBody = z.infer<typeof updatePasswordBodySchema>;
 
 /** 通过激活 token 注册的入参
- *  新流程：申请时已确定租户（applicant.tenantId 或 applicant.tenantName），
- *         激活时只需 token + username + password
- *  兼容：旧流程在激活时传 tenantOption/tenantCode/tenantName
+ *  新流程：加入租户或自建租户（tenantCode  + tenantOption为join或 tenantName + tenantOption为create），
+ *         基础字段 token + username + password
  */
-export const registerByTokenBodySchema = z.object({
+// 基础字段
+const registerByTokenBaseSchema = z.object({
   token: z.string().min(1),
   password: z.string().min(6),
   username: z.string().max(8),
-  tenantOption: z.enum(["join", "create"]).optional(),
-  tenantName: z.string().optional(),
-  tenantCode: z.string().optional(),
-});
+})
+// 加入已有租户
+const registerByTokenOptionJoin = z.object({
+  tenantOption: z.enum(["join"]),
+  tenantCode: z.string(),
+})
+// 自建租户
+const registerByTokenOptionCreate = z.object({
+  tenantOption: z.enum(["create"]),
+  tenantName: z.string()
+})
+// 二选一
+export const registerByTokenBodySchema = z.xor([
+  registerByTokenBaseSchema.extend(registerByTokenOptionJoin.shape),
+  registerByTokenBaseSchema.extend(registerByTokenOptionCreate.shape),
+])
 
 export type RegisterByTokenBody = z.infer<typeof registerByTokenBodySchema>;
