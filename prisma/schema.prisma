@@ -17,8 +17,8 @@ enum TenantStatus {
 // 租户/组织
 model Tenant {
   id          Int          @id @default(autoincrement())
-  name        String       @unique// 显示名称
-  code        String       @unique // 机器用唯一编码
+  name        String       @db.VarChar(20)@unique// 显示名称
+  code        String       @db.Char(6) @unique // 机器用唯一编码
   logo        String?      // 租户 logo 文件路径（/uploads/xxx.png）
   status      TenantStatus @default(ACTIVE)
   superUserId Int?         @unique // 租户超级管理员（自建租户的申请人）

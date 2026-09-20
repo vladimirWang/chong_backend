@@ -223,7 +223,7 @@ export async function registerUserByToken(body: RegisterByTokenBody) {
         if (nameExisted) {
           throw new Error("租户名称已存在");
         }
-        const generatedCode = randomBytes(8).toString("hex");
+        const generatedCode = randomBytes(3).toString("hex");
         // 先创建 Tenant（superUserId 暂为 null）
         const newTenant = await tx.tenant.create({
           data: { name: nameToUse, code: generatedCode },
