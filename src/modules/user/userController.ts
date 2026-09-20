@@ -57,7 +57,7 @@ export const logoutUserHandler = async (c: Context) => {
 
 /**
  * POST /user/registerByToken：通过激活 token 注册用户（公共路由，无需登录）
- * 前端激活表单提交：token + password + username + tenantOption(create/join) + tenantName/tenantCode
+ * 前端激活表单提交：token + password + username（租户归属由申请/审核阶段确定）
  */
 export const registerUserByTokenHandler = async (c: Context) => {
   const body = c.req.valid("json" as never) as RegisterByTokenBody;

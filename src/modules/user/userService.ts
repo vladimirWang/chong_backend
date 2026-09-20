@@ -1,5 +1,4 @@
 import { sign } from "hono/jwt";
-import { randomBytes } from "node:crypto";
 import prisma from "../../utils/prisma";
 import { redisClient } from "../../utils/redis";
 import { sha256, isValidNonce, generateFixedSalt } from "../../utils/algo";
@@ -161,16 +160,12 @@ export async function logoutUser(token: string) {
 /**
  * 通过激活 token 注册用户（公共路由，无需登录）
  *
- * 新流程：申请时已确定租户（applicant.tenantId=join型 / applicant.tenantName=create型）
- *         激活时只需 token + username + password，租户信息从 applicant 记录取
- * 兼容旧流程：如果 applicant 没有租户信息，回退到请求体 tenantOption/tenantCode/tenantName
- *
- * create 型：事务内创建 Tenant + User，再回写 Tenant.superUserId = 新 User.id
- * join  型：applicant.tenantId 已在申请时写入，直接创建 User
+ * 租户归属在申请/审核阶段已写入 applicant.tenantId：
+ * - join  型：申请时关联已 ACTIVE 租户，激活只建 User
+ * - create 型：审核通过时创建 PENDING 占位租户，激活时建 User、绑定 superUserId、租户置为 ACTIVE
  */
 export async function registerUserByToken(body: RegisterByTokenBody) {
-  const { token, password, username, tenantOption, tenantName, tenantCode } =
-    body;
+  const { token, password, username } = body;
 
   // 1. 校验 token
   const tokenRecord = await prisma.applicantActivationToken.findFirst({
@@ -192,7 +187,7 @@ export async function registerUserByToken(body: RegisterByTokenBody) {
 
   const applicant = tokenRecord.applicant;
 
-  // 2. 邮箱是否已注册
+  // 2. 邮箱是否已注册（申请到激活存在最长 7 天窗口，激活时复查兜底）
   const userExisted = await prisma.user.findUnique({
     where: { email: applicant.email },
   });
@@ -200,94 +195,52 @@ export async function registerUserByToken(body: RegisterByTokenBody) {
     return new ErrorResponse(errorCode.VALIDATION_ERROR, "该邮箱已注册");
   }
 
-  // 3. 确定租户：优先用 applicant 已有的信息，回退到请求体
-  //    join 型：applicant.tenantId 已在 sendInviteCode 时写入
-  //    create 型：applicant.tenantName 已在 sendInviteCode 时写入
-  const isCreate =
-    applicant.tenantId == null &&
-    (applicant.tenantName != null ||
-      (tenantOption === "create" && tenantName != null));
+  // 3. 租户归属必须已在审核阶段确定
+  const tenantId = applicant.tenantId;
+  if (tenantId == null) {
+    return new ErrorResponse(errorCode.VALIDATION_ERROR, "申请信息异常，请重新提交申请");
+  }
 
-  // 4. 事务：创建 User + (create 型: 创建 Tenant + 回写 superUserId) + 更新 Applicant + 标记 token 已使用
+  // 4. 事务：创建 User +（PENDING 租户：绑定 superUserId 并置 ACTIVE）
+  //    + 更新 Applicant 为 ACTIVATED + 标记 token 已使用
   const salt = generateFixedSalt();
   const passwordHash = sha256(password + "_" + salt);
 
   try {
     await prisma.$transaction(async (tx) => {
-      if (isCreate) {
-        // create 型：在新事务内创建 Tenant
-        const nameToUse = applicant.tenantName ?? tenantName!;
-        const nameExisted = await tx.tenant.findUnique({
-          where: { name: nameToUse },
-        });
-        if (nameExisted) {
-          throw new Error("租户名称已存在");
-        }
-        const generatedCode = randomBytes(3).toString("hex");
-        // 先创建 Tenant（superUserId 暂为 null）
-        const newTenant = await tx.tenant.create({
-          data: { name: nameToUse, code: generatedCode },
-        });
-        // 创建 User
-        const newUser = await tx.user.create({
-          data: {
-            email: applicant.email,
-            password: passwordHash,
-            username,
-            salt,
-            tenantId: newTenant.id,
-          },
-        });
-        // 回写 superUserId
+      const tenant = await tx.tenant.findUnique({ where: { id: tenantId } });
+      if (!tenant) {
+        throw new Error("租户不存在");
+      }
+      if (tenant.status === "SUSPENDED" || tenant.status === "DISABLED") {
+        throw new Error("租户已停用");
+      }
+
+      const newUser = await tx.user.create({
+        data: {
+          email: applicant.email,
+          password: passwordHash,
+          username,
+          salt,
+          // tenantId: tenant.id,
+          tenant: {
+            connect: { id: tenant.id },
+          }
+        },
+      });
+
+      // create 型：审核时创建的 PENDING 占位租户，在激活时启用并绑定超级管理员
+      if (tenant.status === "PENDING") {
         await tx.tenant.update({
-          where: { id: newTenant.id },
-          data: { superUserId: newUser.id },
-        });
-        await tx.applicant.update({
-          where: { id: applicant.id },
-          data: {
-            status: "ACTIVATED",
-            tenantId: newTenant.id,
-          },
-        });
-      } else {
-        // join 型：tenantId 已在 applicant 中，或从请求体 tenantCode 查找
-        let tenantId: number;
-        if (applicant.tenantId != null) {
-          tenantId = applicant.tenantId;
-        } else {
-          // 兼容旧流程：从请求体 tenantCode 查找
-          if (!tenantCode) {
-            throw new Error("请填写租户编码");
-          }
-          const tenant = await tx.tenant.findUnique({
-            where: { code: tenantCode },
-          });
-          if (!tenant) {
-            throw new Error("租户编码不存在");
-          }
-          if (tenant.status !== "ACTIVE") {
-            throw new Error("租户已停用");
-          }
-          tenantId = tenant.id;
-        }
-        await tx.user.create({
-          data: {
-            email: applicant.email,
-            password: passwordHash,
-            username,
-            salt,
-            tenantId,
-          },
-        });
-        await tx.applicant.update({
-          where: { id: applicant.id },
-          data: {
-            status: "ACTIVATED",
-            tenantId,
-          },
+          where: { id: tenant.id },
+          data: { status: "ACTIVE", superUserId: newUser.id },
         });
       }
+
+      await tx.applicant.update({
+        where: { id: applicant.id },
+        data: { status: "ACTIVATED" },
+      });
       await tx.applicantActivationToken.update({
         where: { id: tokenRecord.id },
         data: { usedAt: new Date() },

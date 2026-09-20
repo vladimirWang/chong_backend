@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import dayjs from "dayjs";
 import prisma from "../../utils/prisma";
 import { getPaginationValues } from "../../utils/db";
-import { auditCreate, auditCreateConnect, auditUpdate } from "../../utils/auditUser";
+import { auditCreate, auditCreateConnect, auditUpdate, auditUpdateConnect } from "../../utils/auditUser";
 import { getRabbitChannel } from "../../utils/rabbitmq";
 import { sendFrom } from "../../utils/mailer";
 import { createModuleLogger } from "../../utils/logger";
@@ -54,6 +54,16 @@ export async function sendInviteCode(body: SendInviteCodeBody) {
   const userExisted = await prisma.user.findFirst({ where: { email } });
   if (userExisted) {
     return new ErrorResponse(errorCode.VALIDATION_ERROR, "邮箱已注册");
+  }
+
+  // create 型：提前校验租户名未被占用（审核通过创建 PENDING 租户时仍有唯一约束兜底竞态）
+  if (tenantName) {
+    const nameExisted = await prisma.tenant.findUnique({
+      where: { name: tenantName },
+    });
+    if (nameExisted) {
+      return new ErrorResponse(errorCode.VALIDATION_ERROR, "租户名称已存在");
+    }
   }
 
   // join 型：校验 tenantCode 有效且租户 ACTIVE
@@ -237,10 +247,11 @@ function checkApprovePermission(
 }
 
 /**
- * 审核通过：事务内创建激活 token + 更新申请状态 + 落一条 Mail，
- * 随后通过 RabbitMQ 通知 worker 异步发信
+ * 审核通过：事务内更新申请状态 +（create 型创建 PENDING 租户并回写 tenantId）
+ * + 创建激活 token + 落一条 Mail，随后通过 RabbitMQ 通知 worker 异步发信
  *
  * 权限：申请人有 tenantId → 该租户 superUser 审核；无 tenantId（create 型）→ 管理员审核
+ * 租户：create 型在此刻创建 PENDING 占位租户，用户激活时绑定 superUserId 并置 ACTIVE
  */
 export async function approveApplication(
   body: ApproveApplicationBody,
@@ -272,9 +283,38 @@ export async function approveApplication(
           where: { id, status: { not: "APPROVED" } },
           data: {
             status: "APPROVED",
-            ...auditUpdate(auditUserId),
+            ...auditUpdateConnect(auditUserId),
           },
         });
+        // create 型（applicant 无租户）：创建 PENDING 租户占位并回写 tenantId，
+        // 消除“申请→激活”窗口内同名租户先激活的竞态；租户名唯一约束为最终兜底
+        if (applicant.tenantId == null) {
+          if (!applicant.tenantName) {
+            throw new Error("申请缺少租户名称，无法创建租户");
+          }
+          const nameExisted = await tx.tenant.findUnique({
+            where: { name: applicant.tenantName },
+          });
+          if (nameExisted) {
+            throw new Error("租户名称已存在");
+          }
+          const newTenant = await tx.tenant.create({
+            data: {
+              name: applicant.tenantName,
+              code: randomBytes(3).toString("hex"),
+              status: "PENDING",
+            },
+          });
+          await tx.applicant.update({
+            where: { id },
+            // data: { tenantId: newTenant.id },
+            data: {
+              tenant: {
+                connect: { id: newTenant.id },
+              }
+            }
+          });
+        }
         await issueActivationMail(tx, id, applicant.email, auditUserId);
       },
       {

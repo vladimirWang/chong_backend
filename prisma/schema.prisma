@@ -9,6 +9,7 @@ datasource db {
 // ==================== 租户域 ====================
 
 enum TenantStatus {
+  PENDING   // 待激活：create 型租户审核通过时创建，首个用户激活后转为 ACTIVE
   ACTIVE   // 正常
   SUSPENDED // 暂停使用
   DISABLED // 已停用
@@ -36,7 +37,7 @@ model Tenant {
   stockOuts            StockOut[]
   productJoinStockOuts ProductJoinStockOut[]
   clients              Client[]
-  applicants           Applicant[] // Applicant.tenantId 可空（加入型必填、创建型为空）
+  applicants           Applicant[] // Applicant.tenantId 可空（仅待审核的 create 型为空，审核通过创建 PENDING 租户后必有值）
 }
 
 // ==================== 业务域 ====================
@@ -370,9 +371,9 @@ enum ApplicationStatus {
 // 系统申请人
 model Applicant {
   id               Int                        @id @default(autoincrement())
-  tenantId         Int?                       // 可空：加入型必填，创建型为空
+  tenantId         Int?                       // 可空：join 型申请时写入；create 型审核通过创建 PENDING 租户后回写
   tenant           Tenant?                    @relation(fields: [tenantId], references: [id])
-  tenantName       String?                    // 可空：创建型场景存新租户名称，激活时据此创建 Tenant
+  tenantName       String?                    // 可空：create 型申请时存新租户名称（申请阶段只软查重不占名），审核通过据此创建 PENDING 租户
   email            String                     @unique
   // inviteCode       String?
   status           ApplicationStatus          @default(PENDING)
