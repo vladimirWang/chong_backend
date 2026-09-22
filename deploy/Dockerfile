@@ -11,6 +11,7 @@ RUN bun install --frozen-lockfile
 
 # 复制 Prisma schema 并生成 client
 COPY prisma ./prisma
+ENV PRISMA_ENGINES_MIRROR=https://registry.npmmirror.com/-/binary/prisma
 RUN bunx prisma generate
 
 # 复制入口脚本（位于 deploy/ 目录）
