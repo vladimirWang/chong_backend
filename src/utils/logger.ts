@@ -14,9 +14,19 @@ import path from "node:path";
  */
 
 const isProduction = process.env.NODE_ENV === "production";
+const defaultLogDir = path.resolve(process.cwd(), "logs");
+
+console.log("process.env.NODE_ENV:", process.env.NODE_ENV);
+console.log("process.env.LOG_DIR:", process.env.LOG_DIR);
+console.log("isProduction:", isProduction);
+console.log("defaultLogDir:", defaultLogDir);
+
+const LOG_LEVEL = process.env.LOG_LEVEL || "debug";
 const DEFAULT_LOG_DIR =
-  process.env.LOG_DIR ||
-  (isProduction ? "/var/log/galleryrepo" : path.resolve(process.cwd(), "logs"));
+  process.env.SERVER_LOG_DIR ||
+  (isProduction ? "/var/log/galleryrepo" : defaultLogDir);
+
+console.log("DEFAULT_LOG_DIR:", DEFAULT_LOG_DIR);
 
 // 文件格式：JSON 行，带时间戳/级别/模块/堆栈
 const fileFormat = winston.format.combine(

@@ -19,7 +19,7 @@ import { mailer, sendEmail } from "./utils/mailer";
 import prisma from "./utils/prisma";
 import { createModuleLogger } from "./utils/logger";
 
-const logger = createModuleLogger("worker");
+const logger = createModuleLogger("worker", process.env.WORKER_LOG_DIR);
 
 sendEmail('184594923@qq.com', '仓库测试邮件', '这是一封测试邮件').then(() => {
   console.log("邮件发送成功");

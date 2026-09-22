@@ -27,11 +27,12 @@ app.onError((err, c) => {
 app.use('*', async (c, next) => {
   // ========= 请求进来：前置拦截逻辑（路由执行之前） =========
   logger.debug('收到请求', { method: c.req.method, path: c.req.path })
-
+  const start = performance.now()
   await next() // 放行，进入后续中间件/路由
 
+  const duration = Math.round(performance.now() - start)
   // ========= 响应返回：后置拦截逻辑（路由执行完之后） =========
-  logger.debug('响应状态码', { status: c.res.status, path: c.req.path })
+  logger.info('响应状态码', { status: c.res.status, method: c.req.method, duration: `${duration}ms`, path: c.req.path })
 })
 
 app.get('/', (c) => {
