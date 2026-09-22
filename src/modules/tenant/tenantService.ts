@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma } from "../../generated/prisma/client";
 import prisma from "../../utils/prisma";
 import { ErrorResponse, SuccessResponse, errorCode } from "../../models/Response";
 import { createModuleLogger } from "../../utils/logger";

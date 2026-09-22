@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma } from "../../generated/prisma/client";
 import { SuccessResponse } from "../../models/Response";
 import type { TenantPrismaClient } from "../../utils/prisma";
 import type { AuthUser } from "../../types/auth";

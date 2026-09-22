@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import dayjs from "dayjs";
-import type { Mail } from "@prisma/client";
+import type { Mail } from "../../generated/prisma/client";
 import prisma from "../../utils/prisma";
 import { getPaginationValues } from "../../utils/db";
 import { auditCreate, auditCreateConnect, auditUpdate, auditUpdateConnect } from "../../utils/auditUser";

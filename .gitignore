@@ -1,5 +1,8 @@
 node_modules
 .pnpm-store
+
+# Prisma v7 生成的 client
+src/generated/
 nginx/html
 public/uploads
 nginx/ssl
