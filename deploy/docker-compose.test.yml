@@ -23,28 +23,28 @@ services:
       dockerfile: deploy/Dockerfile
     expose:
       - "4000"
-    # env_file:
-    #   - ../.env.test
+    env_file:
+      - ../.env.test
     environment:
       IMAGE_GRPC_TARGET: image-service:50051
-    depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_started
-      image-service:
-        condition: service_healthy
+    # depends_on:
+    #   mysql:
+    #     condition: service_healthy
+    #   redis:
+    #     condition: service_started
+    #   image-service:
+    #     condition: service_healthy
 
-  image-service:
-    build:
-      context: ../../image_service
-      dockerfile: Dockerfile
-    image: image-service:test
-    expose:
-      - "50051"
-    environment:
-      IMAGE_GRPC_HOST: 0.0.0.0
-      IMAGE_GRPC_PORT: 50051
+  # image-service:
+  #   build:
+  #     context: ../../image_service
+  #     dockerfile: Dockerfile
+  #   image: image-service:test
+  #   expose:
+  #     - "50051"
+  #   environment:
+  #     IMAGE_GRPC_HOST: 0.0.0.0
+  #     IMAGE_GRPC_PORT: 50051
 
   mysql:
     image: mysql:8.0
