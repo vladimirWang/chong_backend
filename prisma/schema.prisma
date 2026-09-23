@@ -39,6 +39,9 @@ model Tenant {
   productJoinStockOuts ProductJoinStockOut[]
   clients              Client[]
   applicants           Applicant[] // Applicant.tenantId 可空（仅待审核的 create 型为空，审核通过创建 PENDING 租户后必有值）
+  skuCategories        SkuCategory[]
+  skus                 Sku[]
+  productJoinSkus      ProductJoinSku[]
 }
 
 // ==================== 业务域 ====================
@@ -150,6 +153,7 @@ model Product {
   productJoinStockIn  ProductJoinStockIn[] // 进货中间表
   historyCost         HistoryCost[]         @relation("HistoryCostProduct")
   productJoinStockOut ProductJoinStockOut[] // 出货中间表
+  productJoinSkus     ProductJoinSku[] // SKU 中间表
   stockOutPending     Int                   @default(0) @db.UnsignedSmallInt // 出货中产品
   stockInPending      Int                   @default(0) @db.UnsignedSmallInt // 进货中产品
   salePrice           Int? // 销售价
@@ -164,6 +168,75 @@ model Product {
   @@index([tenantId])
   @@index([vendorId], map: "Product_brandId_fkey")
   @@unique([tenantId, vendorId, name])
+}
+
+// SKU 分类（如：颜色、尺码），租户内字典
+model SkuCategory {
+  id            Int       @id @default(autoincrement()) @db.UnsignedSmallInt
+  tenantId      Int
+  tenant        Tenant    @relation(fields: [tenantId], references: [id])
+  name          String    @db.VarChar(20)
+  skus          Sku[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+  createdBy     Int
+  createdByUser User?     @relation("SkuCategoryCreatedBy", fields: [createdBy], references: [id])
+  updatedBy     Int
+  updatedByUser User?     @relation("SkuCategoryUpdatedBy", fields: [updatedBy], references: [id])
+  deletedBy     Int?
+  deletedByUser User?     @relation("SkuCategoryDeletedBy", fields: [deletedBy], references: [id])
+
+  @@index([tenantId])
+  @@unique([tenantId, name])
+}
+
+// SKU（规格值，如：红色、XL），归属于一个 SKU 分类，与产品多对多
+model Sku {
+  id              Int              @id @default(autoincrement()) @db.UnsignedSmallInt
+  tenantId        Int
+  tenant          Tenant           @relation(fields: [tenantId], references: [id])
+  name            String           @db.VarChar(20)
+  skuCategoryId   Int              @db.UnsignedSmallInt
+  skuCategory     SkuCategory      @relation(fields: [skuCategoryId], references: [id])
+  productJoinSkus ProductJoinSku[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  deletedAt       DateTime?
+  createdBy       Int
+  createdByUser   User?            @relation("SkuCreatedBy", fields: [createdBy], references: [id])
+  updatedBy       Int
+  updatedByUser   User?            @relation("SkuUpdatedBy", fields: [updatedBy], references: [id])
+  deletedBy       Int?
+  deletedByUser   User?            @relation("SkuDeletedBy", fields: [deletedBy], references: [id])
+
+  @@index([tenantId])
+  @@index([skuCategoryId])
+  @@unique([tenantId, skuCategoryId, name])
+}
+
+// 产品-SKU 中间表（显式多对多，带租户隔离与审计字段）
+model ProductJoinSku {
+  id            Int       @id @default(autoincrement())
+  tenantId      Int
+  tenant        Tenant    @relation(fields: [tenantId], references: [id])
+  productId     Int
+  product       Product   @relation(fields: [productId], references: [id])
+  skuId         Int       @db.UnsignedSmallInt
+  sku           Sku       @relation(fields: [skuId], references: [id])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+  createdBy     Int
+  createdByUser User?     @relation("ProductJoinSkuCreatedBy", fields: [createdBy], references: [id])
+  updatedBy     Int
+  updatedByUser User?     @relation("ProductJoinSkuUpdatedBy", fields: [updatedBy], references: [id])
+  deletedBy     Int?
+  deletedByUser User?     @relation("ProductJoinSkuDeletedBy", fields: [deletedBy], references: [id])
+
+  @@index([tenantId])
+  @@index([skuId])
+  @@unique([productId, skuId])
 }
 
 // 用户
@@ -204,6 +277,15 @@ model User {
   productJoinStockInCreated  ProductJoinStockIn[]  @relation("ProductJoinStockInCreatedBy")
   productJoinStockInUpdated  ProductJoinStockIn[]  @relation("ProductJoinStockInUpdatedBy")
   productJoinStockInDeleted  ProductJoinStockIn[]  @relation("ProductJoinStockInDeletedBy")
+  skuCategoryCreated         SkuCategory[]         @relation("SkuCategoryCreatedBy")
+  skuCategoryUpdated         SkuCategory[]         @relation("SkuCategoryUpdatedBy")
+  skuCategoryDeleted         SkuCategory[]         @relation("SkuCategoryDeletedBy")
+  skuCreated                 Sku[]                 @relation("SkuCreatedBy")
+  skuUpdated                 Sku[]                 @relation("SkuUpdatedBy")
+  skuDeleted                 Sku[]                 @relation("SkuDeletedBy")
+  productJoinSkuCreated      ProductJoinSku[]      @relation("ProductJoinSkuCreatedBy")
+  productJoinSkuUpdated      ProductJoinSku[]      @relation("ProductJoinSkuUpdatedBy")
+  productJoinSkuDeleted      ProductJoinSku[]      @relation("ProductJoinSkuDeletedBy")
   historyCostsCreated        HistoryCost[]         @relation("HistoryCostCreatedBy")
   historyCostsUpdated        HistoryCost[]         @relation("HistoryCostUpdatedBy")
   historyCostsDeleted        HistoryCost[]         @relation("HistoryCostDeletedBy")

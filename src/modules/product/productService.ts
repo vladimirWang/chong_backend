@@ -53,6 +53,18 @@ export async function getProductById(db: TenantPrismaClient, id: number) {
       latestPrice: true,
       salePrice: true,
       desc: true,
+      productJoinSkus: {
+        select: {
+          sku: {
+            select: {
+              id: true,
+              name: true,
+              skuCategoryId: true,
+              skuCategory: { select: { id: true, name: true } },
+            },
+          },
+        },
+      },
     },
   });
   if (res?.img) {
@@ -71,7 +83,7 @@ export async function createProduct(
   if (!user) {
     throw new HttpError(400, errorCode.VALIDATION_ERROR, "未登录");
   }
-  const { name, remark, vendorId, salePrice, img, desc } = body;
+  const { name, remark, vendorId, salePrice, img, desc, skuIds } = body;
 
   const productExisted = await db.product.findFirst({
     where: { name, vendorId },
@@ -80,16 +92,38 @@ export async function createProduct(
     throw new HttpError(400, errorCode.VALIDATION_ERROR, "产品已存在");
   }
 
-  const product = await db.product.create({
-    data: {
-      name,
-      remark,
-      img,
-      vendor: { connect: { id: vendorId } },
-      salePrice,
-      desc,
-      ...auditCreateConnect(user.userId),
-    } as never,
+  const uniqueSkuIds = skuIds ? Array.from(new Set(skuIds)) : [];
+  if (uniqueSkuIds.length > 0) {
+    const skuCount = await db.sku.count({
+      where: { id: { in: uniqueSkuIds } },
+    });
+    if (skuCount !== uniqueSkuIds.length) {
+      throw new HttpError(400, errorCode.VALIDATION_ERROR, "SKU不存在");
+    }
+  }
+
+  const product = await db.$transaction(async tx => {
+    const created = await tx.product.create({
+      data: {
+        name,
+        remark,
+        img,
+        vendor: { connect: { id: vendorId } },
+        salePrice,
+        desc,
+        ...auditCreateConnect(user.userId),
+      } as never,
+    });
+    for (const skuId of uniqueSkuIds) {
+      await tx.productJoinSku.create({
+        data: {
+          product: { connect: { id: created.id } },
+          sku: { connect: { id: skuId } },
+          ...auditCreateConnect(user.userId),
+        } as never,
+      });
+    }
+    return created;
   });
   return new SuccessResponse(product, "产品创建成功");
 }
@@ -109,17 +143,48 @@ export async function updateProduct(
     throw new HttpError(400, errorCode.VALIDATION_ERROR, "产品不存在");
   }
 
-  const { salePrice, name, remark, img, desc } = body;
-  const product = await db.product.update({
-    where: { id },
-    data: {
-      name,
-      desc,
-      remark,
-      img,
-      salePrice,
-      ...auditUpdate(user.userId),
-    },
+  const { salePrice, name, remark, img, desc, skuIds } = body;
+
+  // skuIds 未传表示不修改 SKU 关联；传了（含空数组）则全量同步
+  const syncSkuIds = skuIds ? Array.from(new Set(skuIds)) : undefined;
+
+  const product = await db.$transaction(async tx => {
+    if (syncSkuIds && syncSkuIds.length > 0) {
+      const skuCount = await tx.sku.count({
+        where: { id: { in: syncSkuIds } },
+      });
+      if (skuCount !== syncSkuIds.length) {
+        throw new HttpError(400, errorCode.VALIDATION_ERROR, "SKU不存在");
+      }
+    }
+
+    const updated = await tx.product.update({
+      where: { id },
+      data: {
+        name,
+        desc,
+        remark,
+        img,
+        salePrice,
+        ...auditUpdate(user.userId),
+      },
+    });
+
+    if (syncSkuIds) {
+      // 关联表仅为映射关系，直接物理删除后重建（含清空场景）
+      await tx.productJoinSku.deleteMany({ where: { productId: id } });
+      for (const skuId of syncSkuIds) {
+        await tx.productJoinSku.create({
+          data: {
+            product: { connect: { id } },
+            sku: { connect: { id: skuId } },
+            ...auditCreateConnect(user.userId),
+          } as never,
+        });
+      }
+    }
+
+    return updated;
   });
   return new SuccessResponse(product, "产品更新成功");
 }

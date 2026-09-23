@@ -17,6 +17,7 @@ export const createProductBodySchema = z.object({
   salePrice: z.number().optional(),
   img: z.string().optional(),
   desc: z.string().optional(),
+  skuIds: z.array(z.coerce.number()).optional(),
 });
 export type CreateProductBody = z.infer<typeof createProductBodySchema>;
 
@@ -27,6 +28,7 @@ export const updateProductBodySchema = z.object({
   remark: z.string().optional(),
   img: z.string().optional(),
   desc: z.string().optional(),
+  skuIds: z.array(z.coerce.number()).optional(),
 });
 export type UpdateProductBody = z.infer<typeof updateProductBodySchema>;
 
