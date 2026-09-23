@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { serveStatic } from 'hono/bun'
+import cron from 'node-cron'
 import prisma from './utils/prisma'
 import { getClickhouse, initClickhouse, ACCESS_LOG_TABLE } from './utils/clickhouse'
 import { connectRedis } from './utils/redis'
@@ -7,8 +8,9 @@ import { apiRouter } from './router'
 import { HttpError } from './models/HttpError'
 import { errorCode } from './models/Response'
 import { createModuleLogger } from './utils/logger'
+import { autoApprovePendingApplications } from './modules/applicant/applicantService'
 import type { ContentfulStatusCode } from 'hono/utils/http-status'
-
+const isProd = process.env.NODE_ENV === 'production'
 const logger = createModuleLogger('http')
 const app = new Hono()
 
@@ -92,3 +94,16 @@ Bun.serve({
   fetch: app.fetch,
 })
 logger.info('server: http://localhost:4000')
+
+// 每30分钟自动审核 PENDING 状态的用户账户申请
+// 每30分钟执行一次 */30 * * * *
+// 每分钟执行一次  * * * * *
+cron.schedule(false ? '*/30 * * * *' : '* * * * *', async () => {
+  try {
+    logger.info('自动审核任务启动', {currentTime: new Date().toISOString()})
+    await autoApprovePendingApplications()
+  } catch (error) {
+    logger.error(`自动审核任务异常: ${error instanceof Error ? error.stack ?? error.message : String(error)}`)
+  }
+})
+logger.info('定时任务已注册：每30分钟自动审核用户申请')

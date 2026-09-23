@@ -256,6 +256,65 @@ function checkApprovePermission(
 }
 
 /**
+ * 审核核心逻辑（事务内）：更新申请状态 +（create 型创建 PENDING 租户）
+ * + 创建激活 token + 落一条 Mail，事务后通过 RabbitMQ 通知 worker 异步发信
+ * 手动审核与自动审核复用此函数
+ */
+async function approveApplicantCore(
+  applicant: { id: number; email: string; tenantId: number | null; tenantName: string | null },
+  auditUserId: number,
+): Promise<void> {
+  const { id, email } = applicant;
+  let mail: Mail | null = null;
+  await prisma.$transaction(
+    async (tx) => {
+      await tx.applicant.update({
+        where: { id, status: { not: "APPROVED" } },
+        data: {
+          status: "APPROVED",
+          ...auditUpdateConnect(auditUserId),
+        },
+      });
+      // create 型（applicant 无租户）：创建 PENDING 租户占位并回写 tenantId，
+      // 消除"申请→激活"窗口内同名租户先激活的竞态；租户名唯一约束为最终兜底
+      if (applicant.tenantId == null) {
+        if (!applicant.tenantName) {
+          throw new Error("申请缺少租户名称，无法创建租户");
+        }
+        const nameExisted = await tx.tenant.findUnique({
+          where: { name: applicant.tenantName },
+        });
+        if (nameExisted) {
+          throw new Error("租户名称已存在");
+        }
+        const newTenant = await tx.tenant.create({
+          data: {
+            name: applicant.tenantName,
+            code: randomBytes(3).toString("hex"),
+            status: "PENDING",
+          },
+        });
+        await tx.applicant.update({
+          where: { id },
+          data: {
+            tenant: {
+              connect: { id: newTenant.id },
+            }
+          }
+        });
+      }
+      mail = await insertMail(tx, id, email, auditUserId);
+    },
+    {
+      // 发信可能较慢，避免默认 timeout 过早中断
+      timeout: 30_000,
+      maxWait: 10_000,
+    },
+  );
+  await issueActivationMail(mail);
+}
+
+/**
  * 审核通过：事务内更新申请状态 +（create 型创建 PENDING 租户并回写 tenantId）
  * + 创建激活 token + 落一条 Mail，随后通过 RabbitMQ 通知 worker 异步发信
  *
@@ -284,56 +343,8 @@ export async function approveApplication(
   const auditUserId = user.role === "admin"
     ? user.userId
     : await getAnonymousAdminUserId();
-  let mail: Mail | null = null;
   try {
-    await prisma.$transaction(
-      async (tx) => {
-        await tx.applicant.update({
-          where: { id, status: { not: "APPROVED" } },
-          data: {
-            status: "APPROVED",
-            ...auditUpdateConnect(auditUserId),
-          },
-        });
-        // create 型（applicant 无租户）：创建 PENDING 租户占位并回写 tenantId，
-        // 消除“申请→激活”窗口内同名租户先激活的竞态；租户名唯一约束为最终兜底
-        if (applicant.tenantId == null) {
-          if (!applicant.tenantName) {
-            throw new Error("申请缺少租户名称，无法创建租户");
-          }
-          const nameExisted = await tx.tenant.findUnique({
-            where: { name: applicant.tenantName },
-          });
-          if (nameExisted) {
-            throw new Error("租户名称已存在");
-          }
-          const newTenant = await tx.tenant.create({
-            data: {
-              name: applicant.tenantName,
-              code: randomBytes(3).toString("hex"),
-              status: "PENDING",
-            },
-          });
-          await tx.applicant.update({
-            where: { id },
-            // data: { tenantId: newTenant.id },
-            data: {
-              tenant: {
-                connect: { id: newTenant.id },
-              }
-            }
-          });
-        }
-        // await issueActivationMail(tx, id, applicant.email, auditUserId);
-        mail = await insertMail(tx, id, applicant.email, auditUserId);
-      },
-      {
-        // 发信可能较慢，避免默认 timeout 过早中断
-        timeout: 30_000,
-        maxWait: 10_000,
-      },
-    );
-    await issueActivationMail(mail);
+    await approveApplicantCore(applicant, auditUserId);
   } catch (error) {
     logger.error(
       `approveApplication error: ${error instanceof Error ? error.stack ?? error.message : String(error)}`,
@@ -344,6 +355,42 @@ export async function approveApplication(
     );
   }
   return new SuccessResponse(null, "审核通过， 邮件已发送");
+}
+
+/**
+ * 自动审核：定时任务调用，批量审核所有 PENDING 状态的申请
+ * 审计用户使用 ANONYMOUS_EMAIL 对应的 AdminUser
+ */
+export async function autoApprovePendingApplications(): Promise<void> {
+  const pendingApplicants = await prisma.applicant.findMany({
+    where: { status: "PENDING" },
+  });
+
+  if (pendingApplicants.length === 0) {
+    logger.info("自动审核任务：无待审核申请");
+    return;
+  }
+
+  logger.info(`自动审核任务启动，待审核申请 ${pendingApplicants.length} 条`);
+
+  const auditUserId = await getAnonymousAdminUserId();
+  let successCount = 0;
+  let failCount = 0;
+
+  for (const applicant of pendingApplicants) {
+    try {
+      await approveApplicantCore(applicant, auditUserId);
+      successCount++;
+      logger.info(`自动审核成功: applicantId=${applicant.id}, email=${applicant.email}`);
+    } catch (error) {
+      failCount++;
+      logger.error(
+        `自动审核失败: applicantId=${applicant.id}, ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
+  logger.info(`自动审核任务完成: 成功 ${successCount} 条, 失败 ${failCount} 条`);
 }
 
 /**
