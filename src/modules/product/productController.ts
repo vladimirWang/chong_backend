@@ -26,7 +26,9 @@ export const getProductsHandler = async (c: Context) => {
 /** GET /product/:id */
 export const getProductByIdHandler = async (c: Context) => {
   const id = Number(c.req.param("id"));
-  return c.json(await getProductById(c.get("tenantPrisma"), id));
+  return c.json(
+    await getProductById(c.get("tenantPrisma"), id, c.get("tenantId")),
+  );
 };
 
 /** POST /product */

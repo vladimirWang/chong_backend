@@ -4,12 +4,39 @@ import { auditCreateConnect, auditUpdate } from "../../utils/auditUser";
 import { SuccessResponse, errorCode } from "../../models/Response";
 import { HttpError } from "../../models/HttpError";
 import type { AuthUser } from "../../types/auth";
+import { cacheQuery, cacheAside } from "../../utils/cacheDecorator";
 import type {
   CreateProductBody,
   ProductAmountQuery,
   ProductQuery,
   UpdateProductBody,
 } from "./productValidator";
+
+/** 产品详情缓存 key 前缀，完整 key 为 product:detail:{tenantId}:{productId} */
+const PRODUCT_DETAIL_CACHE_PREFIX = "product:detail";
+
+/** 产品详情缓存 TTL（秒），10 分钟 */
+const PRODUCT_DETAIL_CACHE_TTL = 600;
+
+/**
+ * 纯缓存读取（不回源）：命中返回产品详情，未命中返回 undefined。
+ * 泛型在调用时指定。缓存 key 包含 tenantId 以保证租户隔离。
+ *
+ * @example
+ * const detail = await getCachedProductDetail<ProductDetail>(`${tenantId}:${id}`);
+ */
+export const getCachedProductDetail = cacheQuery(PRODUCT_DETAIL_CACHE_PREFIX);
+
+/**
+ * 产品详情缓存 aside（读穿透 + 回源回填）
+ *
+ * 先查缓存，未命中执行 loader 回源查库并回填。泛型从 loader 自动推断。
+ * key 格式 product:detail:{tenantId}:{productId}
+ */
+const getProductDetailWithCache = cacheAside(
+  PRODUCT_DETAIL_CACHE_PREFIX,
+  PRODUCT_DETAIL_CACHE_TTL,
+);
 
 /**
  * 产品业务层（移植自 repo_backend productController + productRouter 内联校验）
@@ -38,40 +65,60 @@ export async function getProducts(db: TenantPrismaClient, query: ProductQuery) {
   return new SuccessResponse({ total, list }, "产品列表获取成功");
 }
 
-/** GET /product/:id：仅返回指定字段，img 拼 PUBLIC_BASE_URL 前缀 */
-export async function getProductById(db: TenantPrismaClient, id: number) {
-  const res = await db.product.findUnique({
-    where: { id },
-    select: {
-      historyCost: true,
-      name: true,
-      img: true,
-      balance: true,
-      vendorId: true,
-      remark: true,
-      latestCost: true,
-      latestPrice: true,
-      salePrice: true,
-      desc: true,
-      productJoinSkus: {
+/**
+ * GET /product/:id：先查缓存，未命中回源查库并回填缓存。
+ *
+ * 缓存 key 含 tenantId 保证租户隔离；img 拼接 PUBLIC_BASE_URL 前缀后入缓存，
+ * 因该变量为部署级常量，同一环境内缓存数据可直接复用。
+ *
+ * @param db 租户级 prisma 实例（回源查询用）
+ * @param id 产品 ID
+ * @param tenantId 租户 ID（缓存 key 隔离用）
+ */
+export async function getProductById(
+  db: TenantPrismaClient,
+  id: number,
+  tenantId: number,
+) {
+  const res = await getProductDetailWithCache(
+    `${tenantId}:${id}`,
+    async () => {
+      const row = await db.product.findUnique({
+        where: { id },
         select: {
-          sku: {
+          historyCost: true,
+          name: true,
+          img: true,
+          balance: true,
+          vendorId: true,
+          remark: true,
+          latestCost: true,
+          latestPrice: true,
+          salePrice: true,
+          desc: true,
+          productJoinSkus: {
             select: {
-              id: true,
-              name: true,
-              skuCategoryId: true,
-              skuCategory: { select: { id: true, name: true } },
+              sku: {
+                select: {
+                  id: true,
+                  name: true,
+                  skuCategoryId: true,
+                  skuCategory: { select: { id: true, name: true } },
+                },
+              },
             },
           },
         },
-      },
+      });
+      if (!row) return undefined;
+      if (row.img) {
+        // 未配置 PUBLIC_BASE_URL 时按空前缀处理（老架构会拼出 "undefined/..."）
+        row.img = `${process.env.PUBLIC_BASE_URL ?? ""}${row.img}`;
+      }
+      return row;
     },
-  });
-  if (res?.img) {
-    // 未配置 PUBLIC_BASE_URL 时按空前缀处理（老架构会拼出 "undefined/..."）
-    res.img = `${process.env.PUBLIC_BASE_URL ?? ""}${res.img}`;
-  }
-  return new SuccessResponse(res, "产品信息查询成功");
+  );
+  return new SuccessResponse(res ?? null, "产品信息查询成功");
 }
 
 /** POST /product：创建（同供应商下名称唯一） */
