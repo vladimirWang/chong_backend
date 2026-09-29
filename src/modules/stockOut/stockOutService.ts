@@ -12,6 +12,7 @@ import {
 } from "../../utils/auditUser";
 import { compareArrayMinLoop, normalizeSpecSkuIds, sum2 } from "../../utils/algo";
 import { generateServiceCode } from "../../utils/common";
+import { invalidateProductDetailCache } from "../product/productService";
 import type { AuthUser } from "../../types/auth";
 import type {
   CreateMultipleStockOut,
@@ -269,6 +270,11 @@ export async function createMultipleStockOut(
       "出货记录批量新建失败",
     );
   }
+  // 事务提交后失效相关产品详情缓存（balance/variants 已扣减）
+  await invalidateProductDetailCache(
+    tenantId,
+    normalizedLines.map((item) => item.productId),
+  );
   return new SuccessResponse(
     results[0],
     "出货记录批量新建成功, 出货单号: " + serviceCode,
@@ -313,6 +319,11 @@ export async function confirmStockOutCompleted(
       }),
     ),
   ]);
+  // 事务提交后失效相关产品详情缓存（latestPrice 已变更）
+  await invalidateProductDetailCache(
+    user.tenantId!,
+    productsInRecord.map((item) => item.productId),
+  );
   return new SuccessResponse(null, "出货确认成功");
 }
 
@@ -379,6 +390,11 @@ export async function updateStockOut(
       ),
       db.stockOut.delete({ where: { id } }),
     ]);
+    // 事务提交后失效相关产品详情缓存（balance/variants 已回滚）
+    await invalidateProductDetailCache(
+      user.tenantId!,
+      existedRecord.map((item) => item.productId),
+    );
     return new SuccessResponse(null, "出货单已删除（无产品数据）");
   }
 
@@ -575,6 +591,11 @@ export async function updateStockOut(
       }),
     ),
   ]);
+  // 事务提交后失效所有涉及产品的详情缓存（balance/variants 增量已变更）
+  await invalidateProductDetailCache(
+    user.tenantId!,
+    [...added, ...modified, ...deleted].map((item) => item.productId),
+  );
   return new SuccessResponse(null, "出货单更新成功");
 }
 
@@ -705,6 +726,11 @@ export async function batchDeleteStockOut(
     ),
   ]);
 
+  // 事务提交后失效相关产品详情缓存（balance/variants 已回滚）
+  await invalidateProductDetailCache(
+    user.tenantId!,
+    Object.keys(pendingCount).map(Number),
+  );
   return new SuccessResponse(txResults, "出货单批量删除成功");
 }
 
@@ -759,5 +785,10 @@ export async function restoreDeletedStockOut(
     ),
   ]);
 
+  // 事务提交后失效相关产品详情缓存（balance/variants 已重放扣减）
+  await invalidateProductDetailCache(
+    user.tenantId!,
+    Object.keys(pendingCount).map(Number),
+  );
   return new SuccessResponse(txResults, "出货单恢复成功");
 }

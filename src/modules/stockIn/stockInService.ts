@@ -16,6 +16,7 @@ import {
   sum2,
 } from "../../utils/algo";
 import { generateServiceCode } from "../../utils/common";
+import { invalidateProductDetailCache } from "../product/productService";
 import type { AuthUser } from "../../types/auth";
 import type {
   BatchDeleteStockInQuery,
@@ -407,6 +408,11 @@ export async function confirmCompleted(
       }),
     ),
   ]);
+  // 事务提交后失效相关产品详情缓存（balance/latestCost/variants/historyCost 已变更）
+  await invalidateProductDetailCache(
+    tenantId,
+    relatedProducts.map((item) => item.productId),
+  );
   return new SuccessResponse(record, "进货单确认成功");
 }
 

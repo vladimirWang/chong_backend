@@ -4,7 +4,11 @@ import { auditCreateConnect, auditUpdate } from "../../utils/auditUser";
 import { SuccessResponse, errorCode } from "../../models/Response";
 import { HttpError } from "../../models/HttpError";
 import type { AuthUser } from "../../types/auth";
-import { cacheQuery, cacheAside } from "../../utils/cacheDecorator";
+import {
+  cacheQuery,
+  cacheAside,
+  invalidateCache,
+} from "../../utils/cacheDecorator";
 import type {
   CreateProductBody,
   ProductAmountQuery,
@@ -37,6 +41,19 @@ const getProductDetailWithCache = cacheAside(
   PRODUCT_DETAIL_CACHE_PREFIX,
   PRODUCT_DETAIL_CACHE_TTL,
 );
+
+/**
+ * 写后失效产品详情缓存（须在数据库事务提交成功后调用）。
+ * 下次读请求由 cacheAside 回源回填，避免手动 SET 与读路径的序列化/img
+ * 加工逻辑不一致；删除失败由 invalidateCache 内部吞掉，不影响已提交事务。
+ */
+export const invalidateProductDetailCache = (
+  tenantId: number,
+  productIds: number[],
+) =>
+  invalidateCache(PRODUCT_DETAIL_CACHE_PREFIX)(
+    productIds.map((productId) => `${tenantId}:${productId}`),
+  );
 
 /**
  * 产品业务层（移植自 repo_backend productController + productRouter 内联校验）
@@ -237,6 +254,8 @@ export async function updateProduct(
 
     return updated;
   });
+  // 事务提交后失效详情缓存（name/img/desc/salePrice/productJoinSkus 均在缓存内）
+  await invalidateProductDetailCache(user.tenantId!, [id]);
   return new SuccessResponse(product, "产品更新成功");
 }
 

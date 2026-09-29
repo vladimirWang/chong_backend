@@ -85,3 +85,28 @@ export function cacheAside(keyPrefix: string, ttlSeconds?: number) {
     return data;
   };
 }
+
+/**
+ * 缓存失效装饰器（写后删除）
+ *
+ * 写操作事务提交后批量删除相关 key，下次读请求由 cacheAside 自动回源回填。
+ * 删除失败不抛错（业务事务已提交，缓存至多脏到 TTL 过期），仅记录日志。
+ *
+ * @param keyPrefix 与读缓存相同的 key 前缀
+ * @returns 失效函数：接收 key 后缀集合，自动去重后批量 DEL
+ */
+export function invalidateCache(keyPrefix: string) {
+  return async (keySuffixes: Array<string | number>): Promise<void> => {
+    const uniq = [...new Set(keySuffixes)];
+    if (uniq.length === 0) return;
+    const keys = uniq.map((s) => `${keyPrefix}:${s}`);
+    try {
+      await redisClient.del(keys);
+    } catch (error) {
+      console.error(
+        `[cache] invalidate failed for prefix "${keyPrefix}", keys will expire by TTL:`,
+        error,
+      );
+    }
+  };
+}
