@@ -43,6 +43,8 @@ services:
       options:
         max-size: "20m"
         max-file: "3"
+    environment:
+      TZ: Asia/Shanghai
     expose:
       - "4000"
     ports:
