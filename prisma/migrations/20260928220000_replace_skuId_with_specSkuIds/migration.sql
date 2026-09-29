@@ -1,7 +1,8 @@
 -- 将 ProductJoinStockIn / ProductJoinStockOut 的 skuId（单值，外键关联 Sku）
 -- 替换为 specSkuIds（逗号分隔的 SKU id 字符串，支持多维度规格拼接）。
 -- 同时把唯一约束从 (xxId, productId, skuId) 改为 (xxId, productId, specSkuIds)。
--- 安全回填：先加可空列 → 用 skuId 回填 → 改 NOT NULL → 删旧列。
+-- 安全回填：先加可空列 → 用 skuId 回填 → 历史 NULL 行（SKU 功能上线前的明细）
+-- 回填空串（业务上空串 normalizeSpecSkuIds 视为「无规格」）→ 改 NOT NULL → 删旧列。
 -- 在空库上回放时 UPDATE 影响 0 行，MODIFY NOT NULL 安全。
 
 -- ==================== ProductJoinStockIn ====================
@@ -23,6 +24,9 @@ ALTER TABLE `ProductJoinStockIn` ADD COLUMN `specSkuIds` VARCHAR(191);
 
 -- 6. 回填：将 skuId 转为字符串存入 specSkuIds（空库回放为 0 行 no-op）
 UPDATE `ProductJoinStockIn` SET `specSkuIds` = CAST(`skuId` AS CHAR) WHERE `specSkuIds` IS NULL;
+
+-- 6.1 SKU 功能上线前的历史明细 skuId 为 NULL（CAST 后仍为 NULL），回填空串占位
+UPDATE `ProductJoinStockIn` SET `specSkuIds` = '' WHERE `specSkuIds` IS NULL;
 
 -- 7. 将 specSkuIds 改为 NOT NULL
 ALTER TABLE `ProductJoinStockIn` MODIFY COLUMN `specSkuIds` VARCHAR(191) NOT NULL;
@@ -56,6 +60,9 @@ ALTER TABLE `ProductJoinStockOut` ADD COLUMN `specSkuIds` VARCHAR(191);
 
 -- 6. 回填：将 skuId 转为字符串存入 specSkuIds（空库回放为 0 行 no-op）
 UPDATE `ProductJoinStockOut` SET `specSkuIds` = CAST(`skuId` AS CHAR) WHERE `specSkuIds` IS NULL;
+
+-- 6.1 SKU 功能上线前的历史明细 skuId 为 NULL（CAST 后仍为 NULL），回填空串占位
+UPDATE `ProductJoinStockOut` SET `specSkuIds` = '' WHERE `specSkuIds` IS NULL;
 
 -- 7. 将 specSkuIds 改为 NOT NULL
 ALTER TABLE `ProductJoinStockOut` MODIFY COLUMN `specSkuIds` VARCHAR(191) NOT NULL;
