@@ -10,7 +10,11 @@ import {
   auditUpdate,
   auditUpdateConnect,
 } from "../../utils/auditUser";
-import { compareArrayMinLoop, sum2 } from "../../utils/algo";
+import {
+  compareArrayMinLoop,
+  normalizeSpecSkuIds,
+  sum2,
+} from "../../utils/algo";
 import { generateServiceCode } from "../../utils/common";
 import type { AuthUser } from "../../types/auth";
 import type {
@@ -22,9 +26,10 @@ import type {
 /**
  * 进货业务层（移植自 repo_backend stockInController）
  * 库存联动规则：
- * - 创建/编辑未完成进货单 → product.stockInPending 增减
- * - 确认收货 → pending 转入 balance，并写 HistoryCost
- * - 软删/恢复仅处理 PENDING 单，COMPLETED 单不回滚 pending
+ * - 创建/编辑未完成进货单不改动库存
+ * - 确认收货时 ProductVariant 按 (productId, specSkuIds) upsert（balance += count），
+ *   同时 Product.balance += count 并写 HistoryCost
+ * - 软删/恢复仅作用于 PENDING 单
  */
 
 interface StockLineComparable {
@@ -34,22 +39,25 @@ interface StockLineComparable {
   cost: number;
   count: number;
   vendorId: number;
+  specSkuIds: string;
 }
 
 /** 校验提交的产品行：productId 不可重复，且产品都须存在于当前租户 */
 async function assertProductsExist(
   db: TenantPrismaClient,
-  lines: { productId: number }[],
+  lines: { productId: number, specSkuIds: string }[],
 ) {
-  const productIds = lines.map((item) => item.productId);
-  const uniqueProductIds = [...new Set(productIds)];
-  if (productIds.length > uniqueProductIds.length) {
+  const lineDatas = lines.map((item) => `${item.productId}-${item.specSkuIds}`);
+  const uniqueLineDatas = [...new Set(lineDatas)];
+  if (lineDatas.length > uniqueLineDatas.length) {
     throw new HttpError(
       400,
       errorCode.VALIDATION_ERROR,
-      `提交的数据存在重复的产品id: ${productIds.join(", ")}`,
+      `提交的数据存在重复的产品（产品id-specSkuIds）: ${lineDatas.join(", ")}`,
     );
   }
+  // 去重后的产品id列表
+  const uniqueProductIds =[... new Set(uniqueLineDatas.map((item) => parseInt(item)))]
   const existing = await db.product.findMany({
     where: { id: { in: uniqueProductIds } },
     select: { id: true },
@@ -158,7 +166,7 @@ export async function getStockIns(
   return new SuccessResponse({ list, total }, "进货记录列表获取成功");
 }
 
-/** POST /stockin/multiple：批量进货，联动 product.stockInPending */
+/** POST /stockin/multiple：批量进货 */
 export async function createMultipleStockIn(
   db: TenantPrismaClient,
   user: AuthUser,
@@ -168,9 +176,15 @@ export async function createMultipleStockIn(
   const tenantId = user.tenantId!;
   const { productJoinStockIn, submittedAt, remark } = body;
 
-  await assertProductsExist(db, productJoinStockIn);
+  // 归一化 specSkuIds，使 "1,3" 与 "3,1" 命中同一 ProductVariant
+  const normalizedLines = productJoinStockIn.map((item) => ({
+    ...item,
+    specSkuIds: normalizeSpecSkuIds(item.specSkuIds),
+  }));
 
-  const totalCost = sum2(productJoinStockIn, "cost");
+  await assertProductsExist(db, normalizedLines);
+
+  const totalCost = sum2(normalizedLines, "cost");
   const submittedAtVal = submittedAt ? new Date(submittedAt) : new Date();
   const { serviceCode } = await generateServiceCode("JH", "stockInCode");
 
@@ -184,11 +198,12 @@ export async function createMultipleStockIn(
         ...auditCreateConnect(uid),
         tenant: { connect: { id: tenantId } },
         productJoinStockIn: {
-          create: productJoinStockIn.map((item) => ({
+          create: normalizedLines.map((item) => ({
             cost: item.cost,
             count: item.count,
             product: { connect: { id: item.productId } },
             vendor: { connect: { id: item.vendorId } },
+            specSkuIds: item.specSkuIds,
             // 嵌套 create 不触发租户扩展，需手动指定 tenant
             tenant: { connect: { id: tenantId } },
             ...auditCreateConnect(uid),
@@ -196,15 +211,6 @@ export async function createMultipleStockIn(
         },
       } as never,
     }),
-    ...productJoinStockIn.map((item) =>
-      db.product.update({
-        data: {
-          stockInPending: { increment: item.count },
-          ...auditUpdate(uid),
-        },
-        where: { id: item.productId },
-      }),
-    ),
   ]);
 
   if (!results[0]) {
@@ -240,14 +246,21 @@ export async function updateStockIn(
   body: MultipleStockInBody,
 ) {
   const uid = user.userId;
-  await assertProductsExist(db, body.productJoinStockIn);
+
+  // 归一化 specSkuIds，与库中已归一化的明细行保持一致
+  const normalizedLines = body.productJoinStockIn.map((item) => ({
+    ...item,
+    specSkuIds: normalizeSpecSkuIds(item.specSkuIds),
+  }));
+
+  await assertProductsExist(db, normalizedLines);
 
   const existedRecord = await db.productJoinStockIn.findMany({
     where: { stockInId: id },
   });
 
-  const { productJoinStockIn, submittedAt, remark } = body;
-  const totalCost = productJoinStockIn.reduce(
+  const { submittedAt, remark } = body;
+  const totalCost = normalizedLines.reduce(
     (a, c) => a + c.cost * c.count,
     0,
   );
@@ -259,24 +272,21 @@ export async function updateStockIn(
     cost: r.cost,
     count: r.count,
     vendorId: r.vendorId,
+    specSkuIds: r.specSkuIds,
   }));
-  const newComparable: StockLineComparable[] = productJoinStockIn.map((r) => ({
+  const newComparable: StockLineComparable[] = normalizedLines.map((r) => ({
     productId: r.productId,
     cost: r.cost,
     count: r.count,
     vendorId: r.vendorId,
+    specSkuIds: r.specSkuIds,
   }));
   const { added, modified, deleted } = compareArrayMinLoop(
     existedComparable,
     newComparable,
-    "productId",
-    ["id", "stockInId"],
+    ["productId", "specSkuIds"],
+    ["id", "stockInId", "specSkuIds"],
   );
-
-  const existedInfoMap: Record<number, { count: number; cost: number }> = {};
-  for (const c of existedRecord) {
-    existedInfoMap[c.productId] = { count: c.count, cost: c.cost };
-  }
 
   await db.$transaction([
     db.stockIn.update({
@@ -297,14 +307,16 @@ export async function updateStockIn(
           productId: item.productId,
           vendorId: item.vendorId,
           stockInId: id,
-          ...auditCreate(uid),
+          specSkuIds: item.specSkuIds,
+          ...auditCreateConnect(uid),
         } as never,
       }),
     ),
+    // 修改已有数据
     ...modified.map((item) =>
       db.productJoinStockIn.update({
         where: {
-          stockInId_productId: { stockInId: id, productId: item.productId },
+          stockInId_productId_specSkuIds: { stockInId: id, productId: item.productId, specSkuIds: item.specSkuIds },
         },
         data: {
           cost: item.cost,
@@ -313,42 +325,11 @@ export async function updateStockIn(
         },
       }),
     ),
+    // 删除行
     ...deleted.map((item) =>
       db.productJoinStockIn.delete({
         where: {
-          stockInId_productId: { stockInId: id, productId: item.productId },
-        },
-      }),
-    ),
-    // pending 联动：新增 +count，修改 +(新-旧)，删除 -旧
-    ...added.map((item) =>
-      db.product.update({
-        where: { id: item.productId },
-        data: {
-          stockInPending: { increment: item.count },
-          ...auditUpdate(uid),
-        },
-      }),
-    ),
-    ...modified.map((item) =>
-      db.product.update({
-        where: { id: item.productId },
-        data: {
-          stockInPending: {
-            increment: item.count - existedInfoMap[item.productId].count,
-          },
-          ...auditUpdate(uid),
-        },
-      }),
-    ),
-    ...deleted.map((item) =>
-      db.product.update({
-        where: { id: item.productId },
-        data: {
-          stockInPending: {
-            increment: -1 * existedInfoMap[item.productId].count,
-          },
-          ...auditUpdate(uid),
+          stockInId_productId_specSkuIds: { stockInId: id, productId: item.productId, specSkuIds: item.specSkuIds },
         },
       }),
     ),
@@ -357,7 +338,7 @@ export async function updateStockIn(
   return new SuccessResponse(null, "进货单更新成功");
 }
 
-/** PATCH /stockin/confirmCompleted/:id：确认收货，pending → balance，写历史成本 */
+/** PATCH /stockin/confirmCompleted/:id：确认收货，Product/ProductVariant 加库存，写历史成本 */
 export async function confirmCompleted(
   db: TenantPrismaClient,
   user: AuthUser,
@@ -372,6 +353,7 @@ export async function confirmCompleted(
 
   const completedAtVal = completedAt ?? new Date();
   const record = await db.$transaction([
+    // 修改进货单状态
     db.stockIn.update({
       where: { id },
       data: {
@@ -380,13 +362,35 @@ export async function confirmCompleted(
         ...auditUpdateConnect(uid),
       },
     }),
+    // 修改产品总库存
     ...relatedProducts.map((item) =>
       db.product.update({
         where: { id: item.productId },
         data: {
           balance: { increment: item.count },
-          stockInPending: { increment: -1 * item.count },
           latestCost: item.cost,
+          ...auditUpdateConnect(uid),
+        },
+      }),
+    ),
+    // 按 (productId, specSkuIds) upsert 规格库存（tenant 由扩展注入）
+    ...relatedProducts.map((item) =>
+      db.productVariant.upsert({
+        where: {
+          productId_specSkuIds: {
+            productId: item.productId,
+            specSkuIds: item.specSkuIds,
+          },
+        },
+        create: {
+          product: { connect: { id: item.productId } },
+          specSkuIds: item.specSkuIds,
+          balance: item.count,
+          ...auditCreateConnect(uid),
+          // tenant 由租户扩展运行时注入，原始类型要求 tenant，需断言
+        } as never,
+        update: {
+          balance: { increment: item.count },
           ...auditUpdateConnect(uid),
         },
       }),
@@ -406,12 +410,12 @@ export async function confirmCompleted(
   return new SuccessResponse(record, "进货单确认成功");
 }
 
-/** 筛出指定状态（PENDING）+ 删除状态的单子，并汇总每产品待处理数量 */
-async function getValidsAndPendingCount(
+/** 筛出指定状态（PENDING）+ 删除状态的单子，返回有效的 stockIn id 列表 */
+async function getValidPendingStockInIds(
   db: TenantPrismaClient,
   ids: number[],
   isDeleted: boolean,
-) {
+): Promise<number[]> {
   const pendingStockIns = await db.stockIn.findMany({
     where: {
       id: { in: ids },
@@ -420,28 +424,10 @@ async function getValidsAndPendingCount(
     },
     select: { id: true },
   });
-  const validIds = pendingStockIns.map((s) => s.id);
-  if (validIds.length === 0) {
-    return { validIds: [], pendingCount: {} as Record<number, number> };
-  }
-
-  const joinRows = await db.productJoinStockIn.findMany({
-    where: {
-      stockInId: { in: validIds },
-      deletedAt: isDeleted ? { not: null } : null,
-    },
-    select: { productId: true, count: true },
-  });
-
-  const pendingCount: Record<number, number> = {};
-  for (const row of joinRows) {
-    pendingCount[row.productId] =
-      (pendingCount[row.productId] ?? 0) + row.count;
-  }
-  return { validIds, pendingCount };
+  return pendingStockIns.map((s) => s.id);
 }
 
-/** DELETE /stockin/batchDelete?id=：仅软删 PENDING 单并回滚 pending */
+/** DELETE /stockin/batchDelete?id=：仅软删 PENDING 单 */
 export async function batchDeleteStockIn(
   db: TenantPrismaClient,
   user: AuthUser,
@@ -453,11 +439,7 @@ export async function batchDeleteStockIn(
     return new SuccessResponse(null, "没有需要删除的进货单");
   }
 
-  const { validIds, pendingCount } = await getValidsAndPendingCount(
-    db,
-    ids,
-    false,
-  );
+  const validIds = await getValidPendingStockInIds(db, ids, false);
   if (validIds.length === 0) {
     return new SuccessResponse(null, "没有符合条件的进货单可删除");
   }
@@ -472,21 +454,12 @@ export async function batchDeleteStockIn(
       where: { stockInId: { in: validIds }, deletedAt: null },
       data: auditSoftDelete(uid, now),
     }),
-    ...Object.entries(pendingCount).map(([productId, totalCount]) =>
-      db.product.update({
-        where: { id: Number(productId) },
-        data: {
-          stockInPending: { decrement: totalCount },
-          ...auditUpdate(uid),
-        },
-      }),
-    ),
   ]);
 
   return new SuccessResponse(txResults, "进货单批量删除成功");
 }
 
-/** POST /stockin/restoreDeleted：恢复软删的 PENDING 单并加回 pending */
+/** POST /stockin/restoreDeleted：恢复软删的 PENDING 单 */
 export async function restoreDeletedStockIn(
   db: TenantPrismaClient,
   user: AuthUser,
@@ -497,11 +470,7 @@ export async function restoreDeletedStockIn(
     return new SuccessResponse(null, "没有需要恢复的进货单");
   }
 
-  const { validIds, pendingCount } = await getValidsAndPendingCount(
-    db,
-    ids,
-    true,
-  );
+  const validIds = await getValidPendingStockInIds(db, ids, true);
   if (validIds.length === 0) {
     return new SuccessResponse(null, "没有符合条件的进货单可恢复");
   }
@@ -509,21 +478,12 @@ export async function restoreDeletedStockIn(
   const txResults = await db.$transaction([
     db.stockIn.updateMany({
       where: { id: { in: validIds } },
-      data: { deletedAt: null, ...auditUpdate(uid) },
+      data: { deletedAt: null, ...auditUpdateConnect(uid) },
     }),
     db.productJoinStockIn.updateMany({
       where: { stockInId: { in: validIds } },
-      data: { deletedAt: null, ...auditUpdate(uid) },
+      data: { deletedAt: null, ...auditUpdateConnect(uid) },
     }),
-    ...Object.entries(pendingCount).map(([productId, totalCount]) =>
-      db.product.update({
-        where: { id: Number(productId) },
-        data: {
-          stockInPending: { increment: totalCount },
-          ...auditUpdate(uid),
-        },
-      }),
-    ),
   ]);
 
   return new SuccessResponse(txResults, "进货单恢复成功");

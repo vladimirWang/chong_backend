@@ -42,6 +42,7 @@ model Tenant {
   skuCategories        SkuCategory[]
   skus                 Sku[]
   productJoinSkus      ProductJoinSku[]
+  productVariants      ProductVariant[]
 }
 
 // ==================== 业务域 ====================
@@ -117,6 +118,7 @@ model ProductJoinStockIn {
   // historyCost HistoryCost?
   vendorId      Int
   vendor        Vendor?   @relation(fields: [vendorId], references: [id])
+  specSkuIds    String    // 逗号分隔的 SKU id 集合（规格 = 多维度拼接）
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   deletedAt     DateTime?
@@ -129,7 +131,7 @@ model ProductJoinStockIn {
   deletedByUser User?     @relation("ProductJoinStockInDeletedBy", fields: [deletedBy], references: [id])
 
   @@index([tenantId])
-  @@unique([stockInId, productId])
+  @@unique([stockInId, productId, specSkuIds])
 }
 
 // 商品
@@ -154,8 +156,7 @@ model Product {
   historyCost         HistoryCost[]         @relation("HistoryCostProduct")
   productJoinStockOut ProductJoinStockOut[] // 出货中间表
   productJoinSkus     ProductJoinSku[] // SKU 中间表
-  stockOutPending     Int                   @default(0) @db.UnsignedSmallInt // 出货中产品
-  stockInPending      Int                   @default(0) @db.UnsignedSmallInt // 进货中产品
+  variants            ProductVariant[] // 产品变体（真实 SKU）
   salePrice           Int? // 销售价
   desc                String?               @db.LongText
   createdBy           Int
@@ -239,6 +240,30 @@ model ProductJoinSku {
   @@unique([productId, skuId])
 }
 
+// 产品变体（真实 SKU = 完整规格组合），库存最小单位
+model ProductVariant {
+  id            Int       @id @default(autoincrement())
+  tenantId      Int
+  tenant        Tenant    @relation(fields: [tenantId], references: [id])
+  productId     Int
+  product       Product   @relation(fields: [productId], references: [id])
+  specSkuIds    String    @db.VarChar(50) // 规范化(排序)后的规格组合，如 "1,3"
+  balance       Int       @default(0) @db.UnsignedSmallInt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+  createdBy     Int
+  createdByUser User?     @relation("ProductVariantCreatedBy", fields: [createdBy], references: [id])
+  updatedBy     Int
+  updatedByUser User?     @relation("ProductVariantUpdatedBy", fields: [updatedBy], references: [id])
+  deletedBy     Int?
+  deletedByUser User?     @relation("ProductVariantDeletedBy", fields: [deletedBy], references: [id])
+
+  @@index([tenantId])
+  @@index([productId])
+  @@unique([productId, specSkuIds])
+}
+
 // 用户
 model User {
   id                         Int                   @id @default(autoincrement())
@@ -286,6 +311,9 @@ model User {
   productJoinSkuCreated      ProductJoinSku[]      @relation("ProductJoinSkuCreatedBy")
   productJoinSkuUpdated      ProductJoinSku[]      @relation("ProductJoinSkuUpdatedBy")
   productJoinSkuDeleted      ProductJoinSku[]      @relation("ProductJoinSkuDeletedBy")
+  productVariantCreated      ProductVariant[]      @relation("ProductVariantCreatedBy")
+  productVariantUpdated      ProductVariant[]      @relation("ProductVariantUpdatedBy")
+  productVariantDeleted      ProductVariant[]      @relation("ProductVariantDeletedBy")
   historyCostsCreated        HistoryCost[]         @relation("HistoryCostCreatedBy")
   historyCostsUpdated        HistoryCost[]         @relation("HistoryCostUpdatedBy")
   historyCostsDeleted        HistoryCost[]         @relation("HistoryCostDeletedBy")
@@ -362,6 +390,7 @@ model ProductJoinStockOut {
   count         Int // 数量
   vendorId      Int
   vendor        Vendor?   @relation(fields: [vendorId], references: [id])
+  specSkuIds    String    // 逗号分隔的 SKU id 集合（规格 = 多维度拼接）
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   deletedAt     DateTime?
@@ -373,7 +402,7 @@ model ProductJoinStockOut {
   deletedByUser User?     @relation("ProductJoinStockOutDeletedBy", fields: [deletedBy], references: [id])
 
   @@index([tenantId])
-  @@unique([stockOutId, productId])
+  @@unique([stockOutId, productId, specSkuIds])
 }
 
 model FileInfo {

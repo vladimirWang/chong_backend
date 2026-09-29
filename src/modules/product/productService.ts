@@ -108,6 +108,10 @@ export async function getProductById(
               },
             },
           },
+          variants: {
+            where: { deletedAt: null },
+            select: { specSkuIds: true, balance: true },
+          },
         },
       });
       if (!row) return undefined;
