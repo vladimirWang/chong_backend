@@ -65,6 +65,10 @@ export async function getProductById(db: TenantPrismaClient, id: number) {
           },
         },
       },
+      variants: {
+        where: { deletedAt: null },
+        select: { specSkuIds: true, balance: true },
+      },
     },
   });
   if (res?.img) {

@@ -7,6 +7,7 @@ export const stockInLineSchema = z.object({
   cost: z.number(),
   productId: z.number(),
   vendorId: z.number(),
+  specSkuIds: z.string()
 });
 
 /** POST /stockin/multiple、PUT /stockin/:id body（移植自老架构） */

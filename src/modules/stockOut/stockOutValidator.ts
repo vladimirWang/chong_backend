@@ -7,6 +7,7 @@ export const stockOutLineSchema = z.object({
   count: z.number(),
   productId: z.number(),
   vendorId: z.number(),
+  specSkuIds: z.string(),
 });
 
 /**

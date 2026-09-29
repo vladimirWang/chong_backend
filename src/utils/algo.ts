@@ -30,6 +30,21 @@ export function sum2<T extends { count: number }, K extends keyof T>(
   );
 }
 
+/**
+ * 规范化规格组合：split → 去空 → 去重 → 数字升序 → join。
+ * 保证 "1,3" 与 "3,1" 视为同一变体；空串返回空串。
+ */
+export function normalizeSpecSkuIds(specSkuIds: string): string {
+  if (!specSkuIds) return "";
+  const ids = specSkuIds
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((s) => parseInt(s, 10))
+    .filter((n) => !Number.isNaN(n));
+  return [...new Set(ids)].sort((a, b) => a - b).join(",");
+}
+
 export type CompareArrayResult<T> = {
   added: T[];
   modified: T[];
@@ -59,12 +74,13 @@ function isDeepEqual(a: unknown, b: unknown): boolean {
 
 /**
  * 按 idKey 对比新旧两个对象数组，分类为 added/modified/deleted/unchanged
+ * idKey 支持单个键或多个键（数组），多键时所有键值同时相同才视为同一条记录
  * 对比时忽略 ignoreFields 中的字段（移植自 repo_backend，去掉了 lodash 依赖）
  */
 export function compareArrayMinLoop<T extends object>(
   oldArr: T[],
   newArr: T[],
-  idKey: keyof T,
+  idKey: keyof T | (keyof T)[],
   ignoreFields: string[] = [],
 ): CompareArrayResult<T> {
   const result: CompareArrayResult<T> = {
@@ -74,17 +90,25 @@ export function compareArrayMinLoop<T extends object>(
     unchanged: [],
   };
 
-  const oldMap = new Map<unknown, T>();
+  // 从对象中提取 idKey 对应的值，多键时拼接为复合键
+  const getKeyValue = (item: T): string => {
+    const keys = Array.isArray(idKey) ? idKey : [idKey];
+    return keys
+      .map((k) => (item as Record<string, unknown>)[k as string])
+      .join("\0");
+  };
+
+  const oldMap = new Map<string, T>();
   oldArr.forEach((item) => {
-    const idValue = (item as Record<string, unknown>)[idKey as string];
-    if (idValue !== null && idValue !== undefined) {
+    const idValue = getKeyValue(item);
+    if (idValue) {
       oldMap.set(idValue, item);
     }
   });
 
   for (const newItem of newArr) {
-    const currentId = (newItem as Record<string, unknown>)[idKey as string];
-    if (currentId === null || currentId === undefined) continue;
+    const currentId = getKeyValue(newItem);
+    if (!currentId) continue;
 
     const oldItem = oldMap.get(currentId);
     if (!oldItem) {

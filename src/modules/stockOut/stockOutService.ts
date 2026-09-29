@@ -10,7 +10,7 @@ import {
   auditUpdate,
   auditUpdateConnect,
 } from "../../utils/auditUser";
-import { compareArrayMinLoop, sum2 } from "../../utils/algo";
+import { compareArrayMinLoop, normalizeSpecSkuIds, sum2 } from "../../utils/algo";
 import { generateServiceCode } from "../../utils/common";
 import type { AuthUser } from "../../types/auth";
 import type {
@@ -22,10 +22,8 @@ import type { BatchDeleteStockInQuery } from "../stockIn/stockInValidator";
 
 /**
  * 出货业务层（移植自 repo_backend stockOutController）
- * 库存联动规则：
- * - 创建/编辑未完成出货单 → balance 扣减、stockOutPending 增加（创建时超卖拦截）
- * - 确认出货 → stockOutPending 转出，记录 latestPrice
- * - 软删/恢复仅处理 PENDING 单，并回滚/重放 balance 与 pending
+ * 创建/编辑出货单 → 按变体做超卖校验，通过后 ProductVariant.balance 与 Product.balance 同步扣减；
+ * 确认出货仅记 latestPrice；软删 PENDING 单回滚变体与产品余额，恢复则重放扣减。
  */
 
 interface StockOutLineComparable {
@@ -35,6 +33,41 @@ interface StockOutLineComparable {
   price: number;
   count: number;
   vendorId: number;
+  specSkuIds: string;
+}
+
+interface VariantNeed {
+  productId: number;
+  specSkuIds: string;
+  needed: number;
+}
+
+/** 校验变体存在且可扣减数量充足（needed<=0 跳过）。变体不存在或余额不足直接抛错。 */
+async function assertVariantAvailable(
+  db: TenantPrismaClient,
+  needs: VariantNeed[],
+) {
+  for (const n of needs) {
+    if (n.needed <= 0) continue;
+    const variant = await db.productVariant.findUnique({
+      where: {
+        productId_specSkuIds: {
+          productId: n.productId,
+          specSkuIds: n.specSkuIds,
+        },
+      },
+    });
+    if (!variant) {
+      throw new HttpError(
+        400,
+        errorCode.VALIDATION_ERROR,
+        `该规格无库存: ${n.productId}-${n.specSkuIds}`,
+      );
+    }
+    if (n.needed > variant.balance) {
+      throw new HttpError(400, errorCode.VALIDATION_ERROR, "产品超卖了");
+    }
+  }
 }
 
 /** docs 路径拼 PUBLIC_BASE_URL 前缀（未配置时用空前缀） */
@@ -141,7 +174,7 @@ export async function getStockOuts(
   return new SuccessResponse({ list, total }, "出货记录列表获取成功");
 }
 
-/** POST /stockout/multiple：批量出货，超卖拦截，联动 balance/stockOutPending */
+/** POST /stockout/multiple：批量出货，超卖拦截，联动 balance */
 export async function createMultipleStockOut(
   db: TenantPrismaClient,
   user: AuthUser,
@@ -159,30 +192,22 @@ export async function createMultipleStockOut(
     submittedAt,
   } = body;
 
-  // 超卖校验（租户内查产品；balance 为 null 按 0 处理）
-  const products = await Promise.all(
-    productJoinStockOut.map((item) =>
-      db.product.findUnique({ where: { id: item.productId } }),
-    ),
-  );
-  const missing = productJoinStockOut.filter(
-    (item, index) => products[index] === null,
-  );
-  if (missing.length > 0) {
-    throw new HttpError(
-      400,
-      errorCode.PRODUCT_NOT_FOUND,
-      `产品不存在: ${missing.map((m) => m.productId).join(", ")}`,
-    );
-  }
-  const oversold = productJoinStockOut.some(
-    (item, index) => item.count > (products[index]?.balance ?? 0),
-  );
-  if (oversold) {
-    throw new HttpError(400, errorCode.VALIDATION_ERROR, "产品超卖了");
-  }
+  const normalizedLines = productJoinStockOut.map((item) => ({
+    ...item,
+    specSkuIds: normalizeSpecSkuIds(item.specSkuIds),
+  }));
 
-  const totalPrice = sum2(productJoinStockOut, "price");
+  // 变体级超卖校验：变体不存在或余额不足直接抛错（变体存在即产品存在）
+  await assertVariantAvailable(
+    db,
+    normalizedLines.map((item) => ({
+      productId: item.productId,
+      specSkuIds: item.specSkuIds,
+      needed: item.count,
+    })),
+  );
+
+  const totalPrice = sum2(normalizedLines, "price");
   const createdAt = submittedAt ? new Date(submittedAt) : new Date();
   const { serviceCode } = await generateServiceCode("CH", "stockOutCode");
 
@@ -200,23 +225,37 @@ export async function createMultipleStockOut(
         platform: { connect: { id: platformId } },
         platformOrderNo,
         productJoinStockOut: {
-          create: productJoinStockOut.map((item) => ({
+          create: normalizedLines.map((item) => ({
             price: item.price,
             count: item.count,
             tenant: { connect: { id: tenantId } },
             vendor: { connect: { id: item.vendorId } },
             product: { connect: { id: item.productId } },
+            specSkuIds: item.specSkuIds,
             ...auditCreateConnect(uid),
           })),
         },
       } as never,
     }),
-    ...productJoinStockOut.map((item) =>
+    ...normalizedLines.map((item) =>
       db.product.update({
         where: { id: item.productId },
         data: {
           balance: { decrement: item.count },
-          stockOutPending: { increment: item.count },
+          ...auditUpdateConnect(uid),
+        },
+      }),
+    ),
+    ...normalizedLines.map((item) =>
+      db.productVariant.update({
+        where: {
+          productId_specSkuIds: {
+            productId: item.productId,
+            specSkuIds: item.specSkuIds,
+          },
+        },
+        data: {
+          balance: { decrement: item.count },
           ...auditUpdateConnect(uid),
         },
       }),
@@ -268,7 +307,6 @@ export async function confirmStockOutCompleted(
       db.product.update({
         where: { id: item.productId },
         data: {
-          stockOutPending: { decrement: item.count },
           latestPrice: item.price,
           ...auditUpdate(uid),
         },
@@ -300,16 +338,42 @@ export async function updateStockOut(
     where: { stockOutId: id },
   });
 
+  const existedInfoMap: Record<string, { count: number; price: number }> = {};
+  for (const c of existedRecord) {
+    existedInfoMap[`${c.productId}-${c.specSkuIds}`] = {
+      count: c.count,
+      price: c.price,
+    };
+  }
+
+  const normalizedLines = (productJoinStockOut ?? []).map((item) => ({
+    ...item,
+    specSkuIds: normalizeSpecSkuIds(item.specSkuIds),
+  }));
+
   // 更新后产品为空 → 回滚库存并删除出货单（中间表 onDelete: Cascade 级联删）
-  if (!productJoinStockOut || productJoinStockOut.length === 0) {
+  if (normalizedLines.length === 0) {
     await db.$transaction([
       ...existedRecord.map((item) =>
         db.product.update({
           where: { id: item.productId },
           data: {
             balance: { increment: item.count },
-            stockOutPending: { increment: -1 * item.count },
             ...auditUpdate(uid),
+          },
+        }),
+      ),
+      ...existedRecord.map((item) =>
+        db.productVariant.update({
+          where: {
+            productId_specSkuIds: {
+              productId: item.productId,
+              specSkuIds: item.specSkuIds,
+            },
+          },
+          data: {
+            balance: { increment: item.count },
+            ...auditUpdateConnect(uid),
           },
         }),
       ),
@@ -318,7 +382,7 @@ export async function updateStockOut(
     return new SuccessResponse(null, "出货单已删除（无产品数据）");
   }
 
-  const totalPrice = productJoinStockOut.reduce(
+  const totalPrice = normalizedLines.reduce(
     (a, c) => a + c.price * c.count,
     0,
   );
@@ -331,27 +395,48 @@ export async function updateStockOut(
       price: r.price,
       count: r.count,
       vendorId: r.vendorId,
+      specSkuIds: r.specSkuIds,
     }),
   );
-  const newComparable: StockOutLineComparable[] = productJoinStockOut.map(
+  const newComparable: StockOutLineComparable[] = normalizedLines.map(
     (r) => ({
       productId: r.productId,
       price: r.price,
       count: r.count,
       vendorId: r.vendorId,
+      specSkuIds: r.specSkuIds,
     }),
   );
   const { added, modified, deleted } = compareArrayMinLoop(
     existedComparable,
     newComparable,
-    "productId",
-    ["id", "stockOutId"],
+    ["productId", "specSkuIds"],
+    ["id", "stockOutId", "specSkuIds"],
   );
 
-  const existedInfoMap: Record<number, { count: number; price: number }> = {};
-  for (const c of existedRecord) {
-    existedInfoMap[c.productId] = { count: c.count, price: c.price };
-  }
+  // 变体可用性：新增行按全量、修改行按增量（新-旧，仅正向）统一校验
+  const variantNeeds: VariantNeed[] = [
+    ...added.map((item) => ({
+      productId: item.productId,
+      specSkuIds: item.specSkuIds,
+      needed: item.count,
+    })),
+    ...modified.flatMap((item) => {
+      const oldCount =
+        existedInfoMap[`${item.productId}-${item.specSkuIds}`]?.count ?? 0;
+      const needed = item.count - oldCount;
+      return needed > 0
+        ? [
+            {
+              productId: item.productId,
+              specSkuIds: item.specSkuIds,
+              needed,
+            },
+          ]
+        : [];
+    }),
+  ];
+  await assertVariantAvailable(db, variantNeeds);
 
   // clientId 为 null 时 disconnect；不传（undefined）时保持原值
   const clientValue =
@@ -383,14 +468,15 @@ export async function updateStockOut(
           productId: item.productId,
           stockOutId: id,
           vendorId: item.vendorId,
-          ...auditCreate(uid),
+          specSkuIds: item.specSkuIds,
+          ...auditCreateConnect(uid),
         } as never,
       }),
     ),
     ...modified.map((item) =>
       db.productJoinStockOut.update({
         where: {
-          stockOutId_productId: { stockOutId: id, productId: item.productId },
+          stockOutId_productId_specSkuIds: { stockOutId: id, productId: item.productId, specSkuIds: item.specSkuIds },
         },
         data: {
           price: item.price,
@@ -402,42 +488,89 @@ export async function updateStockOut(
     ...deleted.map((item) =>
       db.productJoinStockOut.delete({
         where: {
-          stockOutId_productId: { stockOutId: id, productId: item.productId },
+          stockOutId_productId_specSkuIds: { stockOutId: id, productId: item.productId, specSkuIds: item.specSkuIds },
         },
       }),
     ),
-    // added：balance-count、pending+count
+    // added：balance-count
     ...added.map((item) =>
       db.product.update({
         where: { id: item.productId },
         data: {
           balance: { increment: -1 * item.count },
-          stockOutPending: { increment: item.count },
-          ...auditUpdate(uid),
+          ...auditUpdateConnect(uid),
         },
       }),
     ),
     // modified：把老数量加回再扣新数量
     ...modified.map((item) => {
-      const existedCount = existedInfoMap[item.productId].count ?? 0;
+      const existedCount =
+        existedInfoMap[`${item.productId}-${item.specSkuIds}`].count ?? 0;
       const balanceDelta = existedCount - item.count;
       return db.product.update({
         where: { id: item.productId },
         data: {
           balance: { increment: balanceDelta },
-          stockOutPending: { increment: -1 * balanceDelta },
-          ...auditUpdate(uid),
+          ...auditUpdateConnect(uid),
         },
       });
     }),
-    // deleted：数量加回 balance、pending 减掉
+    // deleted：数量加回 balance
     ...deleted.map((item) =>
       db.product.update({
         where: { id: item.productId },
         data: {
           balance: { increment: item.count },
-          stockOutPending: { increment: -1 * item.count },
-          ...auditUpdate(uid),
+          ...auditUpdateConnect(uid),
+        },
+      }),
+    ),
+    // 变体级库存联动
+    // added：变体 balance -count
+    ...added.map((item) =>
+      db.productVariant.update({
+        where: {
+          productId_specSkuIds: {
+            productId: item.productId,
+            specSkuIds: item.specSkuIds,
+          },
+        },
+        data: {
+          balance: { decrement: item.count },
+          ...auditUpdateConnect(uid),
+        },
+      }),
+    ),
+    // modified：变体 balance += (旧-新)
+    ...modified.map((item) => {
+      const existedCount =
+        existedInfoMap[`${item.productId}-${item.specSkuIds}`]?.count ?? 0;
+      const balanceDelta = existedCount - item.count;
+      return db.productVariant.update({
+        where: {
+          productId_specSkuIds: {
+            productId: item.productId,
+            specSkuIds: item.specSkuIds,
+          },
+        },
+        data: {
+          balance: { increment: balanceDelta },
+          ...auditUpdateConnect(uid),
+        },
+      });
+    }),
+    // deleted：变体 balance 加回旧数量
+    ...deleted.map((item) =>
+      db.productVariant.update({
+        where: {
+          productId_specSkuIds: {
+            productId: item.productId,
+            specSkuIds: item.specSkuIds,
+          },
+        },
+        data: {
+          balance: { increment: item.count },
+          ...auditUpdateConnect(uid),
         },
       }),
     ),
@@ -477,7 +610,12 @@ async function getValidIdsAndPendingStockOut(
   });
   const validIds = pendingStockOuts.map((s) => s.id);
   if (validIds.length === 0) {
-    return { validIds: [], pendingCount: {} as Record<number, number> };
+    return {
+      validIds: [],
+      pendingCount: {} as Record<number, number>,
+      specSkuItems: [] as { productId: number; specSkuIds: string; count: number }[],
+      variantAgg: [] as { productId: number; specSkuIds: string; count: number }[],
+    };
   }
 
   const joinRows = await db.productJoinStockOut.findMany({
@@ -485,7 +623,7 @@ async function getValidIdsAndPendingStockOut(
       stockOutId: { in: validIds },
       deletedAt: isDeleted ? { not: null } : null,
     },
-    select: { productId: true, count: true },
+    select: { productId: true, specSkuIds: true, count: true },
   });
 
   const pendingCount: Record<number, number> = {};
@@ -493,10 +631,28 @@ async function getValidIdsAndPendingStockOut(
     pendingCount[row.productId] =
       (pendingCount[row.productId] ?? 0) + row.count;
   }
-  return { validIds, pendingCount };
+
+  const variantAggMap = new Map<
+    string,
+    { productId: number; specSkuIds: string; count: number }
+  >();
+  for (const row of joinRows) {
+    const key = `${row.productId}-${row.specSkuIds}`;
+    const cur = variantAggMap.get(key);
+    if (cur) cur.count += row.count;
+    else
+      variantAggMap.set(key, {
+        productId: row.productId,
+        specSkuIds: row.specSkuIds,
+        count: row.count,
+      });
+  }
+  const variantAgg = [...variantAggMap.values()];
+
+  return { validIds, pendingCount, specSkuItems: joinRows, variantAgg };
 }
 
-/** DELETE /stockout/batchDelete?id=：软删 PENDING 单，回滚 balance、扣减 pending */
+/** DELETE /stockout/batchDelete?id=：软删 PENDING 单，回滚 balance */
 export async function batchDeleteStockOut(
   db: TenantPrismaClient,
   user: AuthUser,
@@ -508,11 +664,8 @@ export async function batchDeleteStockOut(
     return new SuccessResponse(null, "没有需要删除的出货单");
   }
 
-  const { validIds, pendingCount } = await getValidIdsAndPendingStockOut(
-    db,
-    ids,
-    false,
-  );
+  const { validIds, pendingCount, variantAgg } =
+    await getValidIdsAndPendingStockOut(db, ids, false);
   if (validIds.length === 0) {
     return new SuccessResponse(null, "没有符合条件的出货单可删除");
   }
@@ -531,9 +684,22 @@ export async function batchDeleteStockOut(
       db.product.update({
         where: { id: Number(productId) },
         data: {
-          stockOutPending: { decrement: totalCount },
           balance: { increment: totalCount },
-          ...auditUpdate(uid),
+          ...auditUpdateConnect(uid),
+        },
+      }),
+    ),
+    ...variantAgg.map((v) =>
+      db.productVariant.update({
+        where: {
+          productId_specSkuIds: {
+            productId: v.productId,
+            specSkuIds: v.specSkuIds,
+          },
+        },
+        data: {
+          balance: { increment: v.count },
+          ...auditUpdateConnect(uid),
         },
       }),
     ),
@@ -542,7 +708,7 @@ export async function batchDeleteStockOut(
   return new SuccessResponse(txResults, "出货单批量删除成功");
 }
 
-/** POST /stockout/restoreDeleted：恢复软删的 PENDING 单，重放 balance/pending */
+/** POST /stockout/restoreDeleted：恢复软删的 PENDING 单，重放 balance */
 export async function restoreDeletedStockOut(
   db: TenantPrismaClient,
   user: AuthUser,
@@ -553,11 +719,8 @@ export async function restoreDeletedStockOut(
     return new SuccessResponse(null, "没有需要恢复的出货单");
   }
 
-  const { validIds, pendingCount } = await getValidIdsAndPendingStockOut(
-    db,
-    ids,
-    true,
-  );
+  const { validIds, pendingCount, variantAgg } =
+    await getValidIdsAndPendingStockOut(db, ids, true);
   if (validIds.length === 0) {
     return new SuccessResponse(null, "没有符合条件的出货单可恢复");
   }
@@ -575,9 +738,22 @@ export async function restoreDeletedStockOut(
       db.product.update({
         where: { id: Number(productId) },
         data: {
-          stockOutPending: { increment: totalCount },
           balance: { decrement: totalCount },
-          ...auditUpdate(uid),
+          ...auditUpdateConnect(uid),
+        },
+      }),
+    ),
+    ...variantAgg.map((v) =>
+      db.productVariant.update({
+        where: {
+          productId_specSkuIds: {
+            productId: v.productId,
+            specSkuIds: v.specSkuIds,
+          },
+        },
+        data: {
+          balance: { decrement: v.count },
+          ...auditUpdateConnect(uid),
         },
       }),
     ),

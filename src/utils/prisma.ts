@@ -19,6 +19,7 @@ const SOFT_DELETE_MODELS = [
   "SkuCategory",
   "Sku",
   "ProductJoinSku",
+  "ProductVariant",
 ] as const;
 
 /** 业务表：带 tenantId 需要租户隔离的模型（NOT NULL tenantId） */
@@ -36,6 +37,7 @@ export const TENANT_MODELS = [
   "SkuCategory",
   "Sku",
   "ProductJoinSku",
+  "ProductVariant",
 ] as const;
 const TENANT_MODEL_SET = new Set<string>(TENANT_MODELS);
 
@@ -239,9 +241,6 @@ export function createTenantPrisma(tenantId: number) {
               const c = args.create as Record<string, unknown>;
               delete c.tenantId;
               c.tenant = { connect: { id: tenantId } };
-            }
-            if (args.update && typeof args.update === "object") {
-              (args.update as Record<string, unknown>).tenantId = tenantId;
             }
           }
           return query(args);
