@@ -39,8 +39,8 @@ model Tenant {
   productJoinStockOuts ProductJoinStockOut[]
   clients              Client[]
   applicants           Applicant[] // Applicant.tenantId 可空（仅待审核的 create 型为空，审核通过创建 PENDING 租户后必有值）
-  skuCategories        SkuCategory[]
-  skus                 Sku[]
+  attrCategories        AttrCategory[]
+  attrs                 Attr[]
   productJoinSkus      ProductJoinSku[]
   productVariants      ProductVariant[]
 }
@@ -172,48 +172,48 @@ model Product {
 }
 
 // SKU 分类（如：颜色、尺码），租户内字典
-model SkuCategory {
+model AttrCategory {
   id            Int       @id @default(autoincrement()) @db.UnsignedSmallInt
   tenantId      Int
   tenant        Tenant    @relation(fields: [tenantId], references: [id])
   name          String    @db.VarChar(20)
-  skus          Sku[]
+  attrs          Attr[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   deletedAt     DateTime?
   createdBy     Int
-  createdByUser User?     @relation("SkuCategoryCreatedBy", fields: [createdBy], references: [id])
+  createdByUser User?     @relation("AttrCategoryCreatedBy", fields: [createdBy], references: [id])
   updatedBy     Int
-  updatedByUser User?     @relation("SkuCategoryUpdatedBy", fields: [updatedBy], references: [id])
+  updatedByUser User?     @relation("AttrCategoryUpdatedBy", fields: [updatedBy], references: [id])
   deletedBy     Int?
-  deletedByUser User?     @relation("SkuCategoryDeletedBy", fields: [deletedBy], references: [id])
+  deletedByUser User?     @relation("AttrCategoryDeletedBy", fields: [deletedBy], references: [id])
 
   @@index([tenantId])
   @@unique([tenantId, name])
 }
 
 // SKU（规格值，如：红色、XL），归属于一个 SKU 分类，与产品多对多
-model Sku {
+model Attr {
   id              Int              @id @default(autoincrement()) @db.UnsignedSmallInt
   tenantId        Int
   tenant          Tenant           @relation(fields: [tenantId], references: [id])
   name            String           @db.VarChar(20)
-  skuCategoryId   Int              @db.UnsignedSmallInt
-  skuCategory     SkuCategory      @relation(fields: [skuCategoryId], references: [id])
+  attrCategoryId   Int              @db.UnsignedSmallInt
+  attrCategory     AttrCategory      @relation(fields: [attrCategoryId], references: [id])
   productJoinSkus ProductJoinSku[]
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   deletedAt       DateTime?
   createdBy       Int
-  createdByUser   User?            @relation("SkuCreatedBy", fields: [createdBy], references: [id])
+  createdByUser   User?            @relation("AttrCreatedBy", fields: [createdBy], references: [id])
   updatedBy       Int
-  updatedByUser   User?            @relation("SkuUpdatedBy", fields: [updatedBy], references: [id])
+  updatedByUser   User?            @relation("AttrUpdatedBy", fields: [updatedBy], references: [id])
   deletedBy       Int?
-  deletedByUser   User?            @relation("SkuDeletedBy", fields: [deletedBy], references: [id])
+  deletedByUser   User?            @relation("AttrDeletedBy", fields: [deletedBy], references: [id])
 
   @@index([tenantId])
-  @@index([skuCategoryId])
-  @@unique([tenantId, skuCategoryId, name])
+  @@index([attrCategoryId])
+  @@unique([tenantId, attrCategoryId, name])
 }
 
 // 产品-SKU 中间表（显式多对多，带租户隔离与审计字段）
@@ -223,8 +223,8 @@ model ProductJoinSku {
   tenant        Tenant    @relation(fields: [tenantId], references: [id])
   productId     Int
   product       Product   @relation(fields: [productId], references: [id])
-  skuId         Int       @db.UnsignedSmallInt
-  sku           Sku       @relation(fields: [skuId], references: [id])
+  attrId         Int       @db.UnsignedSmallInt
+  attr           Attr       @relation(fields: [attrId], references: [id])
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   deletedAt     DateTime?
@@ -236,8 +236,8 @@ model ProductJoinSku {
   deletedByUser User?     @relation("ProductJoinSkuDeletedBy", fields: [deletedBy], references: [id])
 
   @@index([tenantId])
-  @@index([skuId])
-  @@unique([productId, skuId])
+  @@index([attrId])
+  @@unique([productId, attrId])
 }
 
 // 产品变体（真实 SKU = 完整规格组合），库存最小单位
@@ -302,12 +302,12 @@ model User {
   productJoinStockInCreated  ProductJoinStockIn[]  @relation("ProductJoinStockInCreatedBy")
   productJoinStockInUpdated  ProductJoinStockIn[]  @relation("ProductJoinStockInUpdatedBy")
   productJoinStockInDeleted  ProductJoinStockIn[]  @relation("ProductJoinStockInDeletedBy")
-  skuCategoryCreated         SkuCategory[]         @relation("SkuCategoryCreatedBy")
-  skuCategoryUpdated         SkuCategory[]         @relation("SkuCategoryUpdatedBy")
-  skuCategoryDeleted         SkuCategory[]         @relation("SkuCategoryDeletedBy")
-  skuCreated                 Sku[]                 @relation("SkuCreatedBy")
-  skuUpdated                 Sku[]                 @relation("SkuUpdatedBy")
-  skuDeleted                 Sku[]                 @relation("SkuDeletedBy")
+  attrCategoryCreated         AttrCategory[]         @relation("AttrCategoryCreatedBy")
+  attrCategoryUpdated         AttrCategory[]         @relation("AttrCategoryUpdatedBy")
+  attrCategoryDeleted         AttrCategory[]         @relation("AttrCategoryDeletedBy")
+  attrCreated                 Attr[]                 @relation("AttrCreatedBy")
+  attrUpdated                 Attr[]                 @relation("AttrUpdatedBy")
+  attrDeleted                 Attr[]                 @relation("AttrDeletedBy")
   productJoinSkuCreated      ProductJoinSku[]      @relation("ProductJoinSkuCreatedBy")
   productJoinSkuUpdated      ProductJoinSku[]      @relation("ProductJoinSkuUpdatedBy")
   productJoinSkuDeleted      ProductJoinSku[]      @relation("ProductJoinSkuDeletedBy")
