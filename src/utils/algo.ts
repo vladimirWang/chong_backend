@@ -45,6 +45,18 @@ export function normalizeSpecSkuIds(specSkuIds: string): string {
   return [...new Set(ids)].sort((a, b) => a - b).join(",");
 }
 
+/** 规格组合字符串 → 去重升序 attrId 数组；空串返回 []（与 normalizeSpecSkuIds 同规则） */
+export function parseSpecSkuIds(specSkuIds: string): number[] {
+  if (!specSkuIds) return [];
+  const ids = specSkuIds
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((s) => parseInt(s, 10))
+    .filter((n) => !Number.isNaN(n));
+  return [...new Set(ids)].sort((a, b) => a - b);
+}
+
 export type CompareArrayResult<T> = {
   added: T[];
   modified: T[];

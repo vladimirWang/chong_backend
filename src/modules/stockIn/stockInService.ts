@@ -1,4 +1,4 @@
-import type { Prisma } from "../../generated/prisma/client";
+import { Prisma } from "../../generated/prisma/client";
 import type { TenantPrismaClient } from "../../utils/prisma";
 import { SuccessResponse, errorCode } from "../../models/Response";
 import { HttpError } from "../../models/HttpError";
@@ -13,8 +13,10 @@ import {
 import {
   compareArrayMinLoop,
   normalizeSpecSkuIds,
+  parseSpecSkuIds,
   sum2,
 } from "../../utils/algo";
+import { resolveVariant } from "../../utils/variant";
 import { generateServiceCode } from "../../utils/common";
 import { invalidateProductDetailCache } from "../product/productService";
 import type { AuthUser } from "../../types/auth";
@@ -28,7 +30,8 @@ import type {
  * 进货业务层（移植自 repo_backend stockInController）
  * 库存联动规则：
  * - 创建/编辑未完成进货单不改动库存
- * - 确认收货时 ProductVariant 按 (productId, specSkuIds) upsert（balance += count），
+ * - 确认收货时在「锁 Product 行」的事务内解析/创建 ProductVariant（组合 = attrId 集合，
+ *   经 ProductVariantJoinAttr 关联表表达），变体已存在则 balance += count，
  *   同时 Product.balance += count 并写 HistoryCost
  * - 软删/恢复仅作用于 PENDING 单
  */
@@ -352,52 +355,93 @@ export async function confirmCompleted(
     where: { stockInId: id },
   });
 
+  // 预解析每行规格的 attr 集合（校验存在性，并取 attrCategoryId 冗余用于关联表）
+  const lineAttrs = await Promise.all(
+    relatedProducts.map(async (item) => {
+      const attrIds = parseSpecSkuIds(item.specSkuIds);
+      const attrs = attrIds.length
+        ? await db.attr.findMany({
+            where: { id: { in: attrIds } },
+            select: { id: true, attrCategoryId: true },
+          })
+        : [];
+      if (attrs.length !== attrIds.length) {
+        throw new HttpError(
+          400,
+          errorCode.VALIDATION_ERROR,
+          `规格不存在: 产品${item.productId} 规格[${item.specSkuIds}]`,
+        );
+      }
+      return { item, attrIds, attrs };
+    }),
+  );
+
   const completedAtVal = completedAt ?? new Date();
-  const record = await db.$transaction([
+  const productIds = [...new Set(relatedProducts.map((i) => i.productId))];
+
+  const record = await db.$transaction(async (tx) => {
+    // 锁定涉及的产品行：串行化同一产品的变体解析/创建，
+    // 防止并发确认收货为同一组合创建重复变体（组合唯一性的核心保证）
+    if (productIds.length > 0) {
+      await tx.$queryRaw`SELECT id FROM Product WHERE id IN (${Prisma.join(
+        productIds,
+      )}) FOR UPDATE`;
+    }
+
     // 修改进货单状态
-    db.stockIn.update({
+    const stockInResult = await tx.stockIn.update({
       where: { id },
       data: {
         status: "COMPLETED",
         completedAt: completedAtVal,
         ...auditUpdateConnect(uid),
       },
-    }),
-    // 修改产品总库存
-    ...relatedProducts.map((item) =>
-      db.product.update({
+    });
+
+    for (const { item, attrIds, attrs } of lineAttrs) {
+      // 修改产品总库存
+      await tx.product.update({
         where: { id: item.productId },
         data: {
           balance: { increment: item.count },
           latestCost: item.cost,
           ...auditUpdateConnect(uid),
         },
-      }),
-    ),
-    // 按 (productId, specSkuIds) upsert 规格库存（tenant 由扩展注入）
-    ...relatedProducts.map((item) =>
-      db.productVariant.upsert({
-        where: {
-          productId_specSkuIds: {
-            productId: item.productId,
-            specSkuIds: item.specSkuIds,
+      });
+
+      // 变体库存：组合已存在则增量，否则创建变体并写入 attr 关联集合
+      const variant = await resolveVariant(tx, item.productId, attrIds);
+      if (variant) {
+        await tx.productVariant.update({
+          where: { id: variant.id },
+          data: {
+            balance: { increment: item.count },
+            ...auditUpdateConnect(uid),
           },
-        },
-        create: {
-          product: { connect: { id: item.productId } },
-          specSkuIds: item.specSkuIds,
-          balance: item.count,
-          ...auditCreateConnect(uid),
-          // tenant 由租户扩展运行时注入，原始类型要求 tenant，需断言
-        } as never,
-        update: {
-          balance: { increment: item.count },
-          ...auditUpdateConnect(uid),
-        },
-      }),
-    ),
-    ...relatedProducts.map((item) =>
-      db.historyCost.create({
+        });
+      } else {
+        await tx.productVariant.create({
+          data: {
+            product: { connect: { id: item.productId } },
+            balance: item.count,
+            ...auditCreateConnect(uid),
+            // 嵌套 create 不触发租户扩展，需手动指定 tenant
+            productVariantJoinAttrs: {
+              create: attrs.map((a) => ({
+                attr: { connect: { id: a.id } },
+                attrCategoryId: a.attrCategoryId,
+                tenant: { connect: { id: tenantId } },
+                ...auditCreateConnect(uid),
+              })),
+            },
+          } as never,
+        });
+      }
+    }
+
+    // 写历史成本
+    for (const item of relatedProducts) {
+      await tx.historyCost.create({
         data: {
           value: item.cost,
           tenant: { connect: { id: tenantId } },
@@ -405,9 +449,12 @@ export async function confirmCompleted(
           stockIn: { connect: { id } },
           ...auditCreateConnect(uid),
         } as never,
-      }),
-    ),
-  ]);
+      });
+    }
+
+    return stockInResult;
+  });
+
   // 事务提交后失效相关产品详情缓存（balance/latestCost/variants/historyCost 已变更）
   await invalidateProductDetailCache(
     tenantId,

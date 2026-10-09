@@ -5,7 +5,7 @@ import { userRouter } from "../modules/user/userRouter";
 import { utilRouter } from "../modules/util/utilRouter";
 import { vendorRouter } from "../modules/vendor/vendorRouter";
 import { productRouter } from "../modules/product/productRouter";
-import { skuRouter } from "../modules/sku/skuRouter";
+import { attrRouter } from "../modules/attr/attrRouter";
 import { stockInRouter } from "../modules/stockIn/stockInRouter";
 import { stockOutRouter } from "../modules/stockOut/stockOutRouter";
 import { platformRouter } from "../modules/platform/platformRouter";
@@ -29,7 +29,7 @@ export const apiRouter = new Hono()
   .route("/util", utilRouter)
   .route("/vendor", vendorRouter)
   .route("/product", productRouter)
-  .route("/sku", skuRouter)
+  .route("/attr", attrRouter)
   .route("/stockin", stockInRouter)
   .route("/stockout", stockOutRouter)
   .route("/platform", platformRouter)
