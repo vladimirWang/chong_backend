@@ -16,8 +16,8 @@ const SOFT_DELETE_MODELS = [
   "FileInfo",
   "Client",
   "Platform",
-  "SkuCategory",
-  "Sku",
+  "AttrCategory",
+  "Attr",
   "ProductJoinSku",
   "ProductVariant",
 ] as const;
@@ -34,8 +34,8 @@ export const TENANT_MODELS = [
   "HistoryCost",
   "FileInfo",
   "Client",
-  "SkuCategory",
-  "Sku",
+  "AttrCategory",
+  "Attr",
   "ProductJoinSku",
   "ProductVariant",
 ] as const;

@@ -43,6 +43,7 @@ model Tenant {
   attrs                 Attr[]
   productJoinSkus      ProductJoinSku[]
   productVariants      ProductVariant[]
+  productVariantJoinAttrs ProductVariantJoinAttr[]
 }
 
 // ==================== 业务域 ====================
@@ -210,13 +211,14 @@ model Attr {
   updatedByUser   User?            @relation("AttrUpdatedBy", fields: [updatedBy], references: [id])
   deletedBy       Int?
   deletedByUser   User?            @relation("AttrDeletedBy", fields: [deletedBy], references: [id])
-
+  productVariantJoinAttrs ProductVariantJoinAttr[]
+  
   @@index([tenantId])
   @@index([attrCategoryId])
   @@unique([tenantId, attrCategoryId, name])
 }
 
-// 产品-SKU 中间表（显式多对多，带租户隔离与审计字段）
+// 产品-Attr 中间表（显式多对多，带租户隔离与审计字段）
 model ProductJoinSku {
   id            Int       @id @default(autoincrement())
   tenantId      Int
@@ -247,7 +249,7 @@ model ProductVariant {
   tenant        Tenant    @relation(fields: [tenantId], references: [id])
   productId     Int
   product       Product   @relation(fields: [productId], references: [id])
-  specSkuIds    String    @db.VarChar(50) // 规范化(排序)后的规格组合，如 "1,3"
+  // specSkuIds    String    @db.VarChar(50) // 规范化(排序)后的规格组合，如 "1,3"
   balance       Int       @default(0) @db.UnsignedSmallInt
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -258,10 +260,21 @@ model ProductVariant {
   updatedByUser User?     @relation("ProductVariantUpdatedBy", fields: [updatedBy], references: [id])
   deletedBy     Int?
   deletedByUser User?     @relation("ProductVariantDeletedBy", fields: [deletedBy], references: [id])
+  productVariantJoinAttrs ProductVariantJoinAttr[]
 
   @@index([tenantId])
   @@index([productId])
-  @@unique([productId, specSkuIds])
+  // @@unique([productId, specSkuIds])
+}
+
+model ProductVariantJoinAttr {
+  id Int @id @default(autoincrement())
+  tenantId Int
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  productVariantId Int
+  productVariant ProductVariant @relation(fields: [productVariantId], references: [id])
+  attrId Int @db.UnsignedSmallInt
+  attr Attr @relation(fields: [attrId], references: [id])
 }
 
 // 用户
