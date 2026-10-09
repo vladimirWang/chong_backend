@@ -20,6 +20,7 @@ const SOFT_DELETE_MODELS = [
   "Attr",
   "ProductJoinSku",
   "ProductVariant",
+  "ProductVariantJoinAttr",
 ] as const;
 
 /** 业务表：带 tenantId 需要租户隔离的模型（NOT NULL tenantId） */
@@ -38,6 +39,7 @@ export const TENANT_MODELS = [
   "Attr",
   "ProductJoinSku",
   "ProductVariant",
+  "ProductVariantJoinAttr",
 ] as const;
 const TENANT_MODEL_SET = new Set<string>(TENANT_MODELS);
 

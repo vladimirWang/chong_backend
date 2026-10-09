@@ -1,4 +1,4 @@
-import type { Prisma } from "../../generated/prisma/client";
+import type { Prisma, ProductVariant } from "../../generated/prisma/client";
 import type { TenantPrismaClient } from "../../utils/prisma";
 import { SuccessResponse, errorCode } from "../../models/Response";
 import { HttpError } from "../../models/HttpError";
@@ -10,7 +10,13 @@ import {
   auditUpdate,
   auditUpdateConnect,
 } from "../../utils/auditUser";
-import { compareArrayMinLoop, normalizeSpecSkuIds, sum2 } from "../../utils/algo";
+import {
+  compareArrayMinLoop,
+  normalizeSpecSkuIds,
+  parseSpecSkuIds,
+  sum2,
+} from "../../utils/algo";
+import { resolveVariant } from "../../utils/variant";
 import { generateServiceCode } from "../../utils/common";
 import type { AuthUser } from "../../types/auth";
 import type {
@@ -22,7 +28,8 @@ import type { BatchDeleteStockInQuery } from "../stockIn/stockInValidator";
 
 /**
  * 出货业务层（移植自 repo_backend stockOutController）
- * 创建/编辑出货单 → 按变体做超卖校验，通过后 ProductVariant.balance 与 Product.balance 同步扣减；
+ * 创建/编辑出货单 → 变体经集合相等解析（ProductVariantJoinAttr 组合）后做超卖校验，
+ * 通过后 ProductVariant.balance 与 Product.balance 同步扣减；
  * 确认出货仅记 latestPrice；软删 PENDING 单回滚变体与产品余额，恢复则重放扣减。
  */
 
@@ -42,29 +49,44 @@ interface VariantNeed {
   needed: number;
 }
 
-/** 校验变体存在且可扣减数量充足（needed<=0 跳过）。变体不存在或余额不足直接抛错。 */
-async function assertVariantAvailable(
+/**
+ * 按 `productId-specSkuIds` 批量集合相等解析变体（同 key 去重）。
+ * 变体不存在（该产品无此规格组合的库存）直接抛"该规格无库存"。
+ */
+async function resolveVariantMap(
   db: TenantPrismaClient,
-  needs: VariantNeed[],
-) {
-  for (const n of needs) {
-    if (n.needed <= 0) continue;
-    const variant = await db.productVariant.findUnique({
-      where: {
-        productId_specSkuIds: {
-          productId: n.productId,
-          specSkuIds: n.specSkuIds,
-        },
-      },
-    });
+  items: { productId: number; specSkuIds: string }[],
+): Promise<Map<string, ProductVariant>> {
+  const map = new Map<string, ProductVariant>();
+  for (const item of items) {
+    const key = `${item.productId}-${item.specSkuIds}`;
+    if (map.has(key)) continue;
+    const variant = await resolveVariant(
+      db,
+      item.productId,
+      parseSpecSkuIds(item.specSkuIds),
+    );
     if (!variant) {
       throw new HttpError(
         400,
         errorCode.VALIDATION_ERROR,
-        `该规格无库存: ${n.productId}-${n.specSkuIds}`,
+        `该规格无库存: ${key}`,
       );
     }
-    if (n.needed > variant.balance) {
+    map.set(key, variant);
+  }
+  return map;
+}
+
+/** 校验变体可扣减数量充足（needed<=0 跳过），否则抛"产品超卖了" */
+function assertVariantsNotOversold(
+  variantMap: Map<string, ProductVariant>,
+  needs: VariantNeed[],
+) {
+  for (const n of needs) {
+    if (n.needed <= 0) continue;
+    const variant = variantMap.get(`${n.productId}-${n.specSkuIds}`);
+    if (variant && n.needed > variant.balance) {
       throw new HttpError(400, errorCode.VALIDATION_ERROR, "产品超卖了");
     }
   }
@@ -197,9 +219,10 @@ export async function createMultipleStockOut(
     specSkuIds: normalizeSpecSkuIds(item.specSkuIds),
   }));
 
-  // 变体级超卖校验：变体不存在或余额不足直接抛错（变体存在即产品存在）
-  await assertVariantAvailable(
-    db,
+  // 集合相等解析变体（变体不存在即产品无此规格库存，直接抛错），再做超卖校验
+  const variantMap = await resolveVariantMap(db, normalizedLines);
+  assertVariantsNotOversold(
+    variantMap,
     normalizedLines.map((item) => ({
       productId: item.productId,
       specSkuIds: item.specSkuIds,
@@ -249,10 +272,7 @@ export async function createMultipleStockOut(
     ...normalizedLines.map((item) =>
       db.productVariant.update({
         where: {
-          productId_specSkuIds: {
-            productId: item.productId,
-            specSkuIds: item.specSkuIds,
-          },
+          id: variantMap.get(`${item.productId}-${item.specSkuIds}`)!.id,
         },
         data: {
           balance: { decrement: item.count },
@@ -353,6 +373,7 @@ export async function updateStockOut(
 
   // 更新后产品为空 → 回滚库存并删除出货单（中间表 onDelete: Cascade 级联删）
   if (normalizedLines.length === 0) {
+    const variantMap = await resolveVariantMap(db, existedRecord);
     await db.$transaction([
       ...existedRecord.map((item) =>
         db.product.update({
@@ -366,10 +387,7 @@ export async function updateStockOut(
       ...existedRecord.map((item) =>
         db.productVariant.update({
           where: {
-            productId_specSkuIds: {
-              productId: item.productId,
-              specSkuIds: item.specSkuIds,
-            },
+            id: variantMap.get(`${item.productId}-${item.specSkuIds}`)!.id,
           },
           data: {
             balance: { increment: item.count },
@@ -436,7 +454,13 @@ export async function updateStockOut(
         : [];
     }),
   ];
-  await assertVariantAvailable(db, variantNeeds);
+  // 解析全部涉及行（added/modified/deleted）的变体，并按增量做超卖校验
+  const variantMap = await resolveVariantMap(db, [
+    ...added,
+    ...modified,
+    ...deleted,
+  ]);
+  assertVariantsNotOversold(variantMap, variantNeeds);
 
   // clientId 为 null 时 disconnect；不传（undefined）时保持原值
   const clientValue =
@@ -530,10 +554,7 @@ export async function updateStockOut(
     ...added.map((item) =>
       db.productVariant.update({
         where: {
-          productId_specSkuIds: {
-            productId: item.productId,
-            specSkuIds: item.specSkuIds,
-          },
+          id: variantMap.get(`${item.productId}-${item.specSkuIds}`)!.id,
         },
         data: {
           balance: { decrement: item.count },
@@ -548,10 +569,7 @@ export async function updateStockOut(
       const balanceDelta = existedCount - item.count;
       return db.productVariant.update({
         where: {
-          productId_specSkuIds: {
-            productId: item.productId,
-            specSkuIds: item.specSkuIds,
-          },
+          id: variantMap.get(`${item.productId}-${item.specSkuIds}`)!.id,
         },
         data: {
           balance: { increment: balanceDelta },
@@ -563,10 +581,7 @@ export async function updateStockOut(
     ...deleted.map((item) =>
       db.productVariant.update({
         where: {
-          productId_specSkuIds: {
-            productId: item.productId,
-            specSkuIds: item.specSkuIds,
-          },
+          id: variantMap.get(`${item.productId}-${item.specSkuIds}`)!.id,
         },
         data: {
           balance: { increment: item.count },
@@ -669,6 +684,7 @@ export async function batchDeleteStockOut(
   if (validIds.length === 0) {
     return new SuccessResponse(null, "没有符合条件的出货单可删除");
   }
+  const variantMap = await resolveVariantMap(db, variantAgg);
   const now = new Date();
 
   const txResults = await db.$transaction([
@@ -692,10 +708,7 @@ export async function batchDeleteStockOut(
     ...variantAgg.map((v) =>
       db.productVariant.update({
         where: {
-          productId_specSkuIds: {
-            productId: v.productId,
-            specSkuIds: v.specSkuIds,
-          },
+          id: variantMap.get(`${v.productId}-${v.specSkuIds}`)!.id,
         },
         data: {
           balance: { increment: v.count },
@@ -724,6 +737,7 @@ export async function restoreDeletedStockOut(
   if (validIds.length === 0) {
     return new SuccessResponse(null, "没有符合条件的出货单可恢复");
   }
+  const variantMap = await resolveVariantMap(db, variantAgg);
 
   const txResults = await db.$transaction([
     db.stockOut.updateMany({
@@ -746,10 +760,7 @@ export async function restoreDeletedStockOut(
     ...variantAgg.map((v) =>
       db.productVariant.update({
         where: {
-          productId_specSkuIds: {
-            productId: v.productId,
-            specSkuIds: v.specSkuIds,
-          },
+          id: variantMap.get(`${v.productId}-${v.specSkuIds}`)!.id,
         },
         data: {
           balance: { decrement: v.count },

@@ -67,7 +67,14 @@ export async function getProductById(db: TenantPrismaClient, id: number) {
       },
       variants: {
         where: { deletedAt: null },
-        select: { specSkuIds: true, balance: true },
+        select: {
+          id: true,
+          balance: true,
+          // 规格组合 = 关联的 attrId 集合（组合唯一性由业务层保证，无签名列）
+          productVariantJoinAttrs: {
+            select: { attrId: true, attrCategoryId: true },
+          },
+        },
       },
     },
   });
