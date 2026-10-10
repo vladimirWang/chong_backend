@@ -5,8 +5,7 @@ import type { AuthUser } from "../types/auth";
 
 /** 无需登录的公共路由（与 repo_backend auth.macro.ts 的 publicRoutes 对齐，随接口迁移追加） */
 const publicRoutes = new Set([
-  "/nodejs_api/user/login",
-  "/nodejs_api/user/getSalt/:email",
+  "/nodejs_api/user/sso/exchange",
   "/nodejs_api/user/checkEmailExisted/:email",
   "/nodejs_api/util/captcha",
   "/nodejs_api/util/get-nonce",
@@ -14,8 +13,6 @@ const publicRoutes = new Set([
   "/nodejs_api/applicant/sendInviteCode",
   "/nodejs_api/applicant/checkInviteCode",
   "/nodejs_api/applicant/checkApplicantExisted/:email",
-  // 通过激活 token 注册（无需登录）
-  "/nodejs_api/user/registerByToken",
   // 管理员登录/注册/找回密码
   "/nodejs_api/admin/user/login",
   "/nodejs_api/admin/user/register",

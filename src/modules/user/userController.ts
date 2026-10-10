@@ -2,23 +2,15 @@ import type { Context } from "hono";
 import {
   checkEmailExisted,
   getCurrentUser,
-  getUserSaltByEmail,
-  loginUser,
   logoutUser,
-  registerUserByToken,
-  updateUserPassword,
 } from "./userService";
-import type { LoginBody, RegisterByTokenBody, UpdatePasswordBody } from "./userValidator";
+import { ssoExchange } from "./ssoService";
+import type { SsoExchangeBody } from "./userValidator";
 
 /**
- * HTTP 层：取参（zValidator 已在路由层校验过）、调 service、组装响应
- * 响应体为 SuccessResponse/ErrorResponse 实例（HTTP 恒为 200，业务码看 body.code，与 repo_backend 一致）
+ * HTTP 层：取参、调 service、组装响应
+ * 响应体为 SuccessResponse/ErrorResponse 实例（HTTP 恒为 200，业务码看 body.code）
  */
-export const loginHandler = async (c: Context) => {
-  const body: LoginBody = await c.req.json();
-  const result = await loginUser(body);
-  return c.json(result);
-};
 
 /**
  * GET /user/checkEmailExisted/:email：检查邮箱是否已注册（公共路由，无需登录）
@@ -26,15 +18,6 @@ export const loginHandler = async (c: Context) => {
 export const checkEmailExistedHandler = async (c: Context) => {
   const email = c.req.param("email")!;
   const result = await checkEmailExisted(email);
-  return c.json(result);
-};
-
-/**
- * GET /user/getSalt/:email：按邮箱取 salt（公共路由，无需登录）
- */
-export const getUserSaltByEmailHandler = async (c: Context) => {
-  const email = c.req.param("email")!;
-  const result = await getUserSaltByEmail(email);
   return c.json(result);
 };
 
@@ -56,16 +39,9 @@ export const logoutUserHandler = async (c: Context) => {
 };
 
 /**
- * POST /user/registerByToken：通过激活 token 注册用户（公共路由，无需登录）
- * 前端激活表单提交：token + password + username（租户归属由申请/审核阶段确定）
+ * POST /user/sso/exchange：SSO 授权码换本系统 token（公共路由，无需登录）
  */
-export const registerUserByTokenHandler = async (c: Context) => {
-  const body = c.req.valid("json" as never) as RegisterByTokenBody;
-  return c.json(await registerUserByToken(body));
-};
-
-/** POST /user/updatePassword：修改密码（需登录，user 由 authMiddleware 注入） */
-export const updatePasswordHandler = async (c: Context) => {
-  const body = c.req.valid("json" as never) as UpdatePasswordBody;
-  return c.json(await updateUserPassword(body, c.get("user")));
+export const ssoExchangeHandler = async (c: Context) => {
+  const body = c.req.valid("json" as never) as SsoExchangeBody;
+  return c.json(await ssoExchange(body.code, body.redirectUri));
 };

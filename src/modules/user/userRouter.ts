@@ -3,49 +3,30 @@ import { zValidator } from "@hono/zod-validator";
 import {
   checkEmailExistedHandler,
   getCurrentUserHandler,
-  getUserSaltByEmailHandler,
-  loginHandler,
   logoutUserHandler,
-  registerUserByTokenHandler,
-  updatePasswordHandler,
+  ssoExchangeHandler,
 } from "./userController";
 import {
-  loginBodySchema,
   paramEmailSchema,
-  registerByTokenBodySchema,
-  updatePasswordBodySchema,
+  ssoExchangeBodySchema,
 } from "./userValidator";
 
 /**
  * 路由层：只做路由注册 + 挂 validator，业务逻辑在 controller/service
+ * 本地密码登录已下线，仅保留 SSO 统一登录 + 公共查询 + 登出
  */
 const userRouter = new Hono()
   .post(
-    "/login",
-    zValidator("json", loginBodySchema),
-    loginHandler,
-  )
-  .post(
-    "/registerByToken",
-    zValidator("json", registerByTokenBodySchema),
-    registerUserByTokenHandler,
+    "/sso/exchange",
+    zValidator("json", ssoExchangeBodySchema),
+    ssoExchangeHandler,
   )
   .get(
     "/checkEmailExisted/:email",
     zValidator("param", paramEmailSchema),
     checkEmailExistedHandler,
   )
-  .get(
-    "/getSalt/:email",
-    zValidator("param", paramEmailSchema),
-    getUserSaltByEmailHandler,
-  )
   .post("/logout", logoutUserHandler)
-  .get("/current", getCurrentUserHandler)
-  .post(
-    "/updatePassword",
-    zValidator("json", updatePasswordBodySchema),
-    updatePasswordHandler,
-  );
+  .get("/current", getCurrentUserHandler);
 
 export { userRouter };

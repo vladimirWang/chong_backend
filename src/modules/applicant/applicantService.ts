@@ -1,16 +1,8 @@
 import { randomBytes } from "node:crypto";
-import dayjs from "dayjs";
-import type { Mail } from "../../generated/prisma/client";
 import prisma from "../../utils/prisma";
 import { getPaginationValues } from "../../utils/db";
-import { auditCreate, auditCreateConnect, auditUpdate, auditUpdateConnect } from "../../utils/auditUser";
-import { getRabbitChannel } from "../../utils/rabbitmq";
-import { sendFrom } from "../../utils/mailer";
+import { auditUpdateConnect } from "../../utils/auditUser";
 import { createModuleLogger } from "../../utils/logger";
-import {
-  applicantExchange,
-  applicationApproveRoutingKey,
-} from "../../config/rabbitmq";
 import {
   ErrorResponse,
   SuccessResponse,
@@ -26,15 +18,11 @@ import type {
 
 const logger = createModuleLogger("applicant");
 
-/** 交互式事务 client 类型（从扩展型 prisma 实例推导，与 $transaction 回调入参一致） */
-type TxClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
-
 /**
  * 公开申请接口没有登录态，审计字段需要一个系统管理员 id。
  * 与老架构一致从 ANONYMOUS_EMAIL 对应的 AdminUser 取，查不到退回 0。
  */
 async function getAnonymousAdminUserId(): Promise<number> {
-  // const email = process.env.ANONYMOUS_EMAIL;
   const email = process.env.ADMIN_EMAIL;
   if (email) {
     const admin = await prisma.adminUser.findFirst({ where: { email } });
@@ -57,7 +45,7 @@ export async function sendInviteCode(body: SendInviteCodeBody) {
     return new ErrorResponse(errorCode.VALIDATION_ERROR, "邮箱已注册");
   }
 
-  // create 型：提前校验租户名未被占用（审核通过创建 PENDING 租户时仍有唯一约束兜底竞态）
+  // create 型：提前校验租户名未被占用
   if (tenantName) {
     const nameExisted = await prisma.tenant.findUnique({
       where: { name: tenantName },
@@ -107,7 +95,6 @@ export async function sendInviteCode(body: SendInviteCodeBody) {
 
 /**
  * 校验邀请码（注册时使用），公共路由
- * 移植自 repo_backend checkInviteCode
  */
 export async function checkInviteCode(body: CheckInviteCodeBody) {
   const { email } = body;
@@ -173,59 +160,6 @@ export async function getApplicants(
   return new SuccessResponse({ total, list }, "获取申请人列表成功");
 }
 
-async function insertMail(
-  tx: TxClient,
-  applicantId: number,
-  email: string,
-  userId: number,
-): Promise<Mail> {
-  // 生成激活链接 token（只存 hash）
-  const token = randomBytes(32).toString("hex");
-  await tx.applicantActivationToken.create({
-    data: {
-      applicantId,
-      tokenHash: token,
-      expiresAt: dayjs().add(7, "day").toDate(),
-      ...auditCreate(userId),
-    },
-  });
-  const activatedLink = `${process.env.FRONTEND_URL}/#/applicant/activate?token=${token}`;
-  const mail = await tx.mail.create({
-    data: {
-      title: "库存系统激活链接",
-      content: `<p>激活链接为：<a href="${activatedLink}" target="_blank">前往填写用户信息</a>, 请尽快使用。</p>`,
-      from: sendFrom,
-      to: email,
-    },
-  });
-  return mail;
-}
-
-/**
- * 在事务内：生成新激活 token（7 天有效）+ 落一条 Mail + 通过 RabbitMQ 通知 worker 异步发信。
- * approve（首次审核）与 resend（重发链接）复用。
- */
-async function issueActivationMail(
-  mail: Mail | null
-) {
-  if (!mail) return;
-  const mailId = mail.id
-  // 共享连接：DNS/建连只在首次发生，断线后自动懒重建
-  const channel = await getRabbitChannel();
-  await channel.assertExchange(applicantExchange, "topic", {
-    durable: true,
-  });
-  logger.info("审核通过，创建激活邮件", { mailId: mailId });
-  const buf = JSON.stringify({ mailId: mailId });
-  channel.publish(
-    applicantExchange,
-    applicationApproveRoutingKey,
-    Buffer.from(buf),
-    { persistent: true },
-  );
-  logger.info("已投递发信消息", { mailId: mailId });
-}
-
 /**
  * 权限校验：
  * - create 型（applicant.tenantId 为空）：仅系统管理员可审核
@@ -256,28 +190,32 @@ function checkApprovePermission(
 }
 
 /**
- * 审核核心逻辑（事务内）：更新申请状态 +（create 型创建 PENDING 租户）
- * + 创建激活 token + 落一条 Mail，事务后通过 RabbitMQ 通知 worker 异步发信
- * 手动审核与自动审核复用此函数
+ * 审核核心逻辑（事务内）：审核通过即创建 User（无密码，身份信息由 SSO 管理）
+ *
+ * - create 型：创建 ACTIVE 租户 + 创建 User + 绑定 superUserId + 回写 tenantId
+ * - join 型：直接创建 User（关联已有租户）
+ * - 申请人状态直接置为 ACTIVATED（不再有"审核→激活"两步流程）
+ *
+ * 幂等：where status not ACTIVATED 防止重复审核（已 ACTIVATED 的 update 不匹配会抛 P2025 触发回滚）
  */
 async function approveApplicantCore(
   applicant: { id: number; email: string; tenantId: number | null; tenantName: string | null },
   auditUserId: number,
 ): Promise<void> {
   const { id, email } = applicant;
-  let mail: Mail | null = null;
   await prisma.$transaction(
     async (tx) => {
+      // 更新申请状态为 ACTIVATED（审核通过即建 User，一步到位）
       await tx.applicant.update({
-        where: { id, status: { not: "APPROVED" } },
+        where: { id, status: { not: "ACTIVATED" } },
         data: {
-          status: "APPROVED",
+          status: "ACTIVATED",
           ...auditUpdateConnect(auditUserId),
         },
       });
-      // create 型（applicant 无租户）：创建 PENDING 租户占位并回写 tenantId，
-      // 消除"申请→激活"窗口内同名租户先激活的竞态；租户名唯一约束为最终兜底
+
       if (applicant.tenantId == null) {
+        // create 型：创建 ACTIVE 租户
         if (!applicant.tenantName) {
           throw new Error("申请缺少租户名称，无法创建租户");
         }
@@ -291,35 +229,55 @@ async function approveApplicantCore(
           data: {
             name: applicant.tenantName,
             code: randomBytes(3).toString("hex"),
-            status: "PENDING",
+            status: "ACTIVE",
           },
         });
         await tx.applicant.update({
           where: { id },
           data: {
-            tenant: {
-              connect: { id: newTenant.id },
-            }
-          }
+            tenant: { connect: { id: newTenant.id } },
+          },
+        });
+        // 创建 User（无密码/username，身份信息由 SSO 管理）并绑定为租户超级管理员
+        const newUser = await tx.user.create({
+          data: {
+            email,
+            tenant: { connect: { id: newTenant.id } },
+          },
+        });
+        await tx.tenant.update({
+          where: { id: newTenant.id },
+          data: { superUserId: newUser.id },
+        });
+      } else {
+        // join 型：租户已存在，直接建 User
+        const tenant = await tx.tenant.findUnique({ where: { id: applicant.tenantId } });
+        if (!tenant) {
+          throw new Error("租户不存在");
+        }
+        if (tenant.status === "SUSPENDED" || tenant.status === "DISABLED") {
+          throw new Error("租户已停用");
+        }
+        await tx.user.create({
+          data: {
+            email,
+            tenant: { connect: { id: applicant.tenantId } },
+          },
         });
       }
-      mail = await insertMail(tx, id, email, auditUserId);
     },
     {
-      // 发信可能较慢，避免默认 timeout 过早中断
       timeout: 30_000,
       maxWait: 10_000,
     },
   );
-  await issueActivationMail(mail);
 }
 
 /**
- * 审核通过：事务内更新申请状态 +（create 型创建 PENDING 租户并回写 tenantId）
- * + 创建激活 token + 落一条 Mail，随后通过 RabbitMQ 通知 worker 异步发信
+ * 审核通过：事务内创建 User +（create 型创建租户并绑定 superUserId）
+ * 用户身份信息（username/password/salt）统一由 SSO 管理，本系统不再存储
  *
  * 权限：申请人有 tenantId → 该租户 superUser 审核；无 tenantId（create 型）→ 管理员审核
- * 租户：create 型在此刻创建 PENDING 占位租户，用户激活时绑定 superUserId 并置 ACTIVE
  */
 export async function approveApplication(
   body: ApproveApplicationBody,
@@ -351,10 +309,10 @@ export async function approveApplication(
     );
     return new ErrorResponse(
       errorCode.SYSTEM_ERROR,
-      "审核失败：数据库更新或发送邮件出错，已回滚",
+      "审核失败：数据库更新出错，已回滚",
     );
   }
-  return new SuccessResponse(null, "审核通过， 邮件已发送");
+  return new SuccessResponse(null, "审核通过，用户已创建，可通过 SSO 登录");
 }
 
 /**
@@ -394,81 +352,7 @@ export async function autoApprovePendingApplications(): Promise<void> {
 }
 
 /**
- * 重新发送激活链接（需管理员登录）
- *
- * 激活 token 存在数据库 ApplicantActivationToken 表（非 Redis），
- * 重发时在同一事务内把该申请人所有未使用/未作废的旧 token 置为 revokedAt，
- * 旧激活链接立即失效，再生成新 token 并发信。
- * 仅 APPROVED（已审核、尚未激活）状态允许重发。
- */
-export async function resendActivationLink(
-  body: ApproveApplicationBody,
-  user: AuthUser | undefined,
-) {
-  const { id } = body;
-  if (!user) {
-    return new ErrorResponse(errorCode.VALIDATION_ERROR, "未登录");
-  }
-
-  const applicant = await prisma.applicant.findUnique({ where: { id } });
-  if (!applicant) {
-    return new ErrorResponse(errorCode.VALIDATION_ERROR, "申请人不存在");
-  }
-
-  const permError = checkApprovePermission(applicant, user);
-  if (permError) return permError;
-
-  if (applicant.status === "PENDING") {
-    return new ErrorResponse(errorCode.VALIDATION_ERROR, "申请尚未审核，请先审核通过");
-  }
-  if (applicant.status === "REJECTED") {
-    return new ErrorResponse(errorCode.VALIDATION_ERROR, "申请已驳回，无法重发");
-  }
-  if (applicant.status === "ACTIVATED") {
-    return new ErrorResponse(errorCode.VALIDATION_ERROR, "该用户已激活，无需重发");
-  }
-
-  // 审计字段引用 AdminUser 表：merchant 用户改用匿名 AdminUser ID
-  const auditUserId = user.role === "admin"
-    ? user.userId
-    : await getAnonymousAdminUserId();
-
-  try {
-    let mail: Mail | null = null;
-    await prisma.$transaction(
-      async (tx) => {
-        // 作废旧 token：未使用且未作废的全部置为 revoked（旧激活链接立即失效）
-        await tx.applicantActivationToken.updateMany({
-          where: { applicantId: id, usedAt: null, revokedAt: null },
-          data: {
-            revokedAt: new Date(),
-            ...auditUpdate(auditUserId),
-          },
-        });
-        mail = await insertMail(tx, id, applicant.email, auditUserId);
-        // await issueActivationMail(tx, id, applicant.email, auditUserId);
-      },
-      {
-        timeout: 30_000,
-        maxWait: 10_000,
-      },
-    );
-    await issueActivationMail(mail)
-  } catch (error) {
-    logger.error(
-      `resendActivationLink error: ${error instanceof Error ? error.stack ?? error.message : String(error)}`,
-    );
-    return new ErrorResponse(
-      errorCode.SYSTEM_ERROR,
-      "重发失败：数据库更新或发送邮件出错，已回滚",
-    );
-  }
-  return new SuccessResponse(null, "激活链接已重新发送");
-}
-
-/**
  * 检查申请人邮箱是否存在，公共路由
- * 移植自 repo_backend checkApplicantExisted
  */
 export async function checkApplicantExisted(email: string) {
   const applicant = await prisma.applicant.findUnique({

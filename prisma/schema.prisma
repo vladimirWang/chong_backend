@@ -298,13 +298,10 @@ model User {
   tenantId                   Int
   tenant                     Tenant                @relation(fields: [tenantId], references: [id])
   email                      String                @unique
-  username                   String?
   createdAt                  DateTime              @default(now())
   updatedAt                  DateTime              @updatedAt
   deletedAt                  DateTime?
-  password                   String
   avatar                     String?
-  salt                       String
   githubId                   String?               @unique
   vendorsCreated             Vendor[]              @relation("VendorCreatedBy")
   vendorsUpdated             Vendor[]              @relation("VendorUpdatedBy")
