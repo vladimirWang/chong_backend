@@ -67,7 +67,7 @@ services:
       retries: 12
       start_period: 40s
     networks:
-      - mac_docker_network
+      - infra_network
       - default
 
   # image-service:
@@ -82,7 +82,7 @@ services:
   #     IMAGE_GRPC_HOST: 0.0.0.0
   #     IMAGE_GRPC_PORT: 50051
   #   networks:
-  #     - mac_docker_network
+  #     - infra_network
 
   # RabbitMQ 消费者：与 server 共用同一镜像，仅覆盖启动命令
   worker:
@@ -103,7 +103,7 @@ services:
     volumes:
       - /var/log/galleryrepo_worker:/var/log/galleryrepo_worker:rw
     networks:
-      - mac_docker_network
+      - infra_network
       - default
 
   # redis:
@@ -119,5 +119,5 @@ services:
   # redis_data_prod:
 
 networks:
-  mac_docker_network:
+  infra_network:
     external: true
