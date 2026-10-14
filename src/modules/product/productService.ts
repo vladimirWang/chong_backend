@@ -107,6 +107,8 @@ export async function getProductById(
           name: true,
           img: true,
           balance: true,
+          minStock: true,
+          maxStock: true,
           vendorId: true,
           remark: true,
           latestCost: true,
@@ -158,7 +160,7 @@ export async function createProduct(
   if (!user) {
     throw new HttpError(400, errorCode.VALIDATION_ERROR, "未登录");
   }
-  const { name, remark, vendorId, salePrice, img, desc, attrIds } = body;
+  const { name, remark, vendorId, salePrice, img, desc, attrIds, minStock, maxStock } = body;
 
   const productExisted = await db.product.findFirst({
     where: { name, vendorId },
@@ -186,6 +188,8 @@ export async function createProduct(
         vendor: { connect: { id: vendorId } },
         salePrice,
         desc,
+        minStock,
+        maxStock,
         ...auditCreateConnect(user.userId),
       } as never,
     });
@@ -218,7 +222,7 @@ export async function updateProduct(
     throw new HttpError(400, errorCode.VALIDATION_ERROR, "产品不存在");
   }
 
-  const { salePrice, name, remark, img, desc, attrIds } = body;
+  const { salePrice, name, remark, img, desc, attrIds, minStock, maxStock } = body;
 
   // attrIds 未传表示不修改属性关联；传了（含空数组）则全量同步
   const syncAttrIds = attrIds ? Array.from(new Set(attrIds)) : undefined;
@@ -241,6 +245,8 @@ export async function updateProduct(
         remark,
         img,
         salePrice,
+        minStock,
+        maxStock,
         ...auditUpdate(user.userId),
       },
     });

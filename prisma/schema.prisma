@@ -145,6 +145,9 @@ model Product {
   vendorId            Int
   remark              String?
   balance             Int?                  @default(0) @db.UnsignedSmallInt
+  // 库存预警阈值，null=未设置（最低侧未设置时前端沿用 <10 标红）
+  minStock            Int?                  @db.UnsignedSmallInt
+  maxStock            Int?                  @db.UnsignedSmallInt
   createdAt           DateTime              @default(now())
   updatedAt           DateTime              @updatedAt
   deletedAt           DateTime?

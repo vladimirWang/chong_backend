@@ -8,7 +8,7 @@ import prisma from "../src/utils/prisma";
 // 插入到AminUser
 // insert into AdminUser (email, username, password, salt, createdAt, updatedAt) values ("fernandowang584@gmail.com", "admin", "61d591f1e485b0b7dd2165b7a25c160ea9a6a475532306c693d9f7abe456a590", "19c38f179287f151dba6e7ce37fa3cf8", now(), now());
 // 插入到platform
-// INSERT INTO Platform (id, name, updatedAt) VALUES (1, '实体店', NOW())
+// INSERT INTO Platform (id, name, updatedAt) VALUES (1, '实体店', NOW()),(2, '拼多多', NOW()),(3, '闲鱼', NOW())
 // INSERT INTO Platform (id, name, updatedAt) VALUES (2, '拼多多', NOW())
 // INSERT INTO Platform (id, name, updatedAt) VALUES (3, '闲鱼', NOW())
 
