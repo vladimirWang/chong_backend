@@ -1,9 +1,14 @@
 services:
   nginx:
+    # build 段保留作手动服务器构建后门（配合 deploy/Dockerfile 使用）；
+    # 生产部署使用 deploy/build_server.sh 本地预构建，up.sh 里 docker load 导入镜像，
+    # pull_policy: never 确保服务器绝不触发远程拉取或本机构建。
     build:
       context: ../nginx
       args:
         NGINX_SITE: prod
+    image: repo-nginx:latest
+    pull_policy: never
     # 服务器重启后 nginx 可能早于 server 接入网络，静态 upstream 解析失败会 emerg 退出；
     # 加自重启 + 等 server 健康后再启动
     restart: unless-stopped
@@ -34,6 +39,7 @@ services:
       dockerfile: deploy/Dockerfile
     # 固定镜像名，worker 复用同一镜像，避免重复构建
     image: repo-backend:latest
+    pull_policy: never
     # migrate 遇到 mysql 未就绪等瞬时故障时自动重试，避免容器永久退出
     restart: unless-stopped
     # Bun 运行时峰值（prisma/redis 连接池）；超过只杀本容器自动重启，不拖垮整机
@@ -87,6 +93,7 @@ services:
   # RabbitMQ 消费者：与 server 共用同一镜像，仅覆盖启动命令
   worker:
     image: repo-backend:latest
+    pull_policy: never
     command: bun run src/worker.ts
     env_file:
       - ../.env.prod

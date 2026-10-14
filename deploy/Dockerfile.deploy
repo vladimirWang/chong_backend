@@ -1,0 +1,39 @@
+# repo_backend 生产镜像（配合 build_server.sh 使用）
+#
+# 设计思路：
+#   - Mac 宿主机原生环境做 bun install + prisma generate（速度快 ~30s + ~1s）
+#   - 镜像内只做 bun install --frozen-lockfile --production（~10s，不下载 devDependencies）
+#     这条 RUN 走 Alpine 本地缓存，比服务器上第一次要拉 320M 网络快得多
+#   - 整体对比：服务器 Alpine 内直接 build（bun install + prisma generate）= 慢且会卡
+#              Mac 原生 bun install + generate + Docker --platform linux/amd64 = 快
+#
+# 注意：本 Dockerfile 不适合直接在服务器上手动 docker build 使用，
+# 请用 deploy/Dockerfile（服务器手动 build 走那条路径）。
+FROM oven/bun:1.4-alpine
+
+WORKDIR /app
+
+# === Layer 1：锁文件 + package.json（独立缓存层，依赖不变时复用）===
+COPY package.json bun.lock ./
+RUN bun install --frozen-lockfile --production
+
+# === Layer 2：Prisma schema + migrations + generated 产物 ===
+COPY prisma            ./prisma
+COPY prisma.config.ts  ./prisma.config.ts
+COPY src               ./src
+# 说明：Mac 端已执行 `prisma generate` 把产物写进 src/generated/prisma（纯 TS，跨架构），
+# 所以镜像内不再跑 prisma generate；docker-entrypoint.sh 里的 prisma migrate deploy 依赖
+# node_modules 里已安装的 prisma CLI（production install 仍保留了它）。
+
+# === Layer 3：入口脚本 + 部署配置 ===
+COPY deploy ./deploy
+COPY deploy/docker-entrypoint.sh ./docker-entrypoint.sh
+RUN chmod +x ./docker-entrypoint.sh
+
+# === Layer 4：目录兜底（生产由 compose 挂载宿主机卷覆盖）===
+RUN mkdir -p /var/log/galleryrepo_server /var/log/galleryrepo_worker /app/public/uploads
+
+EXPOSE 4000
+
+ENTRYPOINT ["./docker-entrypoint.sh"]
+CMD ["bun", "run", "src/index.ts"]
