@@ -70,18 +70,25 @@ export async function loginAdminUser(body: LoginBody) {
   const loginFailedKey = `adminLogin:failed:${body.email}`;
   const calculatedPassword = sha256(userExisted.password + "_" + body.nonce);
   if (calculatedPassword !== body.password) {
+    const COUNT_OF_PASSWORD_WRONG = 6;
     const FREEZE_DURATION = 60 * 60;
-    const loginFailedCount = await redisClient.get(loginFailedKey);
-    if (loginFailedCount) {
-      await redisClient.incr(loginFailedKey);
+    const increaseResult = await redisClient.incr(loginFailedKey);
+    if (increaseResult === 1 || await redisClient.ttl(loginFailedKey) < 0) {
       await redisClient.expire(loginFailedKey, FREEZE_DURATION);
-      const COUNT_OF_PASSWORD_WRONG = 6;
-      if (Number(loginFailedCount) === COUNT_OF_PASSWORD_WRONG - 1) {
-        await redisClient.setEx(ACCOUNT_LOCKED_KEY, FREEZE_DURATION, "1");
-      }
-    } else {
-      await redisClient.setEx(loginFailedKey, FREEZE_DURATION, "1");
     }
+    if (increaseResult >= COUNT_OF_PASSWORD_WRONG) {
+      await redisClient.setEx(ACCOUNT_LOCKED_KEY, FREEZE_DURATION, "1");
+    }
+    // const loginFailedCount = await redisClient.get(loginFailedKey);
+    // if (loginFailedCount) {
+    //   const increaseResult = await redisClient.incr(loginFailedKey);
+    //   await redisClient.expire(loginFailedKey, FREEZE_DURATION);
+    //   if (Number(increaseResult) >= COUNT_OF_PASSWORD_WRONG) {
+    //     await redisClient.setEx(ACCOUNT_LOCKED_KEY, FREEZE_DURATION, "1");
+    //   }
+    // } else {
+    //   await redisClient.setEx(loginFailedKey, FREEZE_DURATION, "1");
+    // }
     return new ErrorResponse(errorCode.PASSWORD_INCORRECT, "密码不正确");
   }
   await redisClient.del(loginFailedKey);
