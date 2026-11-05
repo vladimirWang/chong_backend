@@ -61,44 +61,52 @@ export async function loginAdminUser(body: LoginBody) {
 
   // 4. 账号是否冻结
   const ACCOUNT_LOCKED_KEY = "adminLogin:locked:" + body.email;
-  const lockStatus = await redisClient.get(ACCOUNT_LOCKED_KEY);
-  if (lockStatus) {
+  const loginFailedKey = `adminLogin:failed:${body.email}`;
+  const COUNT_OF_PASSWORD_WRONG = 6;
+  const FREEZE_DURATION = 60 * 60;
+
+    // 用lua脚本原子操作，避免竞态条件
+  const luaScript = `
+    local failed_key = KEYS[1]
+    local locked_key = KEYS[2]
+    local freeze_duration = ARGV[1]
+    local count_of_password_wrong = ARGV[2]
+    if redis.call("exists", KEYS[2]) == 1 then
+      return {-1, 1}
+    end
+    local n = redis.call('incr', failed_key)
+    if n == 1 or redis.call('ttl', failed_key) < 0 then
+      redis.call('expire', failed_key, freeze_duration)
+    end
+    if n >= tonumber(count_of_password_wrong) then
+      redis.call('set', locked_key, 1, 'EX', freeze_duration)
+      return {n, 1}
+    end
+    return {n, 0}
+  `
+  // eval 的返回类型是宽泛的 ReplyUnion（不按脚本内容推导），这里显式声明脚本的返回结构 [count, locked]
+  const [, locked] = (await redisClient.eval(luaScript, {
+    keys: [loginFailedKey, ACCOUNT_LOCKED_KEY],
+    arguments: [String(FREEZE_DURATION), String(COUNT_OF_PASSWORD_WRONG)],
+  })) as [number, number];
+
+  // const lockStatus = await redisClient.get(ACCOUNT_LOCKED_KEY);
+  if (Number(locked) === 1) {
     return new ErrorResponse(errorCode.ACCOUNT_LOCKED, "账号已锁定");
   }
 
   // 5. 密码比对（失败计数 / 锁定，逻辑与普通用户一致）
-  const loginFailedKey = `adminLogin:failed:${body.email}`;
   const calculatedPassword = sha256(userExisted.password + "_" + body.nonce);
   if (calculatedPassword !== body.password) {
-    const COUNT_OF_PASSWORD_WRONG = 6;
-    const FREEZE_DURATION = 60 * 60;
-
-    // 用lua脚本原子操作，避免竞态条件
-    const luaScript = `
-      local key = KEYS[1]
-      local expire_time = ARGV[1]
-      if redis.call("exists", key) == 0 then
-        redis.call("set", key, 1, "EX", expire_time)
-        return 1
-      else
-        local ttl = redis.call("ttl", key)
-        if ttl < 0 then
-          redis.call("expire", key, expire_time)
-        end
-        redis.call("incr", key)
-        return redis.call("get", key)
-      end
-    `
-    const increaseResult = await redisClient.eval(luaScript, {keys: [loginFailedKey], arguments: [FREEZE_DURATION+""]});
    
     // 没有lua脚本，非原子操作，存在竞态条件
     // const increaseResult = await redisClient.incr(loginFailedKey);
     // if (increaseResult === 1 || await redisClient.ttl(loginFailedKey) < 0) {
     //   await redisClient.expire(loginFailedKey, FREEZE_DURATION);
     // }
-    if (Number(increaseResult) >= COUNT_OF_PASSWORD_WRONG) {
-      await redisClient.setEx(ACCOUNT_LOCKED_KEY, FREEZE_DURATION, "1");
-    }
+    // if (Number(increaseResult) >= COUNT_OF_PASSWORD_WRONG) {
+    //   await redisClient.setEx(ACCOUNT_LOCKED_KEY, FREEZE_DURATION, "1");
+    // }
     return new ErrorResponse(errorCode.PASSWORD_INCORRECT, "密码不正确");
   }
   await redisClient.del(loginFailedKey);
