@@ -72,23 +72,33 @@ export async function loginAdminUser(body: LoginBody) {
   if (calculatedPassword !== body.password) {
     const COUNT_OF_PASSWORD_WRONG = 6;
     const FREEZE_DURATION = 60 * 60;
-    const increaseResult = await redisClient.incr(loginFailedKey);
-    if (increaseResult === 1 || await redisClient.ttl(loginFailedKey) < 0) {
-      await redisClient.expire(loginFailedKey, FREEZE_DURATION);
-    }
-    if (increaseResult >= COUNT_OF_PASSWORD_WRONG) {
+
+    // 用lua脚本原子操作，避免竞态条件
+    const luaScript = `
+      local key = KEYS[1]
+      local expire_time = ARGV[1]
+      if redis.call("exists", key) == 0 then
+        redis.call("set", key, 1, "EX", expire_time)
+        return 1
+      else
+        local ttl = redis.call("ttl", key)
+        if ttl < 0 then
+          redis.call("expire", key, expire_time)
+        end
+        redis.call("incr", key)
+        return redis.call("get", key)
+      end
+    `
+    const increaseResult = await redisClient.eval(luaScript, {keys: [loginFailedKey], arguments: [FREEZE_DURATION+""]});
+   
+    // 没有lua脚本，非原子操作，存在竞态条件
+    // const increaseResult = await redisClient.incr(loginFailedKey);
+    // if (increaseResult === 1 || await redisClient.ttl(loginFailedKey) < 0) {
+    //   await redisClient.expire(loginFailedKey, FREEZE_DURATION);
+    // }
+    if (Number(increaseResult) >= COUNT_OF_PASSWORD_WRONG) {
       await redisClient.setEx(ACCOUNT_LOCKED_KEY, FREEZE_DURATION, "1");
     }
-    // const loginFailedCount = await redisClient.get(loginFailedKey);
-    // if (loginFailedCount) {
-    //   const increaseResult = await redisClient.incr(loginFailedKey);
-    //   await redisClient.expire(loginFailedKey, FREEZE_DURATION);
-    //   if (Number(increaseResult) >= COUNT_OF_PASSWORD_WRONG) {
-    //     await redisClient.setEx(ACCOUNT_LOCKED_KEY, FREEZE_DURATION, "1");
-    //   }
-    // } else {
-    //   await redisClient.setEx(loginFailedKey, FREEZE_DURATION, "1");
-    // }
     return new ErrorResponse(errorCode.PASSWORD_INCORRECT, "密码不正确");
   }
   await redisClient.del(loginFailedKey);
