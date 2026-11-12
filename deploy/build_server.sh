@@ -7,13 +7,15 @@
 #
 # 用法:
 #   cd deploy && ./build_server.sh
+#
+# nginx 镜像不在本脚本构建：网关配置变更很少，单独用 ./build_nginx.sh 构建，
+# dist/ 里已有的 repo-nginx.tar.gz 不会被本脚本清除。
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "${SCRIPT_DIR}/.."  # repo_backend 根目录
 
 SERVER_IMAGE="repo-backend:latest"
-NGINX_IMAGE="repo-nginx:latest"
 STAGE_DIR="${SCRIPT_DIR}/.deploy-stage"
 PKG_DIR="${SCRIPT_DIR}/dist"
 
@@ -36,22 +38,15 @@ cp -R src                       "${STAGE_DIR}/"
 cp prisma.config.ts             "${STAGE_DIR}/"
 cp deploy/Dockerfile.deploy     "${STAGE_DIR}/Dockerfile"
 
-echo "==> [4/5] 构建 linux/amd64 镜像..."
-echo "  - server (仅一条 production-only bun install RUN，快于服务器全量 install+generate)"
+echo "==> [4/5] 构建 linux/amd64 server 镜像（仅一条 production-only bun install RUN）..."
 docker build --platform linux/amd64 -t "${SERVER_IMAGE}" "${STAGE_DIR}"
 echo "    架构: $(docker image inspect "${SERVER_IMAGE}" --format '{{.Architecture}}')"
 
-echo "  - nginx (保持原 Dockerfile，仅一条轻量 RUN)"
-docker build --platform linux/amd64 -f "${SCRIPT_DIR}/../nginx/Dockerfile" \
-  --build-arg NGINX_SITE=prod \
-  -t "${NGINX_IMAGE}" "${SCRIPT_DIR}/../nginx"
-echo "    架构: $(docker image inspect "${NGINX_IMAGE}" --format '{{.Architecture}}')"
-
 echo "==> [5/5] 导出镜像 + 组装部署包（${PKG_DIR}）..."
-rm -rf "${PKG_DIR}" && mkdir -p "${PKG_DIR}"
+# 只覆盖本脚本产物，不清空目录——保留 build_nginx.sh 产出的 repo-nginx.tar.gz
+mkdir -p "${PKG_DIR}"
 
 docker save "${SERVER_IMAGE}" | gzip > "${PKG_DIR}/repo-backend.tar.gz"
-docker save "${NGINX_IMAGE}"  | gzip > "${PKG_DIR}/repo-nginx.tar.gz"
 
 cp "${SCRIPT_DIR}/docker-compose.yml"  "${PKG_DIR}/"
 cp "${SCRIPT_DIR}/up.sh"                "${PKG_DIR}/"
@@ -66,10 +61,16 @@ chmod +x "${PKG_DIR}/up.sh" "${PKG_DIR}/up_server.sh"
 
 rm -rf "${STAGE_DIR}"
 
+ip="139.224.68.145"
 echo ""
 echo "==> 完成！部署包:"
 ls -lh "${PKG_DIR}/"
 echo ""
-echo "服务器部署:"
-echo "  scp -r ${PKG_DIR}/ user@server:~/repo_backend/"
-echo "  ssh user@server && cd ~/repo_backend && ./up.sh"
+echo "服务器部署（日常后端发版）:"
+echo "  scp ./dist/repo-backend.tar.gz root@${ip}:~/chong_backend/deploy/"
+echo "  ssh root@${ip} 'cd ~/repo_backend/deploy && ./up_server.sh'"
+echo ""
+echo "  注意: tar.gz 必须放进服务器仓库的 deploy/ 目录（与 docker-compose.yml、up_server.sh"
+echo "  同级，env_file/volumes 均按仓库结构相对 deploy/ 解析），不能放到独立散目录"
+echo "  全量部署（含 nginx 启动）: 服务器上 deploy/ 里执行 ./up.sh"
+echo "  nginx 配置变更: Mac 上执行 ./build_nginx.sh 后 scp repo-nginx.tar.gz 到服务器 deploy/"

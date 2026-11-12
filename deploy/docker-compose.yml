@@ -13,6 +13,7 @@ services:
     # 加自重启 + 等 server 健康后再启动
     restart: unless-stopped
     volumes:
+      # 前端静态资源 bind mount：发版 = pnpm build + rsync dist 到服务器该目录，nginx 不重启
       - ../nginx/html/dist:/usr/share/nginx/html:ro
       - ../nginx/ssl:/etc/ssl/cert:ro
       # 用户上传文件（商品图、租户 logo）：与 server 共享同一宿主机目录，由 nginx 直接托管
