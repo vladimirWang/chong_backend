@@ -5,6 +5,7 @@ import { HttpError } from "../../models/HttpError";
 import { getPaginationValues } from "../../utils/db";
 import { auditCreateConnect, auditUpdateConnect, auditSoftDelete } from "../../utils/auditUser";
 import { generateServiceCode } from "../../utils/common";
+import { invalidateProductDetailCache } from "../product/productService";
 import type { AuthUser } from "../../types/auth";
 import type {
   CreateInventoryCheckBody,
@@ -214,8 +215,12 @@ export async function updateInventoryCheckItems(
   if (!record) {
     return new ErrorResponse(errorCode.NOT_FOUND, "盘点单不存在");
   }
-  if (record.status !== "COUNTING") {
-    throw new HttpError(400, errorCode.VALIDATION_ERROR, `当前状态 ${record.status} 不可录入实盘数`);
+  if (record.status !== "COUNTING" && record.status !== "REVIEWING") {
+    throw new HttpError(
+      400,
+      errorCode.VALIDATION_ERROR,
+      `当前状态 ${record.status} 不可录入实盘数`,
+    );
   }
 
   // 校验 variantId 都属于这个盘点单
@@ -319,10 +324,11 @@ export async function completeInventoryCheck(
     );
   }
 
+  const productIds = [...new Set(record.items.map((i) => i.productId))];
+
   await db.$transaction(async (tx) => {
     // 锁定涉及的变体 + 产品行，防止并发
     const variantIds = [...new Set(record.items.map((i) => i.variantId))];
-    const productIds = [...new Set(record.items.map((i) => i.productId))];
 
     if (variantIds.length > 0) {
       await tx.$queryRaw`SELECT id FROM ProductVariant WHERE id IN (${Prisma.join(variantIds)}) FOR UPDATE`;
@@ -363,6 +369,9 @@ export async function completeInventoryCheck(
       },
     });
   });
+
+  // 清产品详情缓存（过账改了 ProductVariant/Product 的 balance）
+  await invalidateProductDetailCache(user.tenantId!, [...productIds]);
 
   const refreshed = await db.inventoryCheck.findUnique({ where: { id }, include: { items: true } });
   return new SuccessResponse(refreshed, `盘点单 ${record.serviceCode} 过账成功`);
