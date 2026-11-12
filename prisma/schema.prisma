@@ -44,6 +44,8 @@ model Tenant {
   productJoinSkus      ProductJoinSku[]
   productVariants      ProductVariant[]
   productVariantJoinAttrs ProductVariantJoinAttr[]
+  inventoryChecks      InventoryCheck[]
+  inventoryCheckItems  InventoryCheckItem[]
 }
 
 // ==================== 业务域 ====================
@@ -161,6 +163,7 @@ model Product {
   productJoinStockOut ProductJoinStockOut[] // 出货中间表
   productJoinSkus     ProductJoinSku[] // SKU 中间表
   variants            ProductVariant[] // 产品变体（真实 SKU）
+  inventoryCheckItems InventoryCheckItem[]
   salePrice           Int? // 销售价
   desc                String?               @db.LongText
   createdBy           Int
@@ -263,6 +266,7 @@ model ProductVariant {
   deletedBy     Int?
   deletedByUser User?     @relation("ProductVariantDeletedBy", fields: [deletedBy], references: [id])
   productVariantJoinAttrs ProductVariantJoinAttr[]
+  inventoryCheckItems  InventoryCheckItem[]
 
   @@index([tenantId])
   @@index([productId])
@@ -293,6 +297,88 @@ model ProductVariantJoinAttr {
   @@index([attrId])
   @@index([attrCategoryId, attrId])
   @@unique([productVariantId, attrId])
+}
+
+// 盘点单状态
+enum InventoryCheckStatus {
+  DRAFT       // 草稿：刚创建，尚未开始清点
+  COUNTING    // 清点中
+  REVIEWING   // 复盘：差异已出，等待确认过账
+  COMPLETED   // 已过账
+  CANCELLED   // 作废
+}
+
+// 盘点主表
+model InventoryCheck {
+  id                Int                  @id @default(autoincrement())
+  tenantId          Int
+  tenant            Tenant               @relation(fields: [tenantId], references: [id])
+  serviceCode       String               @db.Char(14) @unique // 单据流水号：PC + YYMMDD + 3 位序号
+  name              String               // 盘点单名称：如 "2026Q4 全仓盘点"
+  scope             String?              // 盘点范围快照（JSON）：{"vendorIds":[1,2],"productIds":[3,4]} 或 null=全租户
+  snapshotAt        DateTime             // 创建时刻（bookQty 冻结时点）
+  status            InventoryCheckStatus @default(DRAFT)
+
+  // 汇总指标（冗余，service 在创建/录入/过账三节点维护）
+  totalItems        Int                  @default(0)
+  pendingItems      Int                  @default(0)
+  matchedItems      Int                  @default(0)
+  surplusItems      Int                  @default(0)
+  lossItems         Int                  @default(0)
+  surplusQty        Int                  @default(0) // 正数，盘盈数量合计
+  lossQty           Int                  @default(0) // 正数，盘亏数量合计
+
+  remark            String?
+  completedAt       DateTime?
+
+  items             InventoryCheckItem[]
+
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  deletedAt         DateTime?
+  createdBy         Int
+  createdByUser     User?                @relation("InventoryCheckCreatedBy", fields: [createdBy], references: [id])
+  updatedBy         Int
+  updatedByUser     User?                @relation("InventoryCheckUpdatedBy", fields: [updatedBy], references: [id])
+  deletedBy         Int?
+  deletedByUser     User?                @relation("InventoryCheckDeletedBy", fields: [deletedBy], references: [id])
+
+  @@index([tenantId])
+  @@unique([tenantId, serviceCode])
+}
+
+// 盘点明细项（ProductVariant 级 = SKU 组合级）
+model InventoryCheckItem {
+  id                Int               @id @default(autoincrement())
+  tenantId          Int
+  tenant            Tenant            @relation(fields: [tenantId], references: [id])
+  inventoryCheckId  Int
+  inventoryCheck    InventoryCheck    @relation(fields: [inventoryCheckId], references: [id], onDelete: Cascade)
+
+  productId         Int
+  product           Product           @relation(fields: [productId], references: [id])
+  variantId         Int
+  variant           ProductVariant    @relation(fields: [variantId], references: [id])
+
+  bookQty           Int               // 账面快照（创建盘点单时拍板）
+  actualQty         Int?              // 实盘数量（null=未清点）
+  diffQty           Int?              // 差异 = actualQty - bookQty（actualQty 录入时后端写）
+
+  remark            String?           // 盘点员备注
+
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  deletedAt         DateTime?
+  createdBy         Int
+  createdByUser     User?             @relation("InventoryCheckItemCreatedBy", fields: [createdBy], references: [id])
+  updatedBy         Int
+  updatedByUser     User?             @relation("InventoryCheckItemUpdatedBy", fields: [updatedBy], references: [id])
+  deletedBy         Int?
+  deletedByUser     User?             @relation("InventoryCheckItemDeletedBy", fields: [deletedBy], references: [id])
+
+  @@index([tenantId])
+  @@index([inventoryCheckId])
+  @@unique([inventoryCheckId, variantId])
 }
 
 // 用户
@@ -348,6 +434,12 @@ model User {
   historyCostsCreated        HistoryCost[]         @relation("HistoryCostCreatedBy")
   historyCostsUpdated        HistoryCost[]         @relation("HistoryCostUpdatedBy")
   historyCostsDeleted        HistoryCost[]         @relation("HistoryCostDeletedBy")
+  inventoryCheckCreated     InventoryCheck[]      @relation("InventoryCheckCreatedBy")
+  inventoryCheckUpdated     InventoryCheck[]      @relation("InventoryCheckUpdatedBy")
+  inventoryCheckDeleted     InventoryCheck[]      @relation("InventoryCheckDeletedBy")
+  inventoryCheckItemCreated InventoryCheckItem[]  @relation("InventoryCheckItemCreatedBy")
+  inventoryCheckItemUpdated InventoryCheckItem[]  @relation("InventoryCheckItemUpdatedBy")
+  inventoryCheckItemDeleted InventoryCheckItem[]  @relation("InventoryCheckItemDeletedBy")
 
   // 反向 relation：该 User 是某 Tenant 的 superUser（自建租户时设置）
   tenantSuperUser            Tenant?                @relation("TenantSuperUser")
