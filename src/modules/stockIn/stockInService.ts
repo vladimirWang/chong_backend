@@ -19,6 +19,7 @@ import {
 import { resolveVariant } from "../../utils/variant";
 import { generateServiceCode } from "../../utils/common";
 import { invalidateProductDetailCache } from "../product/productService";
+import { assertStockLineProductsExist } from "../../utils/stockLineValidator";
 import type { AuthUser } from "../../types/auth";
 import type {
   BatchDeleteStockInQuery,
@@ -44,37 +45,6 @@ interface StockLineComparable {
   count: number;
   vendorId: number;
   specSkuIds: string;
-}
-
-/** 校验提交的产品行：productId 不可重复，且产品都须存在于当前租户 */
-async function assertProductsExist(
-  db: TenantPrismaClient,
-  lines: { productId: number, specSkuIds: string }[],
-) {
-  const lineDatas = lines.map((item) => `${item.productId}-${item.specSkuIds}`);
-  const uniqueLineDatas = [...new Set(lineDatas)];
-  if (lineDatas.length > uniqueLineDatas.length) {
-    throw new HttpError(
-      400,
-      errorCode.VALIDATION_ERROR,
-      `提交的数据存在重复的产品（产品id-specSkuIds）: ${lineDatas.join(", ")}`,
-    );
-  }
-  // 去重后的产品id列表
-  const uniqueProductIds =[... new Set(uniqueLineDatas.map((item) => parseInt(item)))]
-  const existing = await db.product.findMany({
-    where: { id: { in: uniqueProductIds } },
-    select: { id: true },
-  });
-  const existingIds = existing.map((p) => p.id);
-  const missingIds = uniqueProductIds.filter((id) => !existingIds.includes(id));
-  if (missingIds.length > 0) {
-    throw new HttpError(
-      400,
-      errorCode.VALIDATION_ERROR,
-      `产品不存在: ${missingIds.join(", ")}`,
-    );
-  }
 }
 
 /** GET /stockin：分页列表，支持产品名/供应商名/删除区间/完成区间过滤 */
@@ -186,7 +156,7 @@ export async function createMultipleStockIn(
     specSkuIds: normalizeSpecSkuIds(item.specSkuIds),
   }));
 
-  await assertProductsExist(db, normalizedLines);
+  await assertStockLineProductsExist(db, normalizedLines);
 
   const totalCost = sum2(normalizedLines, "cost");
   const submittedAtVal = submittedAt ? new Date(submittedAt) : new Date();
@@ -257,7 +227,7 @@ export async function updateStockIn(
     specSkuIds: normalizeSpecSkuIds(item.specSkuIds),
   }));
 
-  await assertProductsExist(db, normalizedLines);
+  await assertStockLineProductsExist(db, normalizedLines);
 
   const existedRecord = await db.productJoinStockIn.findMany({
     where: { stockInId: id },

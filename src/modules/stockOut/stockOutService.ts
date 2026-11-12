@@ -16,6 +16,7 @@ import {
   parseSpecSkuIds,
   sum2,
 } from "../../utils/algo";
+import { assertStockLineProductsExist } from "../../utils/stockLineValidator";
 import { resolveVariant } from "../../utils/variant";
 import { generateServiceCode } from "../../utils/common";
 import { invalidateProductDetailCache } from "../product/productService";
@@ -220,6 +221,9 @@ export async function createMultipleStockOut(
     specSkuIds: normalizeSpecSkuIds(item.specSkuIds),
   }));
 
+  // 公共校验：同单据内 productId+specSkuIds 不可重复 + 产品存在性
+  await assertStockLineProductsExist(db, normalizedLines);
+
   // 集合相等解析变体（变体不存在即产品无此规格库存，直接抛错），再做超卖校验
   const variantMap = await resolveVariantMap(db, normalizedLines);
   assertVariantsNotOversold(
@@ -415,6 +419,9 @@ export async function updateStockOut(
     );
     return new SuccessResponse(null, "出货单已删除（无产品数据）");
   }
+
+  // 公共校验：同单据内 productId+specSkuIds 不可重复 + 产品存在性
+  await assertStockLineProductsExist(db, normalizedLines);
 
   const totalPrice = normalizedLines.reduce(
     (a, c) => a + c.price * c.count,
