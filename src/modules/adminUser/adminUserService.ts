@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { sign } from "hono/jwt";
 import prisma from "../../utils/prisma";
 import { redisClient } from "../../utils/redis";
@@ -19,6 +20,12 @@ import type {
 
 /** 邮箱验证码在 redis 中的 key 前缀（与 repo_backend utilController.emailVerificationTag 一致） */
 const emailVerificationTag = "register:emailVerification";
+
+/** 登录失败计数 + 锁定脚本（模块加载时读取一次，避免每次登录请求读盘） */
+const adminLoginAttemptLua = readFileSync(
+  new URL("./lua/adminLoginAttempt.lua", import.meta.url),
+  "utf8",
+);
 
 type AdminJwtPayload = {
   userId: number;
@@ -65,27 +72,9 @@ export async function loginAdminUser(body: LoginBody) {
   const COUNT_OF_PASSWORD_WRONG = 6;
   const FREEZE_DURATION = 60 * 60;
 
-    // 用lua脚本原子操作，避免竞态条件
-  const luaScript = `
-    local failed_key = KEYS[1]
-    local locked_key = KEYS[2]
-    local freeze_duration = ARGV[1]
-    local count_of_password_wrong = ARGV[2]
-    if redis.call("exists", KEYS[2]) == 1 then
-      return {-1, 1}
-    end
-    local n = redis.call('incr', failed_key)
-    if n == 1 or redis.call('ttl', failed_key) < 0 then
-      redis.call('expire', failed_key, freeze_duration)
-    end
-    if n >= tonumber(count_of_password_wrong) then
-      redis.call('set', locked_key, 1, 'EX', freeze_duration)
-      return {n, 1}
-    end
-    return {n, 0}
-  `
+  // 用 lua 脚本原子操作，避免竞态条件（脚本见 lua/adminLoginAttempt.lua）
   // eval 的返回类型是宽泛的 ReplyUnion（不按脚本内容推导），这里显式声明脚本的返回结构 [count, locked]
-  const [, locked] = (await redisClient.eval(luaScript, {
+  const [, locked] = (await redisClient.eval(adminLoginAttemptLua, {
     keys: [loginFailedKey, ACCOUNT_LOCKED_KEY],
     arguments: [String(FREEZE_DURATION), String(COUNT_OF_PASSWORD_WRONG)],
   })) as [number, number];
