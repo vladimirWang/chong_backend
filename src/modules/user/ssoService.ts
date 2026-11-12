@@ -34,52 +34,66 @@ interface SsoTokenResp {
 
 /**
  * SSO 登录换取本系统会话（公共路由）
+ * SSO_MOCK=true 时启用本地挡板：跳过回跳白名单与 SSO 服务，code 即本地已注册用户邮箱
+ * 正常流程：
  * 1. 校验 redirectUri 白名单
  * 2. 服务端用 code + client 凭证调 SSO POST /oauth/token 换 userinfo
  * 3. 按 email 匹配本地 User（仅查已有用户，不自动开通）
  * 4. 签发本系统 JWT（username 来自 SSO userinfo）并写 redis
  */
 export async function ssoExchange(code: string, redirectUri: string) {
-  // 1. redirectUri 白名单校验
-  const allowed = (process.env.SSO_REDIRECT_URIS ?? "")
-    .split(",")
-    .map(s => s.trim())
-    .filter(Boolean);
-  if (!allowed.includes(redirectUri)) {
-    logger.warn(`SSO 回跳地址不在白名单: ${redirectUri}`);
-    return new ErrorResponse(errorCode.VALIDATION_ERROR, "非法的回跳地址");
-  }
+  // 本地挡板：SSO_MOCK=true 时不依赖 SSO 服务，code 即本地已注册用户的邮箱
+  let userinfo: SsoUserinfo;
+  if (process.env.SSO_MOCK === "true") {
+    logger.info(`SSO 挡板模式，code 视为邮箱: ${code}`);
+    userinfo = {
+      userId: 0,
+      email: code,
+      username: code.split("@")[0] ?? null,
+    };
+  } else {
+    // 1. redirectUri 白名单校验
+    const allowed = (process.env.SSO_REDIRECT_URIS ?? "")
+      .split(",")
+      .map(s => s.trim())
+      .filter(Boolean);
+    if (!allowed.includes(redirectUri)) {
+      logger.warn(`SSO 回跳地址不在白名单: ${redirectUri}`);
+      return new ErrorResponse(errorCode.VALIDATION_ERROR, "非法的回跳地址");
+    }
 
-  // 2. code 换 userinfo
-  let data: SsoTokenResp;
-  try {
-    const resp = await fetch(`${process.env.SSO_BASE_URL}/oauth/token`, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        grant_type: "authorization_code",
-        client_id: process.env.SSO_CLIENT_ID!,
-        client_secret: process.env.SSO_CLIENT_SECRET!,
-        code,
-        redirect_uri: redirectUri,
-      }).toString(),
-    });
-    data = (await resp.json()) as SsoTokenResp;
-  } catch (error) {
-    logger.error(`SSO token 交换请求失败: ${error instanceof Error ? error.message : String(error)}`);
-    return new ErrorResponse(errorCode.SYSTEM_ERROR, "SSO 服务暂不可用，请稍后重试");
-  }
-  if (!data.access_token || !data.userinfo?.email) {
-    logger.warn(`SSO token 交换被拒绝: ${data.error ?? ""} ${data.error_description ?? ""}`);
-    return new ErrorResponse(
-      errorCode.VALIDATION_ERROR,
-      data.error_description || "SSO 授权失败，请重新登录",
-    );
+    // 2. code 换 userinfo
+    let data: SsoTokenResp;
+    try {
+      const resp = await fetch(`${process.env.SSO_BASE_URL}/oauth/token`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          grant_type: "authorization_code",
+          client_id: process.env.SSO_CLIENT_ID!,
+          client_secret: process.env.SSO_CLIENT_SECRET!,
+          code,
+          redirect_uri: redirectUri,
+        }).toString(),
+      });
+      data = (await resp.json()) as SsoTokenResp;
+    } catch (error) {
+      logger.error(`SSO token 交换请求失败: ${error instanceof Error ? error.message : String(error)}`);
+      return new ErrorResponse(errorCode.SYSTEM_ERROR, "SSO 服务暂不可用，请稍后重试");
+    }
+    if (!data.access_token || !data.userinfo?.email) {
+      logger.warn(`SSO token 交换被拒绝: ${data.error ?? ""} ${data.error_description ?? ""}`);
+      return new ErrorResponse(
+        errorCode.VALIDATION_ERROR,
+        data.error_description || "SSO 授权失败，请重新登录",
+      );
+    }
+    userinfo = data.userinfo;
   }
 
   // 3. 按 email 匹配本地用户（SSO 仅作身份源，不自动开通）
   const localUser = await prisma.user.findUnique({
-    where: { email: data.userinfo.email },
+    where: { email: userinfo.email },
   });
   if (!localUser) {
     return new ErrorResponse(
@@ -100,7 +114,7 @@ export async function ssoExchange(code: string, redirectUri: string) {
   const payload: JwtPayload = {
     userId: localUser.id,
     email: localUser.email,
-    username: data.userinfo.username,
+    username: userinfo.username,
     tenantId: localUser.tenantId,
     exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24,
     role: "merchant",
