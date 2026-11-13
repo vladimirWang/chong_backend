@@ -32,7 +32,21 @@ export async function getVendors(db: TenantPrismaClient, query: VendorQuery) {
   });
   const total = await db.vendor.count({ where: whereValues });
 
-  return new SuccessResponse({ total, list }, "供应商列表获取成功");
+  // 统计每个供应商下产品库存总数（Product.balance 为各变体库存之和）
+  const products = await db.product.findMany({
+    where: { vendorId: { in: list.map((v) => v.id) } },
+    select: { vendorId: true, balance: true },
+  });
+  const stockByVendor = new Map<number, number>();
+  for (const p of products) {
+    stockByVendor.set(p.vendorId, (stockByVendor.get(p.vendorId) ?? 0) + (p.balance ?? 0));
+  }
+  const data = list.map((v) => ({
+    ...v,
+    stockCount: stockByVendor.get(v.id) ?? 0,
+  }));
+
+  return new SuccessResponse({ total, list: data }, "供应商列表获取成功");
 }
 
 /** GET /vendor/:id */
