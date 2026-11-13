@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { stockInQuerySchema } from "../stockIn/stockInValidator";
+import { specSkuIdsSchema } from "../../validators/commonValidator";
 
 /** 出货明细行 */
 export const stockOutLineSchema = z.object({
@@ -7,7 +8,8 @@ export const stockOutLineSchema = z.object({
   count: z.number(),
   productId: z.number(),
   vendorId: z.number(),
-  specSkuIds: z.string(),
+  // 无规格商品允许缺省，统一归一化为空串
+  specSkuIds: specSkuIdsSchema,
 });
 
 /**

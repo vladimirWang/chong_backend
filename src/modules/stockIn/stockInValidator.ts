@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { paginationSchema } from "../../validators/commonValidator";
+import { paginationSchema, specSkuIdsSchema } from "../../validators/commonValidator";
 
 /** 批量进货/更新进货单 body 中的单个产品行 */
 export const stockInLineSchema = z.object({
@@ -7,7 +7,8 @@ export const stockInLineSchema = z.object({
   cost: z.number(),
   productId: z.number(),
   vendorId: z.number(),
-  specSkuIds: z.string()
+  // 无规格商品允许缺省，统一归一化为空串
+  specSkuIds: specSkuIdsSchema,
 });
 
 /** POST /stockin/multiple、PUT /stockin/:id body（移植自老架构） */

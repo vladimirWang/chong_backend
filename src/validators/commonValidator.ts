@@ -37,3 +37,13 @@ export const idArray = z.object({
   ids: z.array(z.coerce.number()),
 });
 export type IdArray = z.infer<typeof idArray>;
+
+/**
+ * 规格 SKU 标识（逗号分隔的属性 id）。
+ * 无规格（单规格）商品没有 SKU 概念，允许缺省；统一归一化为空串，
+ * 与 DB 的 NOT NULL 约束保持一致。
+ */
+export const specSkuIdsSchema = z
+  .string()
+  .nullish()
+  .transform((v) => v ?? "");
