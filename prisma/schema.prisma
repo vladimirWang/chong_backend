@@ -46,6 +46,8 @@ model Tenant {
   productVariantJoinAttrs ProductVariantJoinAttr[]
   inventoryChecks      InventoryCheck[]
   inventoryCheckItems  InventoryCheckItem[]
+  afterSales           AfterSales[]
+  afterSalesItems      AfterSalesItem[]
 }
 
 // ==================== 业务域 ====================
@@ -164,6 +166,7 @@ model Product {
   productJoinSkus     ProductJoinSku[] // SKU 中间表
   variants            ProductVariant[] // 产品变体（真实 SKU）
   inventoryCheckItems InventoryCheckItem[]
+  afterSalesItems     AfterSalesItem[]
   salePrice           Int? // 销售价
   desc                String?               @db.LongText
   createdBy           Int
@@ -440,6 +443,12 @@ model User {
   inventoryCheckItemCreated InventoryCheckItem[]  @relation("InventoryCheckItemCreatedBy")
   inventoryCheckItemUpdated InventoryCheckItem[]  @relation("InventoryCheckItemUpdatedBy")
   inventoryCheckItemDeleted InventoryCheckItem[]  @relation("InventoryCheckItemDeletedBy")
+  afterSalesCreated         AfterSales[]          @relation("AfterSalesCreatedBy")
+  afterSalesUpdated         AfterSales[]          @relation("AfterSalesUpdatedBy")
+  afterSalesDeleted         AfterSales[]          @relation("AfterSalesDeletedBy")
+  afterSalesItemCreated     AfterSalesItem[]      @relation("AfterSalesItemCreatedBy")
+  afterSalesItemUpdated     AfterSalesItem[]      @relation("AfterSalesItemUpdatedBy")
+  afterSalesItemDeleted     AfterSalesItem[]      @relation("AfterSalesItemDeletedBy")
 
   // 反向 relation：该 User 是某 Tenant 的 superUser（自建租户时设置）
   tenantSuperUser            Tenant?                @relation("TenantSuperUser")
@@ -526,6 +535,102 @@ model ProductJoinStockOut {
 
   @@index([tenantId])
   @@unique([stockOutId, productId, specSkuIds])
+}
+
+// ==================== 售后域 ====================
+
+// 售后类型：退货 / 换货 / 返修
+enum AfterSalesType {
+  RETURN   // 退货：商家收到退货后商品回库，支持部分退款
+  EXCHANGE // 换货：商家收到退回商品 → 客户收到换后商品
+  REPAIR   // 返修：商家收到返修商品 → 客户收到修后商品
+}
+
+// 售后单状态（接收方确认驱动）
+enum AfterSalesStatus {
+  PENDING           // 待商家接收
+  MERCHANT_RECEIVED // 商家已接收（仅换货/返修，等待客户收到换后/修后商品）
+  COMPLETED         // 已完成（退货=商家接收即完成；换货/返修=客户收货后完成）
+  CANCELLED         // 已取消（仅 PENDING 可取消，释放占用的可售后数量）
+}
+
+// 售后单
+// 与出货单 StockOut 通过「逻辑外键」关联：只保存 stockOutId / stockOutServiceCode 快照，
+// 不建立数据库外键约束；存在性、归属关系、可售后数量由业务层校验。
+model AfterSales {
+  id                  Int               @id @default(autoincrement())
+  tenantId            Int
+  tenant              Tenant            @relation(fields: [tenantId], references: [id])
+  serviceCode         String            @db.Char(14) // 单号：TH/HH/FX + YYMMDD + 3 位序号
+  type                AfterSalesType
+  status              AfterSalesStatus  @default(PENDING)
+
+  // 逻辑外键：关联出货单（不建 DB 外键）
+  stockOutId          Int
+  stockOutServiceCode String?           @db.VarChar(32) // 出货单号快照，便于展示
+  clientId            Int? // 逻辑外键：客户（取自出货单快照，不建 DB 外键）
+
+  reason              String? // 售后原因
+  remark              String?
+  docs                Json? // 单据：多个文件地址，存为字符串数组 JSON
+  totalCount          Int               @default(0) // 明细数量合计
+  totalPrice          Int               @default(0) // RETURN=应退金额上限；REPAIR=维修费用；EXCHANGE=0
+  refundAmount        Int? // 实际退款金额（仅 RETURN，支持部分退款：0 ~ totalPrice）
+  completedAt         DateTime?
+
+  // 接收方确认时间点
+  merchantReceivedAt  DateTime? // 商家收到退货/换货/返修商品的时间
+  customerReceivedAt  DateTime? // 客户收到换后/修后商品的时间（仅 EXCHANGE/REPAIR）
+
+  items               AfterSalesItem[]
+
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  deletedAt           DateTime?
+  createdBy           Int
+  createdByUser       User?             @relation("AfterSalesCreatedBy", fields: [createdBy], references: [id])
+  updatedBy           Int
+  updatedByUser       User?             @relation("AfterSalesUpdatedBy", fields: [updatedBy], references: [id])
+  deletedBy           Int?
+  deletedByUser       User?             @relation("AfterSalesDeletedBy", fields: [deletedBy], references: [id])
+
+  @@index([tenantId])
+  @@index([tenantId, stockOutId])
+  @@unique([tenantId, serviceCode])
+}
+
+// 售后明细
+// stockOutItemId 为逻辑外键，指向出货明细行 ProductJoinStockOut.id（不建 DB 外键）
+model AfterSalesItem {
+  id             Int        @id @default(autoincrement())
+  tenantId       Int
+  tenant         Tenant     @relation(fields: [tenantId], references: [id])
+  afterSalesId   Int
+  afterSales     AfterSales @relation(fields: [afterSalesId], references: [id], onDelete: Cascade)
+
+  stockOutItemId Int // 逻辑外键：出货明细行 ProductJoinStockOut.id
+  productId      Int
+  product        Product    @relation(fields: [productId], references: [id])
+  vendorId       Int // 供应商快照（取自出货明细行）
+  specSkuIds     String // 规格组合快照（逗号分隔 attrId）
+  price          Int // 出货单价快照
+  count          Int // 售后数量
+  repairFee      Int        @default(0) // REPAIR 时的单件维修费用；其它类型恒为 0
+  remark         String?
+
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  deletedAt      DateTime?
+  createdBy      Int
+  createdByUser  User?      @relation("AfterSalesItemCreatedBy", fields: [createdBy], references: [id])
+  updatedBy      Int
+  updatedByUser  User?      @relation("AfterSalesItemUpdatedBy", fields: [updatedBy], references: [id])
+  deletedBy      Int?
+  deletedByUser  User?      @relation("AfterSalesItemDeletedBy", fields: [deletedBy], references: [id])
+
+  @@index([tenantId])
+  @@index([afterSalesId])
+  @@unique([afterSalesId, productId, specSkuIds])
 }
 
 model FileInfo {

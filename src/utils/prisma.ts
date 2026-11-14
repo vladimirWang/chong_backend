@@ -23,6 +23,8 @@ const SOFT_DELETE_MODELS = [
   "ProductVariantJoinAttr",
   "InventoryCheck",
   "InventoryCheckItem",
+  "AfterSales",
+  "AfterSalesItem",
 ] as const;
 
 /** 业务表：带 tenantId 需要租户隔离的模型（NOT NULL tenantId） */
@@ -44,6 +46,8 @@ export const TENANT_MODELS = [
   "ProductVariantJoinAttr",
   "InventoryCheck",
   "InventoryCheckItem",
+  "AfterSales",
+  "AfterSalesItem",
 ] as const;
 const TENANT_MODEL_SET = new Set<string>(TENANT_MODELS);
 

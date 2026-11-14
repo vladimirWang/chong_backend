@@ -18,6 +18,7 @@ import { fileRouter } from "../modules/file/fileRouter";
 import { imageRouter } from "../modules/image/imageRouter";
 import { tenantRouter } from "../modules/tenant/tenantRouter";
 import { inventoryCheckRouter } from "../modules/inventoryCheck/inventoryCheckRouter";
+import { afterSalesRouter } from "../modules/afterSales/afterSalesRouter";
 
 /**
  * 汇总各业务模块路由，统一挂到 /nodejs_api（与 repo_backend 对齐）
@@ -42,4 +43,5 @@ export const apiRouter = new Hono()
   .route("/file", fileRouter)
   .route("/image", imageRouter)
   .route("/tenant", tenantRouter)
-  .route("/inventoryCheck", inventoryCheckRouter);
+  .route("/inventoryCheck", inventoryCheckRouter)
+  .route("/afterSales", afterSalesRouter);
